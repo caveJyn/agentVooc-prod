@@ -1,0 +1,1353 @@
+// client/src/components/create-character.tsx
+import { useState,  } from "react";
+import { v4 as uuidv4 } from "uuid";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate,  } from "react-router-dom";
+import { apiClient } from "@/lib/api";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2 } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import type { UUID } from "@elizaos/core";
+import { useQuery } from "@tanstack/react-query";
+
+interface CreateCharacterProps {
+  setError: React.Dispatch<React.SetStateAction<string | null>>;
+}
+
+export default function CreateCharacter({ setError }: CreateCharacterProps) {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [secrets, setSecrets] = useState<{ key: string; value: string }[]>([
+    { key: "", value: "" },
+  ]);
+  const [secretsError, setSecretsError] = useState<string | null>(null);
+  const [profileImage, setProfileImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [telegramBotToken, setTelegramBotToken] = useState("");
+  const [twitterUsername, setTwitterUsername] = useState("");
+  const [twitterPassword, setTwitterPassword] = useState("");
+  const [twitterEmail, setTwitterEmail] = useState("");
+
+  // Predefined traits
+  const defaultTraits = {
+    system: "Roleplay and generate interesting dialogue on behalf of Eliza.",
+    bio: [
+      "Someone who can help with performing different transactions and tasks",
+      "A seasoned Web3 developer with deep expertise in Ethereum and Solana",
+      "Security-minded, always emphasizing best practices in smart contract development and blockchain architecture",
+      "A natural educator who believes Web3 should be accessible to everyone, from total beginners to experienced devs",
+      "Firm believer in decentralization but pragmatic about its challenges and trade-offs",
+      "Encourages people to experiment, but always with a safety net—'code like an optimist, test like a pessimist'",
+      "Has a knack for making Solidity, Rust, and smart contracts feel less intimidating",
+    ],
+    lore: [
+      "Started in Web2 development before getting hooked on Web3",
+      "Has contributed to major Ethereum and Solana projects",
+      "Hosts online workshops where she helps devs build secure, scalable dApps without falling for common pitfalls",
+      "Believes the most powerful smart contract is the one you *don’t* have to upgrade every three months",
+      "Maintains a curated list of Web3 tools, libraries, and best practices that she updates obsessively",
+      "Thinks the best way to learn Web3 security is to *think like an attacker*—but never *become* one",
+      "Keeps a notebook full of theoretical smart contract designs that *could* change the industry—if only people were ready for them",
+    ],
+  };
+
+  const [characterData, setCharacterData] = useState({
+    id: uuidv4() as UUID,
+    name: "",
+    username: "",
+    system: defaultTraits.system,
+    bio: defaultTraits.bio,
+    lore: defaultTraits.lore,
+    messageExamples: [] as any[],
+    postExamples: [] as string[],
+    topics: [] as string[],
+    adjectives: [] as string[],
+    modelProvider: "OPENAI" as "OPENAI" | "OLLAMA" | "CUSTOM" | undefined,
+    plugins: [] as string[],
+    settings: {
+      secrets: { dynamic: [] as { key: string; value: string }[] },
+      voice: { model: "" },
+      ragKnowledge: false,
+      email: {
+        outgoing: {
+          service: "gmail" as "smtp" | "gmail",
+          host: "",
+          port: 0,
+          secure: false,
+          user: "",
+          pass: "",
+        },
+        incoming: {
+          service: "imap" as "imap",
+          host: "",
+          port: 993,
+          user: "",
+          pass: "",
+        },
+      },
+    },
+    style: {
+      all: [] as string[],
+      chat: [] as string[],
+      post: [] as string[],
+    },
+    knowledge: [] as any[],
+  });
+  const [bioInput, setBioInput] = useState(defaultTraits.bio.join(", "));
+  const [loreInput, setLoreInput] = useState(defaultTraits.lore.join(", "));
+  const [topicsInput, setTopicsInput] = useState("");
+  const [adjectivesInput, setAdjectivesInput] = useState("");
+  const [postExamplesInput, setPostExamplesInput] = useState("");
+
+ // Fetch user data from Sanity
+  const userQuery = useQuery({
+    queryKey: ["user"],
+    queryFn: async () => {
+      const response = await apiClient.getUser();
+      console.log("[CREATE_CHARACTER] userQuery response:", response);
+      return response.user;
+    },
+  });
+
+  const handlePluginChange = async (plugin: string, checked: boolean) => {
+    let activePlugins = userQuery.data?.activePlugins || [];
+    console.log("[CREATE_CHARACTER] handlePluginChange:", {
+      plugin,
+      checked,
+      activePlugins,
+      userQueryStatus: userQuery.status,
+      userQueryError: userQuery.error,
+    });
+
+    // Fallback: Fetch subscription items if plugin not in activePlugins
+    if (!activePlugins.includes(plugin) && checked) {
+      try {
+        console.log("[CREATE_CHARACTER] Plugin not in activePlugins, fetching subscription items");
+        const subscriptionData = await apiClient.getSubscriptionItems({ includeDetails: true });
+        activePlugins = subscriptionData.plugins || [];
+        console.log("[CREATE_CHARACTER] Fetched subscription items, activePlugins:", activePlugins);
+
+        if (!activePlugins.includes(plugin)) {
+          toast({
+            variant: "destructive",
+            title: "Subscription Required",
+            description: `You need a subscription for the ${plugin} plugin. Please subscribe in the settings page.`,
+            action: (
+              <Button
+                onClick={() => navigate("/settings", { state: { from: "create-character" } })}
+                className="bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-primary-bg"
+              >
+                Go to Settings
+              </Button>
+            ),
+          });
+          return;
+        }
+      } catch (error) {
+        console.error("[CREATE_CHARACTER] Error fetching subscription items:", error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to verify plugin subscription. Please try again.",
+        });
+        return;
+      }
+    }
+    
+
+    setCharacterData((prev) => ({
+      ...prev,
+      plugins: checked
+        ? [...prev.plugins, plugin]
+        : prev.plugins.filter((p) => p !== plugin),
+    }));
+  };
+
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
+    setCharacterData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleArrayInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+    field: string
+  ) => {
+    const value = e.target.value;
+    if (field === "bio") setBioInput(value);
+    if (field === "lore") setLoreInput(value);
+    if (field === "topics") setTopicsInput(value);
+    if (field === "adjectives") setAdjectivesInput(value);
+    if (field === "postExamples") setPostExamplesInput(value);
+  };
+
+  const handleAdvancedInputChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
+    field: string,
+    subfield?: string
+  ) => {
+    const value = e.target.value;
+    setCharacterData((prev) => {
+      if (field === "settings" && subfield) {
+        if (subfield === "voiceModel") {
+          return {
+            ...prev,
+            settings: {
+              ...prev.settings,
+              voice: { model: value },
+            },
+          };
+        }
+        if (subfield === "ragKnowledge") {
+          return {
+            ...prev,
+            settings: {
+              ...prev.settings,
+              ragKnowledge: value === "true",
+            },
+          };
+        }
+        if (subfield.startsWith("email.outgoing.")) {
+          const key = subfield.split(".")[2];
+          return {
+            ...prev,
+            settings: {
+              ...prev.settings,
+              email: {
+                ...prev.settings.email,
+                outgoing: {
+                  ...prev.settings.email.outgoing,
+                  [key]: key === "port" ? Number(value) : key === "secure" ? value === "true" : value,
+                },
+              },
+            },
+          };
+        }
+        if (subfield.startsWith("email.incoming.")) {
+          const key = subfield.split(".")[2];
+          return {
+            ...prev,
+            settings: {
+              ...prev.settings,
+              email: {
+                ...prev.settings.email,
+                incoming: {
+                  ...prev.settings.email.incoming,
+                  [key]: key === "port" ? Number(value) : value,
+                },
+              },
+            },
+          };
+        }
+        return prev;
+      }
+      if (field === "style" && subfield) {
+        return {
+          ...prev,
+          style: {
+            ...prev.style,
+            [subfield]: value.split(",").map((s) => s.trim()),
+          },
+        };
+      }
+      if (field === "plugins") {
+        return {
+          ...prev,
+          plugins: value.split(",").map((s) => s.trim()).filter((s) => s),
+        };
+      }
+      return {
+        ...prev,
+        [field]: value,
+      };
+    });
+  };
+
+  const handleTelegramCheckbox = (checked: boolean) => {
+    handlePluginChange("telegram", checked);
+    if (!checked) {
+      setSecrets((prev) => prev.filter((s) => s.key !== "TELEGRAM_BOT_TOKEN"));
+      setTelegramBotToken("");
+    } else if (userQuery.data?.activePlugins.includes("telegram")) {
+      setSecrets((prev) => {
+        if (!prev.some((s) => s.key === "TELEGRAM_BOT_TOKEN")) {
+          return [...prev, { key: "TELEGRAM_BOT_TOKEN", value: telegramBotToken }];
+        }
+        return prev;
+      });
+    }
+  };
+
+  const handleTelegramBotTokenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setTelegramBotToken(value);
+    setSecrets((prev) => {
+      const newSecrets = prev.filter((s) => s.key !== "TELEGRAM_BOT_TOKEN");
+      if (value) {
+        newSecrets.push({ key: "TELEGRAM_BOT_TOKEN", value });
+      }
+      return newSecrets;
+    });
+  };
+
+  const handleTwitterCheckbox = (checked: boolean) => {
+    handlePluginChange("twitter", checked);
+    if (!checked) {
+      setSecrets((prev) =>
+        prev.filter(
+          (s) => !["TWITTER_USERNAME", "TWITTER_PASSWORD", "TWITTER_EMAIL"].includes(s.key)
+        )
+      );
+      setTwitterUsername("");
+      setTwitterPassword("");
+      setTwitterEmail("");
+    } else if (userQuery.data?.activePlugins.includes("twitter")) {
+      setSecrets((prev) => {
+        const newSecrets = prev.filter(
+          (s) => !["TWITTER_USERNAME", "TWITTER_PASSWORD", "TWITTER_EMAIL"].includes(s.key)
+        );
+        return [
+          ...newSecrets,
+          { key: "TWITTER_USERNAME", value: twitterUsername },
+          { key: "TWITTER_PASSWORD", value: twitterPassword },
+          { key: "TWITTER_EMAIL", value: twitterEmail },
+        ].filter((s) => s.value);
+      });
+    }
+  };
+
+  const handleTwitterUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setTwitterUsername(value);
+    setSecrets((prev) => {
+      const newSecrets = prev.filter((s) => s.key !== "TWITTER_USERNAME");
+      if (value) {
+        newSecrets.push({ key: "TWITTER_USERNAME", value });
+      }
+      return newSecrets;
+    });
+  };
+
+  const handleTwitterPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setTwitterPassword(value);
+    setSecrets((prev) => {
+      const newSecrets = prev.filter((s) => s.key !== "TWITTER_PASSWORD");
+      if (value) {
+        newSecrets.push({ key: "TWITTER_PASSWORD", value });
+      }
+      return newSecrets;
+    });
+  };
+
+  const handleTwitterEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setTwitterEmail(value);
+    setSecrets((prev) => {
+      const newSecrets = prev.filter((s) => s.key !== "TWITTER_EMAIL");
+      if (value) {
+        newSecrets.push({ key: "TWITTER_EMAIL", value });
+      }
+      return newSecrets;
+    });
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!["image/jpeg", "image/png", "image/gif"].includes(file.type)) {
+        setError("Invalid file type. Only JPEG, PNG, and GIF are allowed.");
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Invalid file type. Only JPEG, PNG, and GIF are allowed.",
+        });
+        return;
+      }
+      setProfileImage(file);
+      const reader = new FileReader();
+      reader.onload = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+      setError(null);
+    }
+  };
+
+  const handleSecretChange = (
+    index: number,
+    field: "key" | "value",
+    value: string
+  ) => {
+    setSecrets((prev) => {
+      const newSecrets = [...prev];
+      newSecrets[index] = { ...newSecrets[index], [field]: value };
+      return newSecrets;
+    });
+    setSecretsError(null);
+  };
+
+  const addSecret = () => {
+    setSecrets((prev) => [...prev, { key: "", value: "" }]);
+  };
+
+  const removeSecret = (index: number) => {
+    setSecrets((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const uploadImageMutation = useMutation({
+    mutationFn: async ({ characterId, file }: { characterId: UUID; file: File }) => {
+      console.log("[CREATE_CHARACTER] Uploading profile image for characterId:", characterId);
+      const formData = new FormData();
+      formData.append("image", file);
+      const response = await apiClient.uploadCharacterProfileImage(characterId, formData);
+      console.log("[CREATE_CHARACTER] Image upload response:", response);
+      return response;
+    },
+    onSuccess: (response) => {
+      console.log("[CREATE_CHARACTER] Profile image uploaded successfully, URL:", response.url);
+      toast({
+        title: "Success",
+        description: "Profile image uploaded successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["characters"] });
+    },
+    onError: (error: any) => {
+      console.error("[CREATE_CHARACTER] Image upload error:", error);
+      setError("Failed to upload image: " + (error.message || "Unknown error"));
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to upload image.",
+      });
+      if (error.status === 401 && window.location.pathname !== "/auth") {
+        console.log("[CREATE_CHARACTER] 401 error, redirecting to /auth");
+        navigate("/auth");
+      }
+    },
+  });
+
+  const createCharacterMutation = useMutation({
+    mutationFn: async () => {
+      const validSecrets = secrets.filter(
+        (secret) => secret.key.trim() && secret.value.trim()
+      );
+      const updatedCharacterData = {
+        id: characterData.id,
+        name: characterData.name,
+        username: characterData.username || undefined,
+        system: characterData.system || undefined,
+        bio: bioInput ? bioInput.split(",").map((s) => s.trim()).filter((s) => s) : [],
+        lore: loreInput ? loreInput.split(",").map((s) => s.trim()).filter((s) => s) : [],
+        topics: topicsInput ? topicsInput.split(",").map((s) => s.trim()).filter((s) => s) : [],
+        adjectives: adjectivesInput ? adjectivesInput.split(",").map((s) => s.trim()).filter((s) => s) : [],
+        postExamples: postExamplesInput ? postExamplesInput.split(",").map((s) => s.trim()).filter((s) => s) : [],
+        modelProvider: characterData.modelProvider || "OPENAI",
+        plugins: characterData.plugins || [],
+        knowledge: characterData.knowledge || [],
+        messageExamples: characterData.messageExamples || [],
+        settings: {
+          secrets: validSecrets.length ? { dynamic: validSecrets } : undefined,
+          voice: characterData.settings.voice.model ? characterData.settings.voice : undefined,
+          ragKnowledge: characterData.settings.ragKnowledge,
+          email: characterData.plugins.some((p) => ["email", "emailautomation"].includes(p))
+            ? characterData.settings.email
+            : undefined,
+        },
+        style: {
+          all: characterData.style.all.length ? characterData.style.all : undefined,
+          chat: characterData.style.chat.length ? characterData.style.chat : undefined,
+          post: characterData.style.post.length ? characterData.style.post : undefined,
+        },
+      };
+
+      console.log("[CREATE_CHARACTER] Creating character with payload:", updatedCharacterData);
+      const createResponse = await apiClient.createCharacter(updatedCharacterData);
+      console.log("[CREATE_CHARACTER] Create character response:", createResponse);
+
+      if (profileImage) {
+        await uploadImageMutation.mutateAsync({ characterId: characterData.id, file: profileImage });
+        console.log("[CREATE_CHARACTER] Profile image upload initiated");
+      }
+
+      return characterData.id;
+    },
+    onSuccess: (characterId) => {
+      console.log("[CREATE_CHARACTER] Character created successfully, ID:", characterId);
+      queryClient.invalidateQueries({ queryKey: ["characters"] });
+      toast({
+        title: "Success",
+        description: `Character "${characterData.name}" created successfully.`,
+      });
+      // Reset form
+      setCharacterData({
+        id: uuidv4() as UUID,
+        name: "",
+        username: "",
+        system: "",
+        bio: [],
+        lore: [],
+        messageExamples: [],
+        postExamples: [],
+        topics: [],
+        adjectives: [],
+        modelProvider: "OPENAI",
+        plugins: [],
+        settings: {
+          secrets: { dynamic: [] },
+          voice: { model: "" },
+          ragKnowledge: false,
+          email: {
+            outgoing: {
+              service: "gmail",
+              host: "",
+              port: 0,
+              secure: false,
+              user: "",
+              pass: "",
+            },
+            incoming: {
+              service: "imap",
+              host: "",
+              port: 993,
+              user: "",
+              pass: "",
+            },
+          },
+        },
+        style: {
+          all: [],
+          chat: [],
+          post: [],
+        },
+        knowledge: [],
+      });
+      setBioInput("");
+      setLoreInput("");
+      setTopicsInput("");
+      setAdjectivesInput("");
+      setPostExamplesInput("");
+      setSecrets([{ key: "", value: "" }]);
+      setProfileImage(null);
+      setImagePreview(null);
+      setError(null);
+      setSecretsError(null);
+      setTelegramBotToken("");
+      setTwitterUsername("");
+      setTwitterPassword("");
+      setTwitterEmail("");
+      navigate("/home");
+    },
+    onError: (error: any) => {
+      console.error("[CREATE_CHARACTER] Character creation error:", error);
+      const errorMessage = error.message || "Failed to create character";
+      if (errorMessage.includes("Duplicate keys found in secrets")) {
+        setSecretsError(errorMessage);
+      } else {
+        setError(errorMessage);
+      }
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: errorMessage,
+      });
+      if (error.status === 401 && window.location.pathname !== "/auth") {
+        console.log("[CREATE_CHARACTER] 401 error, redirecting to /auth");
+        navigate("/auth");
+      }
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!characterData.name) {
+      setError("Character name is required.");
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Character name is required.",
+      });
+      return;
+    }
+    const secretKeys = secrets.map(s => s.key.trim()).filter(k => k);
+    if (new Set(secretKeys).size !== secretKeys.length) {
+      setSecretsError("Invalid key: Duplicate keys found in secrets");
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Duplicate keys found in secrets",
+      });
+      return;
+    }
+    console.log("[CREATE_CHARACTER] Submitting character creation form");
+    createCharacterMutation.mutate();
+  };
+
+  const handleCancel = () => {
+    console.log("[CREATE_CHARACTER] Canceling character creation");
+    navigate("/home");
+  };
+
+  return (
+    <div className="p-6 bg-agentvooc-primary-bg border border-agentvooc-accent/30 rounded-xl shadow-agentvooc-glow w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+      <h3 className="text-xl font-semibold mb-6 text-agentvooc-primary">Create New Character</h3>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div>
+          <label
+            htmlFor="name"
+            className="block text-sm font-medium text-agentvooc-secondary mb-1"
+          >
+            Character Name (Required)
+          </label>
+          <Input
+            id="name"
+            name="name"
+            type="text"
+            value={characterData.name}
+            onChange={handleInputChange}
+            placeholder="Enter character name (e.g., Eliza)"
+            className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+            required
+          />
+        </div>
+        <div>
+          <label
+            htmlFor="profileImage"
+            className="block text-sm font-medium text-agentvooc-secondary mb-1"
+          >
+            Profile Image (JPEG, PNG, or GIF)
+          </label>
+          {imagePreview && (
+            <div className="mt-2 mb-4">
+              <img
+                src={imagePreview}
+                alt="Profile preview"
+                className="w-24 h-24 object-cover rounded-lg border border-agentvooc-accent/30"
+              />
+            </div>
+          )}
+          <Input
+            id="profileImage"
+            name="profileImage"
+            type="file"
+            accept="image/jpeg,image/png,image/gif"
+            onChange={handleImageChange}
+            className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+          />
+          {profileImage && (
+            <p className="text-sm text-agentvooc-secondary mt-1">
+              Selected: {profileImage.name}
+            </p>
+          )}
+        </div>
+        <div>
+          <label
+            htmlFor="username"
+            className="block text-sm font-medium text-agentvooc-secondary mb-1"
+          >
+            Username
+          </label>
+          <Input
+            id="username"
+            name="username"
+            type="text"
+            value={characterData.username}
+            onChange={handleInputChange}
+            placeholder="Enter username (e.g., eliza)"
+            className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+          />
+        </div>
+        <div>
+          <label
+            htmlFor="system"
+            className="block text-sm font-medium text-agentvooc-secondary mb-1"
+          >
+            System Prompt
+          </label>
+          <Textarea
+            id="system"
+            name="system"
+            value={characterData.system}
+            onChange={handleInputChange}
+            placeholder="Enter system prompt (e.g., Roleplay as a Web3 developer)"
+            className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+          />
+        </div>
+        <div>
+          <label
+            htmlFor="bio"
+            className="block text-sm font-medium text-agentvooc-secondary mb-1"
+          >
+            Bio (comma-separated)
+          </label>
+          <Input
+            id="bio"
+            name="bio"
+            type="text"
+            value={bioInput}
+            onChange={(e) => handleArrayInputChange(e, "bio")}
+            placeholder="Enter bio statements (e.g., Web3 developer, Security-minded)"
+            className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+          />
+        </div>
+        <div>
+          <label
+            htmlFor="lore"
+            className="block text-sm font-medium text-agentvooc-secondary mb-1"
+          >
+            Lore (comma-separated)
+          </label>
+          <Input
+            id="lore"
+            name="lore"
+            type="text"
+            value={loreInput}
+            onChange={(e) => handleArrayInputChange(e, "lore")}
+            placeholder="Enter lore snippets (e.g., Started in Web2, Contributes to Ethereum)"
+            className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+          />
+        </div>
+        <div>
+          <label
+            htmlFor="topics"
+            className="block text-sm font-medium text-agentvooc-secondary mb-1"
+          >
+            Topics (comma-separated)
+          </label>
+          <Input
+            id="topics"
+            name="topics"
+            type="text"
+            value={topicsInput}
+            onChange={(e) => handleArrayInputChange(e, "topics")}
+            placeholder="Enter topics (e.g., Web3, Blockchain)"
+            className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+          />
+        </div>
+        <div>
+          <label
+            htmlFor="adjectives"
+            className="block text-sm font-medium text-agentvooc-secondary mb-1"
+          >
+            Personality (comma-separated)
+          </label>
+          <Input
+            id="adjectives"
+            name="adjectives"
+            type="text"
+            value={adjectivesInput}
+            onChange={(e) => handleArrayInputChange(e, "adjectives")}
+            placeholder="Enter personality traits (e.g., witty, technical)"
+            className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+          />
+        </div>
+        <div>
+          <label
+            htmlFor="postExamples"
+            className="block text-sm font-medium text-agentvooc-secondary mb-1"
+          >
+            Post Examples (comma-separated)
+          </label>
+          <Input
+            id="postExamples"
+            name="postExamples"
+            type="text"
+            value={postExamplesInput}
+            onChange={(e) => handleArrayInputChange(e, "postExamples")}
+            placeholder="Enter post examples (e.g., Debugged for 3 hours, Gas fees are forever)"
+            className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+          />
+        </div>
+        <div>
+          <label
+            htmlFor="modelProvider"
+            className="block text-sm font-medium text-agentvooc-secondary mb-1"
+          >
+            Model Provider
+          </label>
+          <select
+            id="modelProvider"
+            name="modelProvider"
+            value={characterData.modelProvider}
+            onChange={handleInputChange}
+            className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent rounded-lg w-full p-2"
+          >
+            <option value="OPENAI">OPENAI</option>
+            <option value="OLLAMA">OLLAMA</option>
+            <option value="CUSTOM">CUSTOM</option>
+          </select>
+        </div>
+        <div>
+          <label
+            htmlFor="enableEmailPlugin"
+            className="block text-sm font-medium text-agentvooc-secondary mb-1"
+          >
+            Enable Email Plugin
+          </label>
+          <input
+            id="enableEmailPlugin"
+            name="enableEmailPlugin"
+            type="checkbox"
+            checked={characterData.plugins.includes("email")}
+            onChange={(e) => handlePluginChange("email", e.target.checked)}
+            className="text-agentvooc-accent focus:ring-agentvooc-accent rounded"
+          />
+        </div>
+        {(characterData.plugins.includes("email") || characterData.plugins.includes("emailautomation")) && (
+          <>
+            <div>
+              <h4 className="text-sm font-medium text-agentvooc-secondary mb-2">
+                Outgoing Email Settings
+              </h4>
+              <div className="ml-4 space-y-4">
+                <div>
+                  <label
+                    htmlFor="emailOutgoingService"
+                    className="block text-sm font-medium text-agentvooc-secondary mb-1"
+                  >
+                    Service
+                  </label>
+                  <select
+                    id="emailOutgoingService"
+                    name="emailOutgoingService"
+                    value={characterData.settings.email.outgoing.service}
+                    onChange={(e) =>
+                      handleAdvancedInputChange(e, "settings", "email.outgoing.service")
+                    }
+                    className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent rounded-lg w-full p-2"
+                  >
+                    <option value="gmail">Gmail</option>
+                    <option value="smtp">SMTP</option>
+                  </select>
+                </div>
+                {characterData.settings.email.outgoing.service === "smtp" && (
+                  <>
+                    <div>
+                      <label
+                        htmlFor="emailOutgoingHost"
+                        className="block text-sm font-medium text-agentvooc-secondary mb-1"
+                      >
+                        Host
+                      </label>
+                      <Input
+                        id="emailOutgoingHost"
+                        name="emailOutgoingHost"
+                        type="text"
+                        value={characterData.settings.email.outgoing.host}
+                        onChange={(e) =>
+                          handleAdvancedInputChange(e, "settings", "email.outgoing.host")
+                        }
+                        placeholder="e.g., smtp.example.com"
+                        className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+                      />
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="emailOutgoingPort"
+                        className="block text-sm font-medium text-agentvooc-secondary mb-1"
+                      >
+                        Port
+                      </label>
+                      <Input
+                        id="emailOutgoingPort"
+                        name="emailOutgoingPort"
+                        type="number"
+                        value={characterData.settings.email.outgoing.port}
+                        onChange={(e) =>
+                          handleAdvancedInputChange(e, "settings", "email.outgoing.port")
+                        }
+                        placeholder="e.g., 587"
+                        className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+                      />
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="emailOutgoingSecure"
+                        className="block text-sm font-medium text-agentvooc-secondary mb-1"
+                      >
+                        Secure (TLS)
+                      </label>
+                      <select
+                        id="emailOutgoingSecure"
+                        name="emailOutgoingSecure"
+                        value={characterData.settings.email.outgoing.secure.toString()}
+                        onChange={(e) =>
+                          handleAdvancedInputChange(e, "settings", "email.outgoing.secure")
+                        }
+                        className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent rounded-lg w-full p-2"
+                      >
+                        <option value="true">Yes</option>
+                        <option value="false">No</option>
+                      </select>
+                    </div>
+                  </>
+                )}
+                <div>
+                  <label
+                    htmlFor="emailOutgoingUser"
+                    className="block text-sm font-medium text-agentvooc-secondary mb-1"
+                  >
+                    Username
+                  </label>
+                  <Input
+                    id="emailOutgoingUser"
+                    name="emailOutgoingUser"
+                    type="text"
+                    value={characterData.settings.email.outgoing.user}
+                    onChange={(e) =>
+                      handleAdvancedInputChange(e, "settings", "email.outgoing.user")
+                    }
+                    placeholder="e.g., your-email@gmail.com"
+                    className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="emailOutgoingPass"
+                    className="block text-sm font-medium text-agentvooc-secondary mb-1"
+                  >
+                    Password
+                  </label>
+                  <Input
+                    id="emailOutgoingPass"
+                    name="emailOutgoingPass"
+                    type="password"
+                    value={characterData.settings.email.outgoing.pass}
+                    onChange={(e) =>
+                      handleAdvancedInputChange(e, "settings", "email.outgoing.pass")
+                    }
+                    placeholder="e.g., your-app-password"
+                    className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+                  />
+                  {characterData.settings.email.outgoing.service === "gmail" && (
+                    <p className="text-sm text-agentvooc-secondary mt-1">
+                      Use a Gmail App Password (
+                      <a
+                        href="https://support.google.com/mail/answer/185833?hl=en"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-agentvooc-accent hover:underline"
+                      >
+                        learn more
+                      </a>
+                      ).
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div>
+              <h4 className="text-sm font-medium text-agentvooc-secondary mb-2">
+                Incoming Email Settings
+              </h4>
+              <div className="ml-4 space-y-4">
+                <div>
+                  <label
+                    htmlFor="emailIncomingHost"
+                    className="block text-sm font-medium text-agentvooc-secondary mb-1"
+                  >
+                    Host
+                  </label>
+                  <Input
+                    id="emailIncomingHost"
+                    name="emailIncomingHost"
+                    type="text"
+                    value={characterData.settings.email.incoming.host}
+                    onChange={(e) =>
+                      handleAdvancedInputChange(e, "settings", "email.incoming.host")
+                    }
+                    placeholder="e.g., imap.gmail.com"
+                    className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="emailIncomingPort"
+                    className="block text-sm font-medium text-agentvooc-secondary mb-1"
+                  >
+                    Port
+                  </label>
+                  <Input
+                    id="emailIncomingPort"
+                    name="emailIncomingPort"
+                    type="number"
+                    value={characterData.settings.email.incoming.port}
+                    onChange={(e) =>
+                      handleAdvancedInputChange(e, "settings", "email.incoming.port")
+                    }
+                    placeholder="e.g., 993"
+                    className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="emailIncomingUser"
+                    className="block text-sm font-medium text-agentvooc-secondary mb-1"
+                  >
+                    Username
+                  </label>
+                  <Input
+                    id="emailIncomingUser"
+                    name="emailIncomingUser"
+                    type="text"
+                    value={characterData.settings.email.incoming.user}
+                    onChange={(e) =>
+                      handleAdvancedInputChange(e, "settings", "email.incoming.user")
+                    }
+                    placeholder="e.g., your-email@gmail.com"
+                    className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="emailIncomingPass"
+                    className="block text-sm font-medium text-agentvooc-secondary mb-1"
+                  >
+                    Password
+                  </label>
+                  <Input
+                    id="emailIncomingPass"
+                    name="emailIncomingPass"
+                    type="password"
+                    value={characterData.settings.email.incoming.pass}
+                    onChange={(e) =>
+                      handleAdvancedInputChange(e, "settings", "email.incoming.pass")
+                    }
+                    placeholder="e.g., your-app-password"
+                    className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+                  />
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+        <div>
+          <label
+            htmlFor="enableTelegramPlugin"
+            className="block text-sm font-medium text-agentvooc-secondary mb-1"
+          >
+            Enable Telegram Plugin
+          </label>
+          <input
+            id="enableTelegramPlugin"
+            name="enableTelegramPlugin"
+            type="checkbox"
+            checked={characterData.plugins.includes("telegram")}
+            onChange={(e) => handleTelegramCheckbox(e.target.checked)}
+            className="text-agentvooc-accent focus:ring-agentvooc-accent rounded"
+          />
+        </div>
+        {characterData.plugins.includes("telegram") && (
+          <div>
+            <h4 className="text-sm font-medium text-agentvooc-secondary mb-2">
+              Telegram Settings
+            </h4>
+            <div className="ml-4 space-y-4">
+              <div>
+                <label
+                  htmlFor="telegramBotToken"
+                  className="block text-sm font-medium text-agentvooc-secondary mb-1"
+                >
+                  Telegram Bot Token
+                </label>
+                <Input
+                  id="telegramBotToken"
+                  name="telegramBotToken"
+                  type="text"
+                  value={telegramBotToken}
+                  onChange={handleTelegramBotTokenChange}
+                  placeholder="e.g., 123456789:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
+                  className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+        <div>
+          <label
+            htmlFor="enableTwitterPlugin"
+            className="block text-sm font-medium text-agentvooc-secondary mb-1"
+          >
+            Enable Twitter Plugin
+          </label>
+          <input
+            id="enableTwitterPlugin"
+            name="enableTwitterPlugin"
+            type="checkbox"
+            checked={characterData.plugins.includes("twitter")}
+            onChange={(e) => handleTwitterCheckbox(e.target.checked)}
+            className="text-agentvooc-accent focus:ring-agentvooc-accent rounded"
+          />
+        </div>
+        {characterData.plugins.includes("twitter") && (
+          <div>
+            <h4 className="text-sm font-medium text-agentvooc-secondary mb-2">
+              Twitter Settings
+            </h4>
+            <div className="ml-4 space-y-4">
+              <div>
+                <label
+                  htmlFor="twitterUsername"
+                  className="block text-sm font-medium text-agentvooc-secondary mb-1"
+                >
+                  Twitter Username
+                </label>
+                <Input
+                  id="twitterUsername"
+                  name="twitterUsername"
+                  type="text"
+                  value={twitterUsername}
+                  onChange={handleTwitterUsernameChange}
+                  placeholder="e.g., @username"
+                  className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="twitterPassword"
+                  className="block text-sm font-medium text-agentvooc-secondary mb-1"
+                >
+                  Twitter Password
+                </label>
+                <Input
+                  id="twitterPassword"
+                  name="twitterPassword"
+                  type="password"
+                  value={twitterPassword}
+                  onChange={handleTwitterPasswordChange}
+                  placeholder="Enter your Twitter password"
+                  className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="twitterEmail"
+                  className="block text-sm font-medium text-agentvooc-secondary mb-1"
+                >
+                  Twitter Email
+                </label>
+                <Input
+                  id="twitterEmail"
+                  name="twitterEmail"
+                  type="email"
+                  value={twitterEmail}
+                  onChange={handleTwitterEmailChange}
+                  placeholder="e.g., user@example.com"
+                  className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+        <div>
+          <label
+            htmlFor="plugins"
+            className="block text-sm font-medium text-agentvooc-secondary mb-1"
+          >
+            Other Plugins (comma-separated)
+          </label>
+          <Input
+            id="plugins"
+            name="plugins"
+            type="text"
+            value={characterData.plugins.filter((p) => !["email", "emailautomation", "telegram", "twitter"].includes(p)).join(",")}
+            onChange={(e) => {
+              const newPlugins = e.target.value
+                .split(",")
+                .map((s) => s.trim())
+                .filter((s) => s);
+              const activePlugins = userQuery.data?.activePlugins || [];
+              const invalidPlugins = newPlugins.filter((p) => !activePlugins.includes(p));
+              if (invalidPlugins.length > 0) {
+                toast({
+                  variant: "destructive",
+                  title: "Subscription Required",
+                  description: `You need a subscription for the following plugins: ${invalidPlugins.join(", ")}. Please subscribe in the settings page.`,
+                  action: (
+                    <Button
+                      onClick={() => navigate("/settings", { state: { from: "create-character" } })}
+                      className="bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-primary-bg"
+                    >
+                      Go to Settings
+                    </Button>
+                  ),
+                });
+                return;
+              }
+              setCharacterData((prev) => ({
+                ...prev,
+                plugins: [
+                  ...prev.plugins.filter((p) =>
+                    ["email", "emailautomation", "telegram", "twitter"].includes(p)
+                  ),
+                  ...newPlugins,
+                ],
+              }));
+            }}
+            placeholder="Enter plugins (e.g., solana)"
+            className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-agentvooc-secondary mb-1">
+            Secrets
+          </label>
+          {secretsError && (
+            <p className="text-red-500 text-sm mb-2">{secretsError}</p>
+          )}
+          {secrets.map((secret, index) => (
+            <div key={index} className="flex items-center space-x-2 mb-2">
+              <Input
+                type="text"
+                placeholder="Key (e.g., EMAIL_OUTGOING_USER)"
+                value={secret.key}
+                onChange={(e) => handleSecretChange(index, "key", e.target.value)}
+                className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg w-1/2"
+                disabled={secret.key === "TELEGRAM_BOT_TOKEN"}
+              />
+              <Input
+                type="text"
+                placeholder="Value (e.g., your-email@gmail.com)"
+                value={secret.value}
+                onChange={(e) => handleSecretChange(index, "value", e.target.value)}
+                className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg w-1/2"
+                disabled={secret.key === "TELEGRAM_BOT_TOKEN"}
+              />
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => removeSecret(index)}
+                disabled={secrets.length === 1 || secret.key === "TELEGRAM_BOT_TOKEN"}
+                className="bg-red-500 text-white hover:bg-red-600 rounded-lg"
+              >
+                Remove
+              </Button>
+            </div>
+          ))}
+          <Button
+            type="button"
+            onClick={addSecret}
+            className="mt-2 bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-primary-bg shadow-agentvooc-glow rounded-lg"
+          >
+            Add Secret
+          </Button>
+        </div>
+        <div>
+          <label
+            htmlFor="voiceModel"
+            className="block text-sm font-medium text-agentvooc-secondary mb-1"
+          >
+            Voice Model
+          </label>
+          <Input
+            id="voiceModel"
+            name="voiceModel"
+            type="text"
+            value={characterData.settings.voice.model}
+            onChange={(e) => handleAdvancedInputChange(e, "settings", "voiceModel")}
+            placeholder="Enter voice model (e.g., en_US-hfc_female-medium)"
+            className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+          />
+        </div>
+        <div>
+          <label
+            htmlFor="ragKnowledge"
+            className="block text-sm font-medium text-agentvooc-secondary mb-1"
+          >
+            Enable RAG Knowledge
+          </label>
+          <select
+            id="ragKnowledge"
+            name="ragKnowledge"
+            value={characterData.settings.ragKnowledge.toString()}
+            onChange={(e) => handleAdvancedInputChange(e, "settings", "ragKnowledge")}
+            className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent rounded-lg w-full p-2"
+          >
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </div>
+        <div>
+          <label
+            htmlFor="styleAll"
+            className="block text-sm font-medium text-agentvooc-secondary mb-1"
+          >
+            Style: All Contexts (comma-separated)
+          </label>
+          <Input
+            id="styleAll"
+            name="styleAll"
+            type="text"
+            value={characterData.style.all.join(",")}
+            onChange={(e) => handleAdvancedInputChange(e, "style", "all")}
+            placeholder="Enter styles (e.g., concise, witty)"
+            className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+          />
+        </div>
+        <div>
+          <label
+            htmlFor="styleChat"
+            className="block text-sm font-medium text-agentvooc-secondary mb-1"
+          >
+            Style: Chat (comma-separated)
+          </label>
+          <Input
+            id="styleChat"
+            name="styleChat"
+            type="text"
+            value={characterData.style.chat.join(",")}
+            onChange={(e) => handleAdvancedInputChange(e, "style", "chat")}
+            placeholder="Enter chat styles (e.g., playful, dynamic)"
+            className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+          />
+        </div>
+        <div>
+          <label
+            htmlFor="stylePost"
+            className="block text-sm font-medium text-agentvooc-secondary mb-1"
+          >
+            Style: Post (comma-separated)
+          </label>
+          <Input
+            id="stylePost"
+            name="stylePost"
+            type="text"
+            value={characterData.style.post.join(",")}
+            onChange={(e) => handleAdvancedInputChange(e, "style", "post")}
+            placeholder="Enter post styles (e.g., ironic, relevant)"
+            className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+          />
+        </div>
+        <div className="flex gap-4">
+          <Button
+            type="submit"
+            className="bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-primary-bg shadow-agentvooc-glow rounded-lg px-6 py-2"
+            disabled={createCharacterMutation.isPending || uploadImageMutation.isPending}
+          >
+            {createCharacterMutation.isPending || uploadImageMutation.isPending ? (
+              <>
+                <Loader2 className="text-agentvooc-primary mr-2 h-4 w-4 animate-spin" />
+                Creating...
+              </>
+            ) : (
+              "Create Character"
+            )}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleCancel}
+            className="border-agentvooc-accent/30 text-agentvooc-primary hover:bg-agentvooc-accent hover:text-agentvooc-primary-bg rounded-lg px-6 py-2"
+          >
+            Cancel
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+}

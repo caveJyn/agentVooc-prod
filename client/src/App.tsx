@@ -1,0 +1,210 @@
+// client/src/App.tsx
+import "./index.css";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { AppSidebar } from "./components/app-sidebar";
+import { TooltipProvider } from "./components/ui/tooltip";
+import { Toaster } from "./components/ui/toaster";
+import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
+import Chat from "./routes/chat";
+import Home from "./routes/home";
+import Landing from "./routes/landing";
+import Auth from "./routes/auth";
+import SuccessPage from "./routes/success";
+import CancelPage from "./routes/cancel";
+import { ProtectedRoute } from "./components/protected-route";
+// import useVersion from "./hooks/use-version";
+import { BackgroundWrapper } from "./components/BackgroundWrapper";
+import AgentRoute from "./routes/overview";
+import Payment from "./routes/payment";
+import KnowledgeVault from "./routes/knowledgeVault";
+import CreateCharacter from "./components/create-character";
+import EditCharacter from "./components/edit-character";
+import Settings from "./routes/settings";
+import EmailVault from "./routes/emailVault";
+import { Helmet, HelmetProvider } from "react-helmet-async";
+import LegalDocumentPage from "./routes/legal/[slug]";
+import CompanyPage from "./routes/company/[slug]";
+import BlogListPage from "./routes/blog/index";
+import BlogPostPage from "./routes/blog/[slug]";
+import PressListPage from "./routes/press/index";
+import PressPostPage from "./routes/press/[slug]";
+import ProductListPage from "./routes/product";
+import ProductPage from "./routes/product/[slug]";
+import Demo from "./routes/demo";
+import { useEffect } from "react";
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: Number.POSITIVE_INFINITY,
+    },
+  },
+});
+
+// Routes where the sidebar should be displayed
+const SIDEBAR_ROUTES = ["/home", "/chat", "/settings", "/create-character", "/edit-character", "/email-vault", "/knowledge"];
+
+function AppContent() {
+  const location = useLocation();
+  const showSidebar = SIDEBAR_ROUTES.some((route) =>
+    location.pathname.startsWith(route)
+  );
+
+  // console.log("AppContent: Rendering, showSidebar:",
+  //   showSidebar,
+  //   "pathname:",
+  //   location.pathname
+  // );
+  // console.log(showSidebar ? "Rendering sidebar routes" : "Rendering non-sidebar routes",
+  //   "for pathname:",
+  //   location.pathname
+  // );
+
+  // Track page views on route change
+  useEffect(() => {
+    // Initialize twq if not already loaded
+    if (!window.twq) {
+      window.twq = function (...args: any[]) {
+        window.twq.exe ? window.twq.exe(...args) : window.twq.queue.push(args);
+      } as any;
+      window.twq.version = "1.1";
+      window.twq.queue = [];
+    }
+    window.twq("config", "q5y7y");
+    window.twq("event", "PageView");
+  }, [location]);
+
+  return (
+    <TooltipProvider delayDuration={0}>
+      <SidebarProvider>
+        <Helmet>
+          <script
+            async
+            src="https://static.ads-twitter.com/uwt.js"
+            type="text/javascript"
+          ></script>
+        </Helmet>
+        {showSidebar && <AppSidebar />}
+        <div
+          className={`flex flex-1 flex-col gap-4 size-full w-full ${
+            showSidebar ? "max-w-[90%] mx-auto px-4 md:px-6 mt-9" : "max-w-[100%]"
+          } bg-transparent`}
+        >
+          {showSidebar && (
+            <div className="flex items-center p-4">
+              <SidebarTrigger className="text-agentvooc-primary hover:bg-agentvooc-secondary-accent hover:text-agentvooc-accent" />
+            </div>
+          )}
+          {showSidebar && <SidebarInset />}
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/auth/email" element={<Auth />} />
+            <Route path="/auth/phantom" element={<Auth />} />
+            <Route path="/payment" element={<Payment />} />
+            <Route path="/success" element={<SuccessPage />} />
+            <Route path="/cancel" element={<CancelPage />} />
+            <Route path="/auth/callback/google" element={<Auth />} />
+            <Route
+              path="/knowledge/:agentId"
+              element={
+                <ProtectedRoute>
+                  <KnowledgeVault />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/email-vault/:agentId"
+              element={
+                <ProtectedRoute>
+                  <EmailVault />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/home"
+              element={
+                <ProtectedRoute>
+                  <Home />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/chat/:agentId"
+              element={
+                <ProtectedRoute>
+                  <Chat />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings/:agentId"
+              element={
+                <ProtectedRoute>
+                  <AgentRoute />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute>
+                  <Settings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/create-character"
+              element={
+                <ProtectedRoute>
+                  <CreateCharacter setError={() => {}} />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/edit-character/:id"
+              element={
+                <ProtectedRoute>
+                  <EditCharacter setError={() => {}} />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/legal/:slug" element={<LegalDocumentPage />} />
+            <Route path="/company/:slug" element={<CompanyPage />} />
+            <Route path="/company/blog" element={<BlogListPage />} />
+            <Route path="/company/blog/:slug" element={<BlogPostPage />} />
+            <Route path="/company/press" element={<PressListPage />} />
+            <Route path="/company/press/:slug" element={<PressPostPage />} />
+	    <Route path="/product" element={<ProductListPage />} />
+            <Route path="/product/:slug" element={<ProductPage />} />
+            <Route path="/demo" element={<Demo />} />
+            <Route
+              path="*"
+              element={<div>No route matched: {location.pathname}</div>}
+            />
+          </Routes>
+        </div>
+      </SidebarProvider>
+      <Toaster />
+    </TooltipProvider>
+  );
+}
+
+function App() {
+  // useVersion();
+  // console.log("App: Rendering with KnowledgeVault route fix v2");
+  return (
+    <QueryClientProvider client={queryClient}>
+      <HelmetProvider>
+        <BackgroundWrapper className="dark antialiased">
+          <BrowserRouter>
+            <AppContent />
+          </BrowserRouter>
+        </BackgroundWrapper>
+      </HelmetProvider>
+    </QueryClientProvider>
+  );
+}
+
+export default App;

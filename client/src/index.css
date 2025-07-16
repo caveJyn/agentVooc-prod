@@ -1,0 +1,231 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    :root {
+        /* ElizaOS Original Colors */
+        --background: 0 0% 100%;
+        --foreground: 240 10% 3.9%;
+        --card: 0 0% 93%;
+        --card-foreground: 240 10% 3.9%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 240 10% 3.9%;
+        --primary: 240 5.9% 10%;
+        --primary-foreground: 0 0% 98%;
+        --secondary: 240 4.8% 95.9%;
+        --secondary-foreground: 240 5.9% 10%;
+        --muted: 240 4.8% 95.9%;
+        --muted-foreground: 240 3.8% 46.1%;
+        --accent: 240 4.8% 97%;
+        --accent-foreground: 240 5.9% 10%;
+        --destructive: 0 84.2% 60.2%;
+        --destructive-foreground: 0 0% 98%;
+        --border: 240 5.9% 90%;
+        --input: 240 5.9% 90%;
+        --ring: 240 5.9% 10%;
+        --radius: 1rem;
+        --sidebar-background: 0 0% 98%;
+        --sidebar-foreground: 240 5.3% 26.1%;
+        --sidebar-primary: 240 5.9% 10%;
+        --sidebar-primary-foreground: 0 0% 98%;
+        --sidebar-accent: 240 4.8% 95.9%;
+        --sidebar-accent-foreground: 240 5.9% 10%;
+        --sidebar-border: 220 13% 91%;
+        --sidebar-ring: 217.2 91.2% 59.8%;
+        /* AgentVooc Custom Colors */
+        --agentvooc-primary-bg: 180 20% 10%; /* #1A2526 - Dark teal/gray */
+        --agentvooc-primary-bg-dark: 180 20% 8%; /* #151E1F - Darker for gradients */
+        --agentvooc-primary: 0 0% 100%; /* #FFFFFF - White for text */
+        --agentvooc-primary-foreground: 180 20% 10%; /* #1A2526 - Dark teal for light backgrounds */
+        --agentvooc-secondary: 180 10% 70%; /* #B0B8B4 - Light gray */
+        --agentvooc-secondary-accent: 180 15% 20%; /* #2A3738 - Secondary backgrounds */
+        --agentvooc-secondary-dark: 180 15% 15%; /* #212A2B - Darker secondary */
+        --agentvooc-accent: 160 100% 85%; /* #00FFB3 - Neon green */
+        --agentvooc-accent-dark: 160 100% 75%; /* #00CC8F - Darker neon green */
+        --agentvooc-accent-muted: 160 50% 90%; /* #80FFD9 - Softer green */
+        --agentvooc-stars: 160 100% 15%; /* #004033 - Dim green for stars */
+        --agentvooc-button-bg: 180 15% 25%; /* #2F3D40 - Button background */
+        --agentvooc-button-bg-hover: 180 15% 30%; /* #374647 - Button hover */
+        --agentvooc-glow: 160 100% 85% / 0.5; /* #00FFB3 with 50% opacity */
+        --agentvooc-border: 180 15% 30%; /* #374647 - Borders */
+        --agentvooc-error: 0 70% 50%; /* #E63939 - Error states */
+        --agentvooc-error-foreground: 0 0% 100%; /* #FFFFFF - Error text */
+        --agentvooc-success: 140 60% 50%; /* #26A680 - Success states */
+        --agentvooc-success-foreground: 0 0% 100%; /* #FFFFFF - Success text */
+    }
+
+    .dark {
+        /* ElizaOS Dark Mode */
+        --background: 180 20% 10%; /* #1A2526 */
+        --foreground: 0 0% 100%; /* #FFFFFF */
+        --card: 180 20% 12%; /* #1E2728 */
+        --card-foreground: 0 0% 100%; /* #FFFFFF */
+        --popover: 180 20% 12%; /* #1E2728 */
+        --popover-foreground: 0 0% 100%; /* #FFFFFF */
+        --primary: 160 100% 85%; /* #00FFB3 */
+        --primary-foreground: 180 20% 10%; /* #1A2526 */
+        --secondary: 180 15% 20%; /* #2A3738 */
+        --secondary-foreground: 0 0% 100%; /* #FFFFFF */
+        --muted: 180 15% 20%; /* #2A3738 */
+        --muted-foreground: 180 10% 70%; /* #B0B8B4 */
+        --accent: 180 15% 25%; /* #2F3D40 */
+        --accent-foreground: 0 0% 100%; /* #FFFFFF */
+        --destructive: 0 62.8% 30.6%; /* #802828 */
+        --destructive-foreground: 0 0% 100%; /* #FFFFFF */
+        --border: 180 15% 20%; /* #2A3738 */
+        --input: 180 15% 20%; /* #2A3738 */
+        --ring: 160 100% 85%; /* #00FFB3 */
+        --sidebar-background: 180 20% 10%; /* #1A2526 */
+        --sidebar-foreground: 0 0% 100%; /* #FFFFFF */
+        --sidebar-primary: 160 100% 85%; /* #00FFB3 */
+        --sidebar-primary-foreground: 180 20% 10%; /* #1A2526 */
+        --sidebar-accent: 180 15% 20%; /* #2A3738 */
+        --sidebar-accent-foreground: 0 0% 100%; /* #FFFFFF */
+        --sidebar-border: 180 15% 20%; /* #2A3738 */
+        --sidebar-ring: 160 100% 85%; /* #00FFB3 */
+        /* AgentVooc Dark Mode */
+        --agentvooc-primary-bg: 180 20% 10%; /* #1A2526 */
+        --agentvooc-primary-bg-dark: 180 20% 8%; /* #151E1F */
+        --agentvooc-primary: 0 0% 100%; /* #FFFFFF */
+        --agentvooc-primary-foreground: 180 20% 10%; /* #1A2526 */
+        --agentvooc-secondary: 180 10% 70%; /* #B0B8B4 */
+        --agentvooc-secondary-accent: 180 19% 15%; /* #2A3738 */
+        --agentvooc-secondary-dark: 180 15% 15%; /* #212A2B */
+        --agentvooc-accent: 160 100% 85%; /* #00FFB3 */
+        --agentvooc-accent-dark: 160 100% 75%; /* #00CC8F */
+        --agentvooc-accent-muted: 160 50% 90%; /* #80FFD9 */
+        --agentvooc-stars: 160 100% 15%; /* #004033 */
+        --agentvooc-button-bg: 180 15% 25%; /* #2F3D40 */
+        --agentvooc-button-bg-hover: 180 15% 30%; /* #374647 */
+        --agentvooc-glow: 160 100% 85% / 0.1; /* #00FFB3 with 10% opacity */
+        --agentvooc-border: 180 15% 30%; /* #374647 */
+        --agentvooc-error: 0 70% 50%; /* #E63939 */
+        --agentvooc-error-foreground: 0 0% 100%; /* #FFFFFF */
+        --agentvooc-success: 140 60% 50%; /* #26A680 */
+        --agentvooc-success-foreground: 0 0% 100%; /* #FFFFFF */
+    }
+}
+
+@layer base {
+    * {
+        @apply border-agentvooc-border;
+    }
+
+    body {
+        @apply bg-agentvooc-primary-bg text-agentvooc-primary font-sans;
+    }
+
+    p, li {
+        line-height: 1.6;
+        @apply text-agentvooc-secondary;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+        @apply text-agentvooc-primary font-bold;
+    }
+
+    /* Custom Glow Effect for AgentVooc */
+    .shadow-agentvooc-glow {
+        box-shadow: 0 0 5px hsl(var(--agentvooc-glow));
+    }
+}
+
+@layer utilities {
+    /* Custom bullet styling */
+    ul.custom-bullets li::marker {
+        color: hsl(var(--agentvooc-accent));
+    }
+    .bg-blend-overlay {
+  background-blend-mode: overlay;
+}
+
+    /* Footer link underline effect */
+    .footer-link {
+        position: relative;
+        @apply text-agentvooc-accent;
+    }
+    .footer-link::after {
+        content: '';
+        position: absolute;
+        width: 0;
+        height: 1px;
+        bottom: 0;
+        left: 0;
+        background-color: hsl(var(--agentvooc-accent-dark));
+        transition: width 0.3s;
+    }
+    .footer-link:hover::after {
+        width: 100%;
+    }
+
+    /* Section fade-in animation */
+    
+    section.animate {
+        opacity: 0;
+        transform: translateY(20px);
+        transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+    }
+    section.animate.visible {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    /* Combined animation: Initial fade followed by pulsing */
+    @keyframes star-sequence {
+        0% {
+            opacity: 0.8;
+            transform: scale(1);
+        }
+        25% {
+            opacity: 0.45;
+            transform: scale(1);
+        }
+        50% {
+            opacity: 0.45;
+            transform: scale(1.2);
+        }
+        75% {
+            opacity: 0.15;
+            transform: scale(1);
+        }
+        100% {
+            opacity: 0.55;
+            transform: scale(1);
+        }
+    }
+    .animate-star-sequence {
+        animation: star-sequence 4s infinite ease-in-out;
+    }
+
+    /* Glow pulse animation for buttons */
+    @keyframes glow-pulse {
+        0% { box-shadow: 0 0 5px hsl(var(--agentvooc-glow)); }
+        50% { box-shadow: 0 0 15px hsl(var(--agentvooc-glow)); }
+        100% { box-shadow: 0 0 5px hsl(var(--agentvooc-glow)); }
+    }
+    .animate-glow-pulse {
+        animation: glow-pulse 2s infinite ease-in-out;
+    }
+
+    /* Fade-in animation for text */
+    @keyframes fade-in {
+        0% { opacity: 0; transform: translateY(20px); }
+        100% { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in {
+        animation: fade-in 1s ease-out forwards;
+    }
+
+    /* Mobile responsiveness */
+    @media (max-width: 640px) {
+        h1 {
+            font-size: 2.5rem;
+        }
+        button {
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            @apply bg-agentvooc-button-bg text-agentvooc-accent;
+        }
+    }
+}

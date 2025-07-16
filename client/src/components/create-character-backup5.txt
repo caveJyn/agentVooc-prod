@@ -1,0 +1,404 @@
+return (
+  <div className="min-h-screen bg-gradient-to-br from-agentvooc-primary-bg via-agentvooc-primary-bg to-agentvooc-secondary-accent/20 p-6">
+    <div className="max-w-6xl mx-auto">
+      {/* Header Card */}
+      <div className="bg-agentvooc-primary-bg/90 backdrop-blur-sm border border-agentvooc-accent/30 rounded-2xl shadow-agentvooc-glow mb-8 p-8">
+        <div className="flex items-center space-x-4 mb-6">
+          <div className="w-12 h-12 bg-gradient-to-br from-agentvooc-accent to-agentvooc-button-bg rounded-xl flex items-center justify-center">
+            <svg className="w-6 h-6 text-agentvooc-primary-bg" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+            </svg>
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-agentvooc-primary bg-gradient-to-r from-agentvooc-accent to-agentvooc-button-bg bg-clip-text text-transparent">
+              Create New Character
+            </h1>
+            <p className="text-agentvooc-secondary mt-1">Design and configure your AI agent with advanced settings</p>
+          </div>
+        </div>
+
+        {/* Preset Selection */}
+        <div className="mb-6">
+          <label className="block text-sm font-semibold text-agentvooc-secondary mb-3 uppercase tracking-wider">
+            Select a Preset
+          </label>
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={() => handlePresetSelect(null)}
+              className={`px-6 py-3 rounded-xl font-medium transition-all duration-300 transform hover:scale-105 ${
+                selectedPreset === null
+                  ? "bg-gradient-to-r from-agentvooc-accent to-agentvooc-button-bg text-agentvooc-primary-bg shadow-lg shadow-agentvooc-accent/25"
+                  : "bg-agentvooc-secondary-accent/20 border border-agentvooc-accent/30 text-agentvooc-primary hover:bg-agentvooc-accent/10"
+              }`}
+            >
+              ✨ Create Your Own
+            </button>
+            {presetsQuery.isLoading ? (
+              <div className="flex items-center space-x-2 px-4 py-3 bg-agentvooc-secondary-accent/20 rounded-xl">
+                <div className="w-4 h-4 border-2 border-agentvooc-accent/30 border-t-agentvooc-accent rounded-full animate-spin"></div>
+                <span className="text-agentvooc-secondary">Loading presets...</span>
+              </div>
+            ) : presetsQuery.isError ? (
+              <div className="px-4 py-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400">
+                Error loading presets: {presetsQuery.error.message}
+              </div>
+            ) : (
+              presetsQuery.data?.map((preset: any) => (
+                <button
+                  key={preset._id}
+                  onClick={() => handlePresetSelect(preset)}
+                  className={`px-6 py-3 rounded-xl font-medium transition-all duration-300 transform hover:scale-105 ${
+                    selectedPreset === preset._id
+                      ? "bg-gradient-to-r from-agentvooc-accent to-agentvooc-button-bg text-agentvooc-primary-bg shadow-lg shadow-agentvooc-accent/25"
+                      : "bg-agentvooc-secondary-accent/20 border border-agentvooc-accent/30 text-agentvooc-primary hover:bg-agentvooc-accent/10"
+                  }`}
+                >
+                  🎭 {preset.name}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-8">
+        {/* Basic Information Card */}
+        <div className="bg-agentvooc-primary-bg/90 backdrop-blur-sm border border-agentvooc-accent/30 rounded-2xl shadow-agentvooc-glow p-8">
+          <div className="flex items-center space-x-3 mb-6">
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+              <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <h2 className="text-xl font-bold text-agentvooc-primary">Basic Information</h2>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div>
+              <label htmlFor="name" className="block text-sm font-semibold text-agentvooc-secondary mb-2 uppercase tracking-wider">
+                Character Name *
+              </label>
+              <input
+                id="name"
+                name="name"
+                type="text"
+                value={characterData.name}
+                onChange={handleInputChange}
+                placeholder="Enter character name (e.g., Eliza)"
+                className="w-full px-4 py-3 text-agentvooc-primary bg-agentvooc-secondary-accent/50 border border-agentvooc-accent/30 focus:ring-2 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-xl transition-all duration-300"
+                required
+              />
+            </div>
+
+            <div>
+              <label htmlFor="username" className="block text-sm font-semibold text-agentvooc-secondary mb-2 uppercase tracking-wider">
+                Username
+              </label>
+              <input
+                id="username"
+                name="username"
+                type="text"
+                value={characterData.username}
+                onChange={handleInputChange}
+                placeholder="Enter username (e.g., eliza)"
+                className="w-full px-4 py-3 text-agentvooc-primary bg-agentvooc-secondary-accent/50 border border-agentvooc-accent/30 focus:ring-2 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-xl transition-all duration-300"
+              />
+            </div>
+
+            <div className="lg:col-span-2">
+              <label htmlFor="profileImage" className="block text-sm font-semibold text-agentvooc-secondary mb-2 uppercase tracking-wider">
+                Profile Image
+              </label>
+              <div className="flex items-center space-x-4">
+                {imagePreview && (
+                  <div className="relative">
+                    <img
+                      src={imagePreview}
+                      alt="Profile preview"
+                      className="w-20 h-20 object-cover rounded-xl border-2 border-agentvooc-accent/30 shadow-lg"
+                    />
+                    <div className="absolute -top-2 -right-2 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  </div>
+                )}
+                <div className="flex-1">
+                  <input
+                    id="profileImage"
+                    name="profileImage"
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif"
+                    onChange={handleImageChange}
+                    className="w-full px-4 py-3 text-agentvooc-primary bg-agentvooc-secondary-accent/50 border border-agentvooc-accent/30 focus:ring-2 focus:ring-agentvooc-accent focus:border-agentvooc-accent rounded-xl transition-all duration-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-agentvooc-accent file:text-agentvooc-primary-bg file:font-medium hover:file:bg-agentvooc-button-bg"
+                  />
+                  {profileImage && (
+                    <p className="text-sm text-agentvooc-secondary mt-2 flex items-center">
+                      <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+                      </svg>
+                      Selected: {profileImage.name}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Character Personality Card */}
+        <div className="bg-agentvooc-primary-bg/90 backdrop-blur-sm border border-agentvooc-accent/30 rounded-2xl shadow-agentvooc-glow p-8">
+          <div className="flex items-center space-x-3 mb-6">
+            <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-teal-600 rounded-lg flex items-center justify-center">
+              <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h2 className="text-xl font-bold text-agentvooc-primary">Character Personality</h2>
+          </div>
+
+          <div className="space-y-6">
+            <div>
+              <label htmlFor="system" className="block text-sm font-semibold text-agentvooc-secondary mb-2 uppercase tracking-wider">
+                System Prompt
+              </label>
+              <textarea
+                id="system"
+                name="system"
+                value={characterData.system}
+                onChange={handleInputChange}
+                placeholder="Enter system prompt (e.g., Roleplay as a Web3 developer)"
+                className="w-full px-4 py-3 text-agentvooc-primary bg-agentvooc-secondary-accent/50 border border-agentvooc-accent/30 focus:ring-2 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-xl transition-all duration-300 resize-none"
+                style={{
+                  minHeight: '120px',
+                  maxHeight: '288px',
+                  height: `${Math.min(288, Math.max(120, (characterData.system.split('\n').length + 2) * 24))}px`,
+                  paddingBottom: '3rem',
+                }}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div>
+                <label htmlFor="bio" className="block text-sm font-semibold text-agentvooc-secondary mb-2 uppercase tracking-wider">
+                  Bio (one per line)
+                </label>
+                <textarea
+                  id="bio"
+                  name="bio"
+                  value={bioInput}
+                  onChange={(e) => handleArrayInputChange(e, "bio")}
+                  placeholder="Enter bio statements, one per line (e.g., Web3 developer,\nSecurity-minded)"
+                  className="w-full px-4 py-3 text-agentvooc-primary bg-agentvooc-secondary-accent/50 border border-agentvooc-accent/30 focus:ring-2 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-xl transition-all duration-300 resize-none"
+                  style={{
+                    minHeight: '120px',
+                    maxHeight: '288px',
+                    height: `${Math.min(288, Math.max(120, (bioInput.split('\n').length + 2) * 24))}px`,
+                    paddingBottom: '3rem',
+                  }}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="lore" className="block text-sm font-semibold text-agentvooc-secondary mb-2 uppercase tracking-wider">
+                  Lore (one per line)
+                </label>
+                <textarea
+                  id="lore"
+                  name="lore"
+                  value={loreInput}
+                  onChange={(e) => handleArrayInputChange(e, "lore")}
+                  placeholder="Enter lore snippets, one per line (e.g., Started in Web2,\nContributes to Ethereum)"
+                  className="w-full px-4 py-3 text-agentvooc-primary bg-agentvooc-secondary-accent/50 border border-agentvooc-accent/30 focus:ring-2 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-xl transition-all duration-300 resize-none"
+                  style={{
+                    minHeight: '120px',
+                    maxHeight: '288px',
+                    height: `${Math.min(288, Math.max(120, (loreInput.split('\n').length + 2) * 24))}px`,
+                    paddingBottom: '3rem',
+                  }}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="adjectives" className="block text-sm font-semibold text-agentvooc-secondary mb-2 uppercase tracking-wider">
+                  Personality Traits (one per line)
+                </label>
+                <textarea
+                  id="adjectives"
+                  name="adjectives"
+                  value={adjectivesInput}
+                  onChange={(e) => handleArrayInputChange(e, "adjectives")}
+                  placeholder="Enter personality traits, one per line (e.g., witty,\ntechnical)"
+                  className="w-full px-4 py-3 text-agentvooc-primary bg-agentvooc-secondary-accent/50 border border-agentvooc-accent/30 focus:ring-2 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-xl transition-all duration-300 resize-none"
+                  style={{
+                    minHeight: '120px',
+                    maxHeight: '288px',
+                    height: `${Math.min(288, Math.max(120, (adjectivesInput.split('\n').length + 2) * 24))}px`,
+                    paddingBottom: '3rem',
+                  }}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="topics" className="block text-sm font-semibold text-agentvooc-secondary mb-2 uppercase tracking-wider">
+                  Topics (one per line)
+                </label>
+                <textarea
+                  id="topics"
+                  name="topics"
+                  value={topicsInput}
+                  onChange={(e) => handleArrayInputChange(e, "topics")}
+                  placeholder="Enter topics, one per line (e.g., Web3,\nBlockchain)"
+                  className="w-full px-4 py-3 text-agentvooc-primary bg-agentvooc-secondary-accent/50 border border-agentvooc-accent/30 focus:ring-2 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-xl transition-all duration-300 resize-none"
+                  style={{
+                    minHeight: '120px',
+                    maxHeight: '288px',
+                    height: `${Math.min(288, Math.max(120, (topicsInput.split('\n').length + 2) * 24))}px`,
+                    paddingBottom: '3rem',
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Communication Style Card */}
+        <div className="bg-agentvooc-primary-bg/90 backdrop-blur-sm border border-agentvooc-accent/30 rounded-2xl shadow-agentvooc-glow p-8">
+          <div className="flex items-center space-x-3 mb-6">
+            <div className="w-8 h-8 bg-gradient-to-br from-pink-500 to-rose-600 rounded-lg flex items-center justify-center">
+              <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 13V5a2 2 0 00-2-2H4a2 2 0 00-2 2v8a2 2 0 002 2h3l3 3 3-3h3a2 2 0 002-2zM5 7a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1zm1 3a1 1 0 100 2h3a1 1 0 100-2H6z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <h2 className="text-xl font-bold text-agentvooc-primary">Communication Style</h2>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div>
+              <label htmlFor="styleAll" className="block text-sm font-semibold text-agentvooc-secondary mb-2 uppercase tracking-wider">
+                Style: All Contexts
+              </label>
+              <textarea
+                id="styleAll"
+                name="styleAll"
+                value={styleAllInput}
+                onChange={(e) => handleArrayInputChange(e, "styleAll")}
+                placeholder="Enter styles, one per line (e.g., concise,\nwitty)"
+                className="w-full px-4 py-3 text-agentvooc-primary bg-agentvooc-secondary-accent/50 border border-agentvooc-accent/30 focus:ring-2 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-xl transition-all duration-300 resize-none"
+                style={{
+                  minHeight: '120px',
+                  maxHeight: '288px',
+                  height: `${Math.min(288, Math.max(120, (styleAllInput.split('\n').length + 2) * 24))}px`,
+                  paddingBottom: '3rem',
+                }}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="styleChat" className="block text-sm font-semibold text-agentvooc-secondary mb-2 uppercase tracking-wider">
+                Style: Chat
+              </label>
+              <textarea
+                id="styleChat"
+                name="styleChat"
+                value={styleChatInput}
+                onChange={(e) => handleArrayInputChange(e, "styleChat")}
+                placeholder="Enter chat styles, one per line (e.g., playful,\ndynamic)"
+                className="w-full px-4 py-3 text-agentvooc-primary bg-agentvooc-secondary-accent/50 border border-agentvooc-accent/30 focus:ring-2 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-xl transition-all duration-300 resize-none"
+                style={{
+                  minHeight: '120px',
+                  maxHeight: '288px',
+                  height: `${Math.min(288, Math.max(120, (styleChatInput.split('\n').length + 2) * 24))}px`,
+                  paddingBottom: '3rem',
+                }}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="stylePost" className="block text-sm font-semibold text-agentvooc-secondary mb-2 uppercase tracking-wider">
+                Style: Post
+              </label>
+              <textarea
+                id="stylePost"
+                name="stylePost"
+                value={stylePostInput}
+                onChange={(e) => handleArrayInputChange(e, "stylePost")}
+                placeholder="Enter post styles, one per line (e.g., ironic,\nrelevant)"
+                className="w-full px-4 py-3 text-agentvooc-primary bg-agentvooc-secondary-accent/50 border border-agentvooc-accent/30 focus:ring-2 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-xl transition-all duration-300 resize-none"
+                style={{
+                  minHeight: '120px',
+                  maxHeight: '288px',
+                  height: `${Math.min(288, Math.max(120, (stylePostInput.split('\n').length + 2) * 24))}px`,
+                  paddingBottom: '3rem',
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Examples Card */}
+        <div className="bg-agentvooc-primary-bg/90 backdrop-blur-sm border border-agentvooc-accent/30 rounded-2xl shadow-agentvooc-glow p-8">
+          <div className="flex items-center space-x-3 mb-6">
+            <div className="w-8 h-8 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-lg flex items-center justify-center">
+              <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <h2 className="text-xl font-bold text-agentvooc-primary">Examples & Training Data</h2>
+          </div>
+
+          <div className="space-y-6">
+            <div>
+              <label htmlFor="messageExamples" className="block text-sm font-semibold text-agentvooc-secondary mb-2 uppercase tracking-wider">
+                Message Examples (JSON format)
+              </label>
+              <textarea
+                id="messageExamples"
+                name="messageExamples"
+                value={messageExamplesInput}
+                onChange={(e) => handleArrayInputChange(e, "messageExamples")}
+                placeholder={`Example format:\n[\n [\n {"user": "{{user1}}", "content": {"text": "Question"}},\n {"user": "CharacterName", "content": {"text": "Answer"}}\n ],\n [...]\n]`}
+                className="w-full px-4 py-3 text-agentvooc-primary bg-agentvooc-secondary-accent/50 border border-agentvooc-accent/30 focus:ring-2 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-xl transition-all duration-300 font-mono resize-none"
+                style={{
+                  minHeight: '120px',
+                  maxHeight: '288px',
+                  height: `${Math.min(288, Math.max(120, (messageExamplesInput.split('\n').length + 2) * 24))}px`,
+                  paddingBottom: '3rem',
+                }}
+              />
+              {messageExamplesError && (
+                <div className="mt-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 flex items-center">
+                  <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  {messageExamplesError}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="postExamples" className="block text-sm font-semibold text-agentvooc-secondary mb-2 uppercase tracking-wider">
+                Post Examples (one per line)
+              </label>
+              <textarea
+                id="postExamples"
+                name="postExamples"
+                value={postExamplesInput}
+                onChange={(e) => handleArrayInputChange(e, "postExamples")}
+                placeholder="Enter post examples, one per line (e.g., Debugged for 3 hours,\nGas fees are forever)"
+                className="w-full px-4 py-3 text-agentvooc-primary bg-agentvooc-secondary-accent/50 border border-agentvooc-accent/30 focus:ring-2 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-xl transition-all duration-300 resize-none"
+                style={{
+                  minHeight: '120px',
+                  maxHeight: '288px',
+                  height: `${Math.min(288, Math.max(120, (postExamplesInput.split('\n').length + 2) * 24))}px`,
+                  paddingBottom: '3rem',
+                }}
+              />
+            </div>
+          </div>
+        </div>
+</form>
+         </div>
+  </div>
+)

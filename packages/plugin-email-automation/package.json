@@ -1,0 +1,101 @@
+{
+    "name": "@elizaos-plugins/plugin-email-automation",
+    "version": "0.25.6-alpha.1",
+    "description": "AI-powered email automation plugin for Eliza",
+    "type": "module",
+    "main": "./dist/index.js",
+    "module": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "build": "tsup --format esm --dts",
+        "clean": "rimraf dist",
+        "dev": "tsup --format esm --dts --watch",
+        "lint": "biome lint .",
+        "lint:fix": "biome check --apply .",
+        "format": "biome format .",
+        "format:fix": "biome format --write .",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "test:coverage": "vitest run --coverage"
+    },
+    "dependencies": {
+        "@elizaos/core": "workspace:^",
+        "handlebars": "^4.7.8",
+        "resend": "^4.5.1",
+        "typescript": "5.6.3",
+        "tsup": "8.3.5"
+    },
+    "devDependencies": {
+        "@biomejs/biome": "1.9.4",
+        "@types/jest": "^29.0.0",
+        "@types/node": "^20.0.0",
+        "jest": "^29.0.0",
+        "rimraf": "^5.0.0",
+        "ts-jest": "^29.0.0",
+        "tsup": "^8.5.0",
+        "typescript": "^5.0.0",
+        "vitest": "^3.0.0"
+    },
+    "jest": {
+        "preset": "ts-jest",
+        "testEnvironment": "node",
+        "moduleNameMapper": {
+            "^(\\.{1,2}/.*)\\.js$": "$1"
+        },
+        "transform": {
+            "^.+\\.(ts|tsx)$": "ts-jest"
+        },
+        "testMatch": [
+            "**/__tests__/**/*.test.(ts|js)"
+        ],
+        "moduleFileExtensions": [
+            "ts",
+            "tsx",
+            "js",
+            "jsx",
+            "json",
+            "node"
+        ]
+    },
+    "publishConfig": {
+        "access": "public"
+    },
+    "agentConfig": {
+        "pluginType": "elizaos:client:1.0.0",
+        "pluginParameters": {
+            "RESEND_API_KEY": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Your Resend API key",
+                "optional": false
+            },
+            "DEFAULT_TO_EMAIL": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Default recipient",
+                "optional": false
+            },
+            "DEFAULT_FROM_EMAIL": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Default sender",
+                "optional": false
+            },
+            "EMAIL_AUTOMATION_ENABLED": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Enable AI detection. If this is enabled, the plugin will automatically detect email-worthy conversations and handle generation/delivery and only that.",
+                "optional": true
+            },
+            "EMAIL_EVALUATION_PROMPT": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Custom detection criteria for shouldEmail",
+                "optional": true
+            }
+        }
+    }
+}
