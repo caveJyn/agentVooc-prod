@@ -56,8 +56,6 @@ export const Footer = ({ footerSection }: FooterProps) => {
       ? footerSection.productLinks
       : [
           { label: "Features", url: "/product/features" },
-          { label: "Pricing", url: "/product/pricing" },
-          { label: "Documentation", url: "/product/docs" },
         ]
   );
 

@@ -5144,19 +5144,6 @@ router.get("/company-pages/:slug?", async (req, res) => {
   }
 });
 
-
-// Static routes in the application
-const staticRoutes = [
-  { path: "/", changefreq: "weekly", priority: 1.0 },
-  { path: "/features", changefreq: "monthly", priority: 0.9 },
-  { path: "/pricing", changefreq: "monthly", priority: 0.9 },
-  { path: "/docs", changefreq: "monthly", priority: 0.8 },
-  { path: "/demo", changefreq: "monthly", priority: 0.8 },
-  { path: "/company/blog", changefreq: "weekly", priority: 0.8 },
-  { path: "/company/press", changefreq: "weekly", priority: 0.8 },
-];
-
-
 router.get("/product-pages/:slug?", async (req, res) => {
   try {
     const { slug } = req.params;
@@ -5228,20 +5215,41 @@ router.get("/product-pages/:slug?", async (req, res) => {
 });
 
 
+// Static routes in the application
+const staticRoutes = [
+  { path: "/", changefreq: "weekly", priority: 1.0 },
+  { path: "/demo", changefreq: "monthly", priority: 0.8 },
+  { path: "/company/blog", changefreq: "weekly", priority: 0.8 },
+  { path: "/company/press", changefreq: "weekly", priority: 0.8 },
+];
+
 router.get("/sitemap.xml", async (req, res) => {
   try {
     const websiteDomain = process.env.WEBSITE_DOMAIN;
+
+    // Fetch all blog posts
     const blogPosts = await sanityClient.fetch(
       `*[_type == "blogPost" && defined(slug.current) && published == true] { slug, publishedAt }`
     );
+
+    // Fetch all press posts
     const pressPosts = await sanityClient.fetch(
       `*[_type == "pressPost" && defined(slug.current) && published == true] { slug, publishedAt }`
     );
+
+    // Fetch all company pages
     const companyPages = await sanityClient.fetch(
       `*[_type == "companyPage" && defined(slug.current)] { slug, lastUpdated }`
     );
+
+    // Fetch all legal documents
     const legalDocuments = await sanityClient.fetch(
       `*[_type == "legalDocument" && defined(slug.current)] { slug, lastUpdated }`
+    );
+
+    // Fetch all product pages
+    const productPages = await sanityClient.fetch(
+      `*[_type == "productPage" && defined(slug.current)] { slug, lastUpdated }`
     );
 
     const currentDate = new Date().toISOString();
@@ -5306,6 +5314,17 @@ router.get("/sitemap.xml", async (req, res) => {
   </url>`
     )
     .join("")}
+  ${productPages
+    .map(
+      (page: any) => `
+  <url>
+    <loc>${websiteDomain}/product/${page.slug.current}</loc>
+    <lastmod>${formatLastmod(page.lastUpdated)}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>`
+    )
+    .join("")}
 </urlset>`;
 
     res.header("Content-Type", "application/xml");
@@ -5316,12 +5335,9 @@ router.get("/sitemap.xml", async (req, res) => {
   }
 });
 
-
-// Add this endpoint alongside your sitemap.xml endpoint in api.ts
-
 router.get("/robots.txt", async (req, res) => {
   try {
-    const websiteDomain = process.env.WEBSITE_DOMAIN ;
+    const websiteDomain = process.env.WEBSITE_DOMAIN;
     
     const robots = `User-agent: *
 Allow: /
@@ -5333,10 +5349,10 @@ Sitemap: ${websiteDomain}/api/sitemap.xml
 Crawl-delay: 1
 
 # Disallow certain paths if needed (uncomment and modify as required)
-# Disallow: /admin/
-# Disallow: /api/
-# Disallow: /auth
-# Disallow: /private/`;
+Disallow: /admin/
+Disallow: /api/
+Disallow: /auth
+Disallow: /private/`;
 
     res.header("Content-Type", "text/plain");
     res.send(robots);

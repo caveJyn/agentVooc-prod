@@ -1,5 +1,4 @@
-// /home/cave/projects/bots/venv/elizaOS_env/eliza-main/client/src/routes/landing.tsx
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import AuthSelection from "@/components/auth-selection";
 import Navbar from "@/components/navbar";
 import Subscriptions from "@/components/subscriptions";
@@ -7,8 +6,6 @@ import { FeaturesSection } from "@/components/landing/features-section";
 import { BenefitsSection } from "@/components/landing/benefits-section";
 import { TestimonialsSection } from "@/components/landing/testimonials-section";
 import { CTASection } from "@/components/landing/cta-section";
-import { Footer } from "@/components/landing/footer";
-import { SubFooter } from "@/components/landing/sub-footer";
 import { apiClient } from "@/lib/api";
 import { Hero } from "@/components/landing/hero";
 
@@ -60,20 +57,8 @@ interface LandingPage {
     description: string;
     ctaText: string;
   };
-  footerSection: {
-    tagline: string;
-    companyLinks: Array<{ label: string; url: string }>;
-    productLinks: Array<{ label: string; url: string }>;
-    legalLinks: Array<{ label: string; url: string }>;
-  };
-  subFooterSection: {
-    ctaText: string;
-    ctaUrl: string;
-    copyright: string;
-  };
 }
 
-// Fallback data based on original static components
 const fallbackLandingPage: LandingPage = {
   title: "Welcome to agentVooc",
   slug: { current: "home" },
@@ -141,30 +126,12 @@ const fallbackLandingPage: LandingPage = {
     description: "Learn how to automate your email generation adn Join thousands of users automating their tasks with agentVooc.",
     ctaText: "How it Works",
   },
-  footerSection: {
-    tagline: "Empowering the future with AI automation.",
-    companyLinks: [
-      { label: "About", url: "/company/about" },
-    ],
-    productLinks: [
-      { label: "Features", url: "/features" },
-    ],
-    legalLinks: [
-      { label: "Privacy Policy", url: "/legal/privacy" },
-    ],
-  },
-  subFooterSection: {
-    ctaText: "Still Not Sure?",
-    ctaUrl: "/demo",
-    copyright: "© 2025 agentVooc. All rights reserved.",
-  },
 };
 
 export default function Landing() {
   const [landingPage, setLandingPage] = useState<LandingPage | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Refs for sections to apply Intersection Observer
   const heroRef = useRef<HTMLElement>(null);
   const featuresRef = useRef<HTMLElement>(null);
   const benefitsRef = useRef<HTMLElement>(null);
@@ -181,16 +148,15 @@ export default function Landing() {
       } catch (err: any) {
         console.error("Error fetching landing page:", err);
         setError(err.message || "Failed to fetch landing page");
-        setLandingPage(fallbackLandingPage); // Use fallback data on error
+        setLandingPage(fallbackLandingPage);
       }
     };
     if (error) {
-      // console.warn("Using fallback landing page data due to error:", error);
+      console.warn("Using fallback landing page data due to error:", error);
     }
     fetchLandingPage();
   }, [error]);
 
-  // Intersection Observer for section visibility
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -215,7 +181,7 @@ export default function Landing() {
 
     sections.forEach((section) => {
       if (section) {
-        section.classList.add("animate"); // Add animate class to trigger fade-in
+        section.classList.add("animate");
         observer.observe(section);
       }
     });
@@ -227,7 +193,6 @@ export default function Landing() {
     };
   }, []);
 
-  // Use fallback data if landingPage is null or an error occurred
   const pageData = landingPage || fallbackLandingPage;
 
   return (
@@ -254,8 +219,6 @@ export default function Landing() {
       <section ref={authRef} id="auth" aria-label="Authentication Section" className="flex justify-center py-12">
         <AuthSelection />
       </section>
-      <Footer footerSection={pageData.footerSection} />
-      <SubFooter subFooterSection={pageData.subFooterSection} />
     </main>
   );
 }

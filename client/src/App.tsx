@@ -1,4 +1,3 @@
-// client/src/App.tsx
 import "./index.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -13,7 +12,6 @@ import Auth from "./routes/auth";
 import SuccessPage from "./routes/success";
 import CancelPage from "./routes/cancel";
 import { ProtectedRoute } from "./components/protected-route";
-// import useVersion from "./hooks/use-version";
 import { BackgroundWrapper } from "./components/BackgroundWrapper";
 import AgentRoute from "./routes/overview";
 import Payment from "./routes/payment";
@@ -33,6 +31,9 @@ import ProductListPage from "./routes/product";
 import ProductPage from "./routes/product/[slug]";
 import Demo from "./routes/demo";
 import { useEffect } from "react";
+import { Footer } from "./components/landing/footer";
+import { SubFooter } from "./components/landing/sub-footer";
+import { FooterProvider, useFooter } from "./context/footerContext";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -45,25 +46,22 @@ const queryClient = new QueryClient({
 // Routes where the sidebar should be displayed
 const SIDEBAR_ROUTES = ["/home", "/chat", "/settings", "/create-character", "/edit-character", "/email-vault", "/knowledge"];
 
+// Routes where the footer and sub-footer should be displayed
+const FOOTER_ROUTES = ["/", "/company/:slug" ,"/company/blog", "/company/blog/:slug", "/company/press", "/company/press/:slug", "/product", "/product/:slug", "/legal/:slug", "/demo"];
+
 function AppContent() {
   const location = useLocation();
   const showSidebar = SIDEBAR_ROUTES.some((route) =>
     location.pathname.startsWith(route)
   );
+  const showFooter = FOOTER_ROUTES.some(
+    (route) =>
+      location.pathname === route ||
+      (route.includes(":slug") && location.pathname.startsWith(route.split("/:")[0]))
+  );
+  const { footerSection, subFooterSection } = useFooter();
 
-  // console.log("AppContent: Rendering, showSidebar:",
-  //   showSidebar,
-  //   "pathname:",
-  //   location.pathname
-  // );
-  // console.log(showSidebar ? "Rendering sidebar routes" : "Rendering non-sidebar routes",
-  //   "for pathname:",
-  //   location.pathname
-  // );
-
-  // Track page views on route change
   useEffect(() => {
-    // Initialize twq if not already loaded
     if (!window.twq) {
       window.twq = function (...args: any[]) {
         window.twq.exe ? window.twq.exe(...args) : window.twq.queue.push(args);
@@ -176,7 +174,7 @@ function AppContent() {
             <Route path="/company/blog/:slug" element={<BlogPostPage />} />
             <Route path="/company/press" element={<PressListPage />} />
             <Route path="/company/press/:slug" element={<PressPostPage />} />
-	    <Route path="/product" element={<ProductListPage />} />
+            <Route path="/product" element={<ProductListPage />} />
             <Route path="/product/:slug" element={<ProductPage />} />
             <Route path="/demo" element={<Demo />} />
             <Route
@@ -184,6 +182,12 @@ function AppContent() {
               element={<div>No route matched: {location.pathname}</div>}
             />
           </Routes>
+          {showFooter && (
+            <>
+              <Footer footerSection={footerSection} />
+              <SubFooter subFooterSection={subFooterSection} />
+            </>
+          )}
         </div>
       </SidebarProvider>
       <Toaster />
@@ -192,14 +196,14 @@ function AppContent() {
 }
 
 function App() {
-  // useVersion();
-  // console.log("App: Rendering with KnowledgeVault route fix v2");
   return (
     <QueryClientProvider client={queryClient}>
       <HelmetProvider>
         <BackgroundWrapper className="dark antialiased">
           <BrowserRouter>
-            <AppContent />
+            <FooterProvider>
+              <AppContent />
+            </FooterProvider>
           </BrowserRouter>
         </BackgroundWrapper>
       </HelmetProvider>
