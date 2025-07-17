@@ -115,6 +115,8 @@ export default function EditCharacter({ setError }: EditCharacterProps) {
   const [topicsInput, setTopicsInput] = useState("");
   const [adjectivesInput, setAdjectivesInput] = useState("");
   const [postExamplesInput, setPostExamplesInput] = useState("");
+  const [emailOutgoingUserError, setEmailOutgoingUserError] = useState<string | null>(null);
+  const [emailIncomingUserError, setEmailIncomingUserError] = useState<string | null>(null);
 
   const [characterData, setCharacterData] = useState<CharacterData>({
     id: characterId ?? "00000000-0000-0000-0000-000000000000",
@@ -162,10 +164,35 @@ export default function EditCharacter({ setError }: EditCharacterProps) {
     return re.test(email);
   };
 
+  const debouncedValidateEmail = useCallback(
+    debounce((value: string, field: string, setFieldError: (error: string | null) => void) => {
+      if (!value) {
+        setFieldError(null); // Clear error if field is empty
+        return true;
+      }
+      const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+      if (!isValid) {
+        setFieldError(`Invalid email format for ${field}`);
+      } else {
+        setFieldError(null); // Clear error if valid
+      }
+      return isValid;
+    }, 300),
+    []
+  );
+
   useEffect(() => {
     if (initialData?.character) {
       // console.log("[EDIT_CHARACTER] Initial character data:", initialData.character);
       const character: Character = initialData.character;
+
+      const transformedMessageExamples = Array.isArray(character.messageExamples)
+      ? character.messageExamples.map((conversation: any) =>
+          Array.isArray(conversation?.messages) ? conversation.messages : []
+        )
+      : [];
+
+
       const newCharacterData: CharacterData = {
         id: character.id ?? characterId!,
         name: character.name || "",
@@ -173,7 +200,7 @@ export default function EditCharacter({ setError }: EditCharacterProps) {
         system: character.system || "",
         bio: Array.isArray(character.bio) ? character.bio : [],
         lore: Array.isArray(character.lore) ? character.lore : [],
-        messageExamples: Array.isArray(character.messageExamples) ? character.messageExamples : [],
+        messageExamples: transformedMessageExamples,
         postExamples: Array.isArray(character.postExamples) ? character.postExamples : [],
         topics: Array.isArray(character.topics) ? character.topics : [],
         adjectives: Array.isArray(character.adjectives) ? character.adjectives : [],
@@ -227,12 +254,8 @@ export default function EditCharacter({ setError }: EditCharacterProps) {
       setAdjectivesInput(Array.isArray(character.adjectives) ? character.adjectives.join("\n") : "");
       setPostExamplesInput(Array.isArray(character.postExamples) ? character.postExamples.join("\n") : "");
       setMessageExamplesInput(
-        JSON.stringify(
-          Array.isArray(character.messageExamples) ? character.messageExamples : [],
-          null,
-          2
-        )
-      );
+      JSON.stringify(transformedMessageExamples, null, 2)
+    );
       setTelegramBotToken(
         Array.isArray(character.settings?.secrets?.dynamic)
           ? character.settings.secrets.dynamic.find((s) => s.key === "TELEGRAM_BOT_TOKEN")?.value || ""
@@ -304,41 +327,73 @@ export default function EditCharacter({ setError }: EditCharacterProps) {
   }, [bioInput, loreInput, topicsInput, adjectivesInput, postExamplesInput, debouncedUpdateCharacterData]);
 
 useEffect(() => {
-  let parsedMessageExamples: Message[][] = characterData.messageExamples; // Use current value as fallback
-  let errorMessage: string | null = null;
+  let parsedMessageExamples: Message[][] = [];
+  setMessageExamplesError(null); // Reset error state
+
   try {
     if (messageExamplesInput) {
-      parsedMessageExamples = JSON.parse(messageExamplesInput);
-      if (!Array.isArray(parsedMessageExamples) || !parsedMessageExamples.every(Array.isArray)) {
-        errorMessage = "Message Examples must be an array of arrays";
+      const parsed = JSON.parse(messageExamplesInput);
+      
+      // Check if input is an array
+      if (!Array.isArray(parsed)) {
+        setMessageExamplesError("Message Examples must be an array");
+        return;
+      }
+
+      // Transform Sanity structure to Message[][] if needed
+      if (parsed.every(item => 'messages' in item && Array.isArray(item.messages))) {
+        // Input matches Sanity schema: [{ messages: [{ user, content: { text, action? }}] }, ...]
+        parsedMessageExamples = parsed.map((conversation: { messages: Message[] }) => conversation.messages);
+      } else if (parsed.every(Array.isArray)) {
+        // Input is already in Message[][] format
+        parsedMessageExamples = parsed;
       } else {
-        const isValid = parsedMessageExamples.every((example) =>
-          example.every(
-            (msg) =>
-              msg &&
-              typeof msg === "object" &&
-              "user" in msg &&
-              "content" in msg &&
-              msg.content &&
-              typeof msg.content === "object" &&
-              "text" in msg.content
-          )
-        );
-        if (!isValid) {
-          errorMessage = "Each message example must contain objects with 'user' and 'content' properties, where 'content' has a 'text' property";
-        }
+        setMessageExamplesError("Message Examples must be an array of arrays or an array of conversation objects");
+        return;
+      }
+
+      // Validate each message
+      const isValid = parsedMessageExamples.every((conversation, convoIndex) =>
+        Array.isArray(conversation) &&
+        conversation.every((msg, msgIndex) => {
+          if (!msg || typeof msg !== 'object') {
+            setMessageExamplesError(`Invalid message at conversation ${convoIndex + 1}, message ${msgIndex + 1}: Must be an object`);
+            return false;
+          }
+          if (!('user' in msg) || typeof msg.user !== 'string' || !msg.user) {
+            setMessageExamplesError(`Invalid message at conversation ${convoIndex + 1}, message ${msgIndex + 1}: 'user' must be a non-empty string`);
+            return false;
+          }
+          if (!('content' in msg) || typeof msg.content !== 'object' || !msg.content) {
+            setMessageExamplesError(`Invalid message at conversation ${convoIndex + 1}, message ${msgIndex + 1}: 'content' must be an object`);
+            return false;
+          }
+          if (!('text' in msg.content) || typeof msg.content.text !== 'string' || !msg.content.text) {
+            setMessageExamplesError(`Invalid message at conversation ${convoIndex + 1}, message ${msgIndex + 1}: 'content.text' must be a non-empty string`);
+            return false;
+          }
+          if ('action' in msg.content && msg.content.action !== undefined && typeof msg.content.action !== 'string') {
+            setMessageExamplesError(`Invalid message at conversation ${convoIndex + 1}, message ${msgIndex + 1}: 'content.action' must be a string if provided`);
+            return false;
+          }
+          return true;
+        })
+      );
+
+      if (!isValid) {
+        // Error is set in the validation loop
+        return;
       }
     }
   } catch (error) {
-    errorMessage = "Invalid JSON format in Message Examples";
+    setMessageExamplesError("Invalid JSON format in Message Examples");
+    return;
   }
-  setMessageExamplesError(errorMessage);
-  if (!errorMessage) {
-    setCharacterData((prev) => ({
-      ...prev,
-      messageExamples: parsedMessageExamples,
-    }));
-  }
+
+  setCharacterData((prev) => ({
+    ...prev,
+    messageExamples: parsedMessageExamples,
+  }));
 }, [messageExamplesInput]);
 
   const handlePluginChange = async (plugin: string, checked: boolean) => {
@@ -487,16 +542,8 @@ useEffect(() => {
 
   const handleEmailOutgoingUserChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    if (value && !validateEmail(value)) {
-      setError("Invalid email format for outgoing email username");
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Invalid email format for outgoing email username",
-      });
-      return;
-    }
     setEmailOutgoingUser(value);
+    debouncedValidateEmail(value, "outgoing email username", setEmailOutgoingUserError);
     setCharacterData((prev) => ({
       ...prev,
       settings: {
@@ -522,16 +569,8 @@ useEffect(() => {
 
   const handleEmailIncomingUserChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    if (value && !validateEmail(value)) {
-      setError("Invalid email format for incoming email username");
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Invalid email format for incoming email username",
-      });
-      return;
-    }
     setEmailIncomingUser(value);
+    debouncedValidateEmail(value, "incoming email username", setEmailIncomingUserError);
     setCharacterData((prev) => ({
       ...prev,
       settings: {
@@ -713,32 +752,37 @@ useEffect(() => {
         }
       }
       try {
-        if (messageExamplesInput) {
-          const parsed = JSON.parse(messageExamplesInput);
-          if (!Array.isArray(parsed) || !parsed.every(Array.isArray)) {
-            throw new Error("Message Examples must be an array of arrays");
-          }
-          const isValid = parsed.every((example) =>
-            example.every(
-              (msg) =>
-                msg &&
-                typeof msg === "object" &&
-                "user" in msg &&
-                "content" in msg &&
-                msg.content &&
-                typeof msg.content === "object" &&
-                "text" in msg.content
-            )
-          );
-          if (!isValid) {
-            throw new Error(
-              "Each message example must contain objects with 'user' and 'content' properties, where 'content' has a 'text' property"
-            );
-          }
+      if (messageExamplesInput) {
+        const parsed = JSON.parse(messageExamplesInput);
+        if (!Array.isArray(parsed) || !parsed.every(Array.isArray)) {
+          throw new Error("Message Examples must be an array of arrays");
         }
-      } catch (error) {
-        throw new Error("Invalid JSON format in Message Examples");
+        const isValid = parsed.every((example) =>
+          example.every(
+            (msg) =>
+              msg &&
+              typeof msg === "object" &&
+              "user" in msg &&
+              typeof msg.user === "string" &&
+              msg.user &&
+              "content" in msg &&
+              msg.content &&
+              typeof msg.content === "object" &&
+              "text" in msg.content &&
+              typeof msg.content.text === "string" &&
+              msg.content.text &&
+              (!("action" in msg.content) || typeof msg.content.action === "string")
+          )
+        );
+        if (!isValid) {
+          throw new Error(
+            "Each message example must contain objects with 'user' and 'content' properties, where 'content' has a 'text' property, and 'action' is optional but must be a string if provided"
+          );
+        }
       }
+    } catch (error) {
+      throw new Error("Invalid JSON format in Message Examples");
+    }
       const secrets = [
         ...(characterData.plugins.includes("telegram") && telegramBotToken
           ? [{ key: "TELEGRAM_BOT_TOKEN", value: telegramBotToken }]
@@ -865,6 +909,25 @@ useEffect(() => {
           variant: "destructive",
           title: "Error",
           description: "All email fields (username and password for both outgoing and incoming) are required when the email plugin is enabled.",
+        });
+        return;
+      }
+      // Validate email formats on submission
+      if (!validateEmail(emailOutgoingUser)) {
+        setEmailOutgoingUserError("Invalid email format for outgoing email username");
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Invalid email format for outgoing email username",
+        });
+        return;
+      }
+      if (!validateEmail(emailIncomingUser)) {
+        setEmailIncomingUserError("Invalid email format for incoming email username");
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Invalid email format for incoming email username",
         });
         return;
       }
@@ -1288,9 +1351,15 @@ useEffect(() => {
                     value={emailOutgoingUser}
                     onChange={handleEmailOutgoingUserChange}
                     placeholder="e.g., your-email@gmail.com"
-                    className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+                    className={`text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg ${
+                      emailOutgoingUserError ? "border-red-500" : ""
+                    }`}
                     aria-describedby="emailOutgoingUserDescription"
+                    aria-invalid={!!emailOutgoingUserError}
                   />
+                  {emailOutgoingUserError && (
+                    <p className="text-red-500 text-sm mt-1">{emailOutgoingUserError}</p>
+                  )}
                   <p id="emailOutgoingUserDescription" className="text-sm text-agentvooc-secondary mt-1">
                     Enter the username for outgoing emails.
                   </p>
@@ -1389,9 +1458,15 @@ useEffect(() => {
                     value={emailIncomingUser}
                     onChange={handleEmailIncomingUserChange}
                     placeholder="e.g., your-email@gmail.com"
-                    className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+                    className={`text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg ${
+                      emailIncomingUserError ? "border-red-500" : ""
+                    }`}
                     aria-describedby="emailIncomingUserDescription"
+                    aria-invalid={!!emailIncomingUserError}
                   />
+                  {emailIncomingUserError && (
+                    <p className="text-red-500 text-sm mt-1">{emailIncomingUserError}</p>
+                  )}
                   <p id="emailIncomingUserDescription" className="text-sm text-agentvooc-secondary mt-1">
                     Enter the username for incoming emails.
                   </p>

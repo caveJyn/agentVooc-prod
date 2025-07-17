@@ -11,6 +11,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import type { UUID } from "@elizaos/core";
 import { useQuery } from "@tanstack/react-query";
+import { Eye, EyeOff } from "lucide-react";
 
 // Debounce utility
 function debounce<T extends (...args: any[]) => void>(func: T, wait: number): (...args: Parameters<T>) => void {
@@ -41,6 +42,12 @@ export default function CreateCharacter({ setError }: CreateCharacterProps) {
   const [emailIncomingPass, setEmailIncomingPass] = useState("");
   const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false); // New state for loader
+
+  const [emailOutgoingUserError, setEmailOutgoingUserError] = useState<string | null>(null);
+  const [emailIncomingUserError, setEmailIncomingUserError] = useState<string | null>(null);
+  const [showEmailOutgoingPass, setShowEmailOutgoingPass] = useState(false);
+  const [showEmailIncomingPass, setShowEmailIncomingPass] = useState(false);
+
 
   // Initialize characterData state with empty fields
   const [characterData, setCharacterData] = useState({
@@ -95,6 +102,41 @@ export default function CreateCharacter({ setError }: CreateCharacterProps) {
   const [styleAllInput, setStyleAllInput] = useState("");
   const [styleChatInput, setStyleChatInput] = useState("");
   const [stylePostInput, setStylePostInput] = useState("");
+
+
+   // Email validation function
+  const validateEmail = (email: string) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+  };
+
+
+  // Debounced email validation
+  const debouncedValidateEmail = useCallback(
+    debounce((value: string, field: string, setFieldError: (error: string | null) => void) => {
+      if (!value) {
+        setFieldError(null); // Clear error if field is empty
+        return true;
+      }
+      const isValid = validateEmail(value);
+      if (!isValid) {
+        setFieldError(`Invalid email format for ${field}`);
+      } else {
+        setFieldError(null); // Clear error if valid
+      }
+      return isValid;
+    }, 300),
+    []
+  );
+
+  // Toggle password visibility
+  const toggleEmailOutgoingPassVisibility = () => {
+    setShowEmailOutgoingPass((prev) => !prev);
+  };
+
+  const toggleEmailIncomingPassVisibility = () => {
+    setShowEmailIncomingPass((prev) => !prev);
+  };
 
   // Fetch character presets
   const presetsQuery = useQuery({
@@ -169,6 +211,10 @@ export default function CreateCharacter({ setError }: CreateCharacterProps) {
       setEmailOutgoingPass("");
       setEmailIncomingUser("");
       setEmailIncomingPass("");
+      setEmailOutgoingUserError(null); // Reset error states
+      setEmailIncomingUserError(null);
+      setShowEmailOutgoingPass(false);
+      setShowEmailIncomingPass(false);
     } else {
       // Load preset data
       setCharacterData({
@@ -215,6 +261,8 @@ export default function CreateCharacter({ setError }: CreateCharacterProps) {
       setEmailOutgoingPass(preset.settings?.email?.outgoing?.pass || "");
       setEmailIncomingUser(preset.settings?.email?.incoming?.user || "");
       setEmailIncomingPass(preset.settings?.email?.incoming?.pass || "");
+      debouncedValidateEmail(preset.settings?.email?.outgoing?.user || "", "outgoing email username", setEmailOutgoingUserError);
+      debouncedValidateEmail(preset.settings?.email?.incoming?.user || "", "incoming email username", setEmailIncomingUserError);
     }
   };
 
@@ -492,6 +540,7 @@ export default function CreateCharacter({ setError }: CreateCharacterProps) {
   const handleEmailOutgoingUserChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setEmailOutgoingUser(value);
+    debouncedValidateEmail(value, "outgoing email username", setEmailOutgoingUserError);
     setCharacterData((prev) => ({
       ...prev,
       settings: {
@@ -522,6 +571,7 @@ export default function CreateCharacter({ setError }: CreateCharacterProps) {
   const handleEmailIncomingUserChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setEmailIncomingUser(value);
+    debouncedValidateEmail(value, "incoming email username", setEmailIncomingUserError);
     setCharacterData((prev) => ({
       ...prev,
       settings: {
@@ -1253,7 +1303,7 @@ export default function CreateCharacter({ setError }: CreateCharacterProps) {
             className="text-agentvooc-accent focus:ring-agentvooc-accent rounded"
           />
         </div>
-        {(characterData.plugins.includes("email")) && (
+        {characterData.plugins.includes("email") && (
           <>
             <div>
               <h4 className="text-sm font-medium text-agentvooc-secondary mb-2">
@@ -1356,10 +1406,19 @@ export default function CreateCharacter({ setError }: CreateCharacterProps) {
                     value={emailOutgoingUser}
                     onChange={handleEmailOutgoingUserChange}
                     placeholder="e.g., your-email@gmail.com"
-                    className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+                    className={`text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg ${
+                      emailOutgoingUserError ? "border-red-500" : ""
+                    }`}
+                    aria-invalid={emailOutgoingUserError ? "true" : "false"}
+                    aria-describedby={emailOutgoingUserError ? "emailOutgoingUserError" : undefined}
                   />
+                  {emailOutgoingUserError && (
+                    <p id="emailOutgoingUserError" className="text-red-500 text-sm mt-1" role="alert">
+                      {emailOutgoingUserError}
+                    </p>
+                  )}
                 </div>
-                <div>
+                <div className="relative">
                   <label
                     htmlFor="emailOutgoingPass"
                     className="block text-sm font-medium text-agentvooc-secondary mb-1"
@@ -1369,12 +1428,20 @@ export default function CreateCharacter({ setError }: CreateCharacterProps) {
                   <Input
                     id="emailOutgoingPass"
                     name="emailOutgoingPass"
-                    type="password"
+                    type={showEmailOutgoingPass ? "text" : "password"}
                     value={emailOutgoingPass}
                     onChange={handleEmailOutgoingPassChange}
                     placeholder="e.g., your-app-password"
-                    className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+                    className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg pr-10"
                   />
+                  <button
+                    type="button"
+                    onClick={toggleEmailOutgoingPassVisibility}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-agentvooc-secondary"
+                    aria-label={showEmailOutgoingPass ? "Hide password" : "Show password"}
+                  >
+                    {showEmailOutgoingPass ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
                   {characterData.settings.email.outgoing.service === "gmail" && (
                     <p className="text-sm text-agentvooc-secondary mt-1">
                       Use a Gmail App Password (
@@ -1449,10 +1516,19 @@ export default function CreateCharacter({ setError }: CreateCharacterProps) {
                     value={emailIncomingUser}
                     onChange={handleEmailIncomingUserChange}
                     placeholder="e.g., your-email@gmail.com"
-                    className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+                    className={`text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg ${
+                      emailIncomingUserError ? "border-red-500" : ""
+                    }`}
+                    aria-invalid={emailIncomingUserError ? "true" : "false"}
+                    aria-describedby={emailIncomingUserError ? "emailIncomingUserError" : undefined}
                   />
+                  {emailIncomingUserError && (
+                    <p id="emailIncomingUserError" className="text-red-500 text-sm mt-1" role="alert">
+                      {emailIncomingUserError}
+                    </p>
+                  )}
                 </div>
-                <div>
+                <div className="relative">
                   <label
                     htmlFor="emailIncomingPass"
                     className="block text-sm font-medium text-agentvooc-secondary mb-1"
@@ -1462,12 +1538,20 @@ export default function CreateCharacter({ setError }: CreateCharacterProps) {
                   <Input
                     id="emailIncomingPass"
                     name="emailIncomingPass"
-                    type="password"
+                    type={showEmailIncomingPass ? "text" : "password"}
                     value={emailIncomingPass}
                     onChange={handleEmailIncomingPassChange}
                     placeholder="e.g., your-app-password"
-                    className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+                    className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg pr-10"
                   />
+                  <button
+                    type="button"
+                    onClick={toggleEmailIncomingPassVisibility}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-agentvooc-secondary mt-6"
+                    aria-label={showEmailIncomingPass ? "Hide password" : "Show password"}
+                  >
+                    {showEmailIncomingPass ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
                 </div>
               </div>
             </div>
