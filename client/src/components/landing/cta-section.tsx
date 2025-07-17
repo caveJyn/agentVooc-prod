@@ -23,7 +23,7 @@ export const CTASection = ({ ctaSection }: CTASectionProps) => {
       className="py-16 px-4 bg-gradient-to-r from-agentvooc-button-bg to-agentvooc-secondary-accent text-center animate-fade-in"
       aria-label="Call to Action"
     >
-      <h2 className="text-4xl md:text-5xl font-bold mb-4 text-agentvooc-accent shadow-agentvooc-glow inline-block px-4 py-1 rounded-full">
+      <h2 className="text-4xl md:text-2xl font-bold mb-4 text-agentvooc-accent shadow-agentvooc-glow inline-block px-4 py-1 rounded-full">
         {heading}
       </h2>
       <p className="text-agentvooc-primary mb-8 max-w-2xl mx-auto">{description}</p>

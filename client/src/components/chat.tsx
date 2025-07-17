@@ -509,7 +509,7 @@ const processEmailContent = (content: string) => {
               >
                 <ChatBubble
                   variant={variant}
-                  className="flex flex-row items-center gap-2 bg-agentvooc-secondary-accent border-agentvooc-accent/30 rounded-lg"
+                  className="flex flex-row items-center gap-2 border-agentvooc-accent/30 rounded-lg"
                 >
                   {message?.user !== "user" ? (
                     <Avatar className="size-8 p-1 border border-agentvooc-accent/30 rounded-full select-none">

@@ -137,7 +137,7 @@ export default function BlogListPage() {
               <Link
                 key={post.slug.current}
                 to={`/company/blog/${post.slug.current}`}
-                className="block p-6 bg-agentvooc-secondary-bg rounded-lg hover:bg-agentvooc-accent transition text-white"
+                className="group block p-6 bg-agentvooc-secondary-bg rounded-lg transition text-white border border-agentvooc-border "
               >
                 {post.mainImage && (
                   <img
@@ -146,11 +146,17 @@ export default function BlogListPage() {
                     className="w-full h-48 object-cover rounded-t-lg mb-4 hidden md:block"
                   />
                 )}
-                <h2 className="text-xl font-semibold mb-2">{post.title}</h2>
-                <p className="text-sm text-gray-300 mb-4">
+                <h2 className="text-xl font-semibold mb-2">
+                  <span
+                    className="transition duration-300 ease-in-out group-hover:bg-agentvooc-accent group-active:bg-agentvooc-accent group-hover:text-black group-active:text-black px-2 py-1 rounded-md group-hover:shadow-md"
+                  >
+                    {post.title}
+                  </span>
+                </h2>
+                <p className="text-sm text-gray-300 mb-4 px-2">
                   Published: {new Date(post.publishedAt).toLocaleDateString()}
                 </p>
-                <p>{post.excerpt}</p>
+                <p className="px-2">{post.excerpt}</p>
               </Link>
             ))}
           </div>
