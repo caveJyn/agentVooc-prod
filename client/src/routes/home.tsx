@@ -94,7 +94,8 @@ export default function Home() {
       }
     },
     enabled: !!user?.userId,
-    refetchInterval: 30_000,
+    staleTime: 10 * 60 * 1000, // Cache for 10 minutes
+    refetchInterval: false, // Disable auto-refetching
   });
 
   const deleteCharacterMutation = useMutation({

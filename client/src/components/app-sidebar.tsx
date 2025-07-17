@@ -38,15 +38,16 @@ export function AppSidebar() {
   const userQuery = useQuery({
     queryKey: ["user"],
     queryFn: () => apiClient.getUser(),
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-    refetchInterval: 30_000, // Add this
+    staleTime: 30 * 60 * 1000, // Cache for 30 minutes
+    refetchInterval: false,
   });
 
   // Fetch all agents/characters
   const query = useQuery({
     queryKey: ["agents"],
     queryFn: () => apiClient.getAgents(),
-    refetchInterval: 30_000,
+    staleTime: 30 * 60 * 1000,
+    refetchInterval: false,
   });
 
   const agents = query?.data?.agents || [];
@@ -81,7 +82,7 @@ export function AppSidebar() {
         results.map((r) => [r.agentId, r.character])
       );
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30 * 60 * 1000,
     enabled: filteredAgents.length > 0,
   });
 
