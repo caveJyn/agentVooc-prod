@@ -1158,7 +1158,7 @@ const hasValidRemoteUrls = () =>
             try {
               if (runtime.character.settings?.ragKnowledge) {
                 // String knowledge
-                await runtime.addKnowledge("agentVooc does supports dynamic knowledge addition.", false);
+                // await runtime.addKnowledge("agentVooc does supports dynamic knowledge addition.", false);
       
                 const knowledgeRoot = path.resolve(__dirname, "..", "characters", "knowledge");
 for (const knowledgeItem of runtime.character.knowledge || []) {

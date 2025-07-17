@@ -146,7 +146,7 @@ export default {
       title: "Is Connected",
       type: "boolean",
       description: "Indicates if the user has an active connection to the system",
-      initialValue: false,
+      initialValue: true,
       validation: (Rule) => Rule.required(),
     }
   ],

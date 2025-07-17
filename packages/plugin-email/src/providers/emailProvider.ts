@@ -20,7 +20,7 @@ export interface EmailMetadata {
 }
 
 interface EmailMemory extends Memory {
-  id: string;
+  id: `${string}-${string}-${string}-${string}-${string}`;
   createdAt?: number;
   content: {
     text: string;
