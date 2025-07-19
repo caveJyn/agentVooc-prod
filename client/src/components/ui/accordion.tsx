@@ -24,7 +24,7 @@ export function Accordion({ title, children, defaultOpen = false }: AccordionPro
         )}
       </button>
       {isOpen && (
-        <div className="mt-2 p-4 bg-agentvooc-primary-bg/80 border border-agentvooc-accent/30 rounded-lg">
+        <div className="mt-2 p-4 bg-agentvooc-secondary-bg/80 border border-agentvooc-accent/30 rounded-lg">
           {children}
         </div>
       )}

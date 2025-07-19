@@ -1,11 +1,11 @@
 return (
-  <div className="min-h-screen bg-gradient-to-br from-agentvooc-primary-bg via-agentvooc-primary-bg to-agentvooc-secondary-accent/20 p-6">
+  <div className="min-h-screen bg-gradient-to-br from-agentvooc-secondary-bg via-agentvooc-secondary-bg to-agentvooc-secondary-accent/20 p-6">
     <div className="max-w-6xl mx-auto">
       {/* Header Card */}
-      <div className="bg-agentvooc-primary-bg/90 backdrop-blur-sm border border-agentvooc-accent/30 rounded-2xl shadow-agentvooc-glow mb-8 p-8">
+      <div className="bg-agentvooc-secondary-bg/90 backdrop-blur-sm border border-agentvooc-accent/30 rounded-2xl shadow-agentvooc-glow mb-8 p-8">
         <div className="flex items-center space-x-4 mb-6">
           <div className="w-12 h-12 bg-gradient-to-br from-agentvooc-accent to-agentvooc-button-bg rounded-xl flex items-center justify-center">
-            <svg className="w-6 h-6 text-agentvooc-primary-bg" fill="currentColor" viewBox="0 0 20 20">
+            <svg className="w-6 h-6 text-agentvooc-secondary-bg" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
             </svg>
           </div>
@@ -27,7 +27,7 @@ return (
               onClick={() => handlePresetSelect(null)}
               className={`px-6 py-3 rounded-xl font-medium transition-all duration-300 transform hover:scale-105 ${
                 selectedPreset === null
-                  ? "bg-gradient-to-r from-agentvooc-accent to-agentvooc-button-bg text-agentvooc-primary-bg shadow-lg shadow-agentvooc-accent/25"
+                  ? "bg-gradient-to-r from-agentvooc-accent to-agentvooc-button-bg text-agentvooc-secondary-bg shadow-lg shadow-agentvooc-accent/25"
                   : "bg-agentvooc-secondary-accent/20 border border-agentvooc-accent/30 text-agentvooc-primary hover:bg-agentvooc-accent/10"
               }`}
             >
@@ -49,7 +49,7 @@ return (
                   onClick={() => handlePresetSelect(preset)}
                   className={`px-6 py-3 rounded-xl font-medium transition-all duration-300 transform hover:scale-105 ${
                     selectedPreset === preset._id
-                      ? "bg-gradient-to-r from-agentvooc-accent to-agentvooc-button-bg text-agentvooc-primary-bg shadow-lg shadow-agentvooc-accent/25"
+                      ? "bg-gradient-to-r from-agentvooc-accent to-agentvooc-button-bg text-agentvooc-secondary-bg shadow-lg shadow-agentvooc-accent/25"
                       : "bg-agentvooc-secondary-accent/20 border border-agentvooc-accent/30 text-agentvooc-primary hover:bg-agentvooc-accent/10"
                   }`}
                 >
@@ -63,7 +63,7 @@ return (
 
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Basic Information Card */}
-        <div className="bg-agentvooc-primary-bg/90 backdrop-blur-sm border border-agentvooc-accent/30 rounded-2xl shadow-agentvooc-glow p-8">
+        <div className="bg-agentvooc-secondary-bg/90 backdrop-blur-sm border border-agentvooc-accent/30 rounded-2xl shadow-agentvooc-glow p-8">
           <div className="flex items-center space-x-3 mb-6">
             <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
               <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -131,7 +131,7 @@ return (
                     type="file"
                     accept="image/jpeg,image/png,image/gif"
                     onChange={handleImageChange}
-                    className="w-full px-4 py-3 text-agentvooc-primary bg-agentvooc-secondary-accent/50 border border-agentvooc-accent/30 focus:ring-2 focus:ring-agentvooc-accent focus:border-agentvooc-accent rounded-xl transition-all duration-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-agentvooc-accent file:text-agentvooc-primary-bg file:font-medium hover:file:bg-agentvooc-button-bg"
+                    className="w-full px-4 py-3 text-agentvooc-primary bg-agentvooc-secondary-accent/50 border border-agentvooc-accent/30 focus:ring-2 focus:ring-agentvooc-accent focus:border-agentvooc-accent rounded-xl transition-all duration-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-agentvooc-accent file:text-agentvooc-secondary-bg file:font-medium hover:file:bg-agentvooc-button-bg"
                   />
                   {profileImage && (
                     <p className="text-sm text-agentvooc-secondary mt-2 flex items-center">
@@ -148,7 +148,7 @@ return (
         </div>
 
         {/* Character Personality Card */}
-        <div className="bg-agentvooc-primary-bg/90 backdrop-blur-sm border border-agentvooc-accent/30 rounded-2xl shadow-agentvooc-glow p-8">
+        <div className="bg-agentvooc-secondary-bg/90 backdrop-blur-sm border border-agentvooc-accent/30 rounded-2xl shadow-agentvooc-glow p-8">
           <div className="flex items-center space-x-3 mb-6">
             <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-teal-600 rounded-lg flex items-center justify-center">
               <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -264,7 +264,7 @@ return (
         </div>
 
         {/* Communication Style Card */}
-        <div className="bg-agentvooc-primary-bg/90 backdrop-blur-sm border border-agentvooc-accent/30 rounded-2xl shadow-agentvooc-glow p-8">
+        <div className="bg-agentvooc-secondary-bg/90 backdrop-blur-sm border border-agentvooc-accent/30 rounded-2xl shadow-agentvooc-glow p-8">
           <div className="flex items-center space-x-3 mb-6">
             <div className="w-8 h-8 bg-gradient-to-br from-pink-500 to-rose-600 rounded-lg flex items-center justify-center">
               <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -338,7 +338,7 @@ return (
         </div>
 
         {/* Examples Card */}
-        <div className="bg-agentvooc-primary-bg/90 backdrop-blur-sm border border-agentvooc-accent/30 rounded-2xl shadow-agentvooc-glow p-8">
+        <div className="bg-agentvooc-secondary-bg/90 backdrop-blur-sm border border-agentvooc-accent/30 rounded-2xl shadow-agentvooc-glow p-8">
           <div className="flex items-center space-x-3 mb-6">
             <div className="w-8 h-8 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-lg flex items-center justify-center">
               <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">

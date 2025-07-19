@@ -3,7 +3,7 @@ import Navbar from "@/components/navbar";
 export default function Demo() {
 
     return(
-        <div className="min-h-screen bg-agentvooc-primary-bg dark:bg-agentvooc-primary-bg">
+        <div className="min-h-screen bg-agentvooc-secondary-bg dark:bg-agentvooc-secondary-bg">
             <Navbar />
         <div className="flex flex-col items-center justify-center h-screen">
             

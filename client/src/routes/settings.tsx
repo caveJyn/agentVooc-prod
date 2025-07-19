@@ -257,7 +257,7 @@ export default function Settings() {
   if (!user) {
     // console.log("[Settings] No user data, rendering loading state");
     return (
-      <div className="flex items-center justify-center min-h-screen bg-agentvooc-primary-bg">
+      <div className="flex items-center justify-center min-h-screen bg-agentvooc-secondary-bg">
         <Loader2 className="h-8 w-8 animate-spin text-agentvooc-accent" />
         <p className="ml-3 text-agentvooc-secondary">Analyzing user data...</p>
       </div>
@@ -267,7 +267,7 @@ export default function Settings() {
   if (isSubscriptionLoading) {
     // console.log("[Settings] Subscription data loading, rendering loader");
     return (
-      <div className="flex items-center justify-center min-h-screen bg-agentvooc-primary-bg">
+      <div className="flex items-center justify-center min-h-screen bg-agentvooc-secondary-bg">
         <Loader2 className="h-8 w-8 animate-spin text-agentvooc-accent" />
         <p className="ml-3 text-agentvooc-secondary">Processing subscription analytics...</p>
       </div>
@@ -277,7 +277,7 @@ export default function Settings() {
   if (!subscriptionData || subscriptionData.status === "none" || subscriptionData.status === "canceled") {
     // console.log("[Settings] No active subscription, rendering payment section");
     return (
-      <div className="min-h-screen bg-agentvooc-primary-bg p-4">
+      <div className="min-h-screen bg-agentvooc-secondary-bg p-4">
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center gap-3 mb-8">
             <SettingsIcon className="h-8 w-8 text-agentvooc-accent" />
@@ -321,7 +321,7 @@ export default function Settings() {
   const isCancelPending = subscriptionData.cancelAtPeriodEnd;
 
   return (
-    <div className="min-h-screen bg-agentvooc-primary-bg p-4 md:p-8">
+    <div className="min-h-screen bg-agentvooc-secondary-bg p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex items-center gap-3 mb-8">
@@ -408,21 +408,21 @@ export default function Settings() {
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-agentvooc-primary">Usage Analytics</h3>
                 <div className="space-y-3">
-                  <div className="flex justify-between items-center p-3 bg-agentvooc-primary-bg rounded-lg">
+                  <div className="flex justify-between items-center p-3 bg-agentvooc-secondary-bg rounded-lg">
                     <div className="flex items-center gap-2">
                       <Activity className="h-4 w-4 text-blue-400" />
                       <span className="text-agentvooc-secondary">API Responses</span>
                     </div>
                     <span className="text-agentvooc-primary font-bold">{user.responseCount.toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between items-center p-3 bg-agentvooc-primary-bg rounded-lg">
+                  <div className="flex justify-between items-center p-3 bg-agentvooc-secondary-bg rounded-lg">
                     <div className="flex items-center gap-2">
                       <Zap className="h-4 w-4 text-purple-400" />
                       <span className="text-agentvooc-secondary">Tokens Processed</span>
                     </div>
                     <span className="text-agentvooc-primary font-bold">{user.tokenCount.toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between items-center p-3 bg-agentvooc-primary-bg rounded-lg">
+                  <div className="flex justify-between items-center p-3 bg-agentvooc-secondary-bg rounded-lg">
                     <div className="flex items-center gap-2">
                       <BarChart3 className="h-4 w-4 text-green-400" />
                       <span className="text-agentvooc-secondary">Efficiency Ratio</span>
@@ -440,7 +440,7 @@ export default function Settings() {
               <h4 className="text-lg font-semibold text-agentvooc-primary mb-4">Active Subscription Items</h4>
               <div className="space-y-2">
                 {subscriptionData.items.map((item: SubscriptionItem) => (
-                  <div key={item.stripePriceId} className="flex items-center justify-between p-3 bg-agentvooc-primary-bg rounded-lg">
+                  <div key={item.stripePriceId} className="flex items-center justify-between p-3 bg-agentvooc-secondary-bg rounded-lg">
                     <div className="flex items-center gap-3">
                       <div className={`w-3 h-3 rounded-full ${item.itemType === "base" ? "bg-blue-400" : "bg-green-400"}`}></div>
                       <span className="text-agentvooc-primary font-medium">{item.name}</span>
@@ -485,7 +485,7 @@ export default function Settings() {
                       const selected = availableBaseItems.find(item => item.id === e.target.value) || null;
                       setSelectedBaseItem(selected);
                     }}
-                    className="w-full p-3 bg-agentvooc-primary-bg border border-agentvooc-accent/30 rounded-lg text-agentvooc-primary focus:border-agentvooc-accent"
+                    className="w-full p-3 bg-agentvooc-secondary-bg border border-agentvooc-accent/30 rounded-lg text-agentvooc-primary focus:border-agentvooc-accent"
                   >
                     <option value="">Select a base plan</option>
                     {availableBaseItems.map(item => (
@@ -496,7 +496,7 @@ export default function Settings() {
                   </select>
                   <Button 
                     onClick={handleUpdateBasePlan} 
-                    className="w-full bg-agentvooc-accent hover:bg-agentvooc-accent/80 text-agentvooc-primary-bg" 
+                    className="w-full bg-agentvooc-accent hover:bg-agentvooc-accent/80 text-agentvooc-secondary-bg" 
                     disabled={!selectedBaseItem}
                   >
                     Update Base Plan
@@ -514,7 +514,7 @@ export default function Settings() {
                 <div className="space-y-3 max-h-64 overflow-y-auto">
                   {availablePluginItems.length > 0 ? (
                     availablePluginItems.map(item => (
-                      <div key={item.id} className="flex items-center justify-between p-3 bg-agentvooc-primary-bg rounded-lg">
+                      <div key={item.id} className="flex items-center justify-between p-3 bg-agentvooc-secondary-bg rounded-lg">
                         <div>
                           <p className="text-agentvooc-primary font-medium">{item.name}</p>
                           <p className="text-agentvooc-secondary text-sm">${(item.price / 100).toFixed(2)}/month</p>
@@ -542,7 +542,7 @@ export default function Settings() {
         <div className="flex flex-col sm:flex-row gap-4">
           <Button
             onClick={handleManageSubscription}
-            className="bg-agentvooc-accent hover:bg-agentvooc-accent/80 text-agentvooc-primary-bg"
+            className="bg-agentvooc-accent hover:bg-agentvooc-accent/80 text-agentvooc-secondary-bg"
           >
             Manage Billing Portal
           </Button>

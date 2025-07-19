@@ -121,7 +121,7 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar className="bg-agentvooc-primary-bg text-agentvooc-primary border-r border-agentvooc-border shadow-agentvooc-glow">
+    <Sidebar className="bg-agentvooc-secondary-bg text-agentvooc-primary border-r border-agentvooc-border shadow-agentvooc-glow">
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
@@ -196,11 +196,11 @@ export function AppSidebar() {
                     <SidebarMenuAction
                        onClick={() => handleEditAgent(agent.id)}
                        showOnHover
-                       className="hover:bg-agentvooc-accent hover:text-agentvooc-primary-bg p-1"
+                       className="hover:bg-agentvooc-accent hover:text-agentvooc-secondary-bg p-1"
                         >   
                        <Edit className="h-4 w-4" />
                     </SidebarMenuAction>
-                    <SidebarMenuBadge className="bg-agentvooc-accent text-agentvooc-primary-bg">.</SidebarMenuBadge>
+                    <SidebarMenuBadge className="bg-agentvooc-accent text-agentvooc-secondary-bg">.</SidebarMenuBadge>
                     <KnowledgeVaultLink
                       agentId={agent.id}
                       agentName={agent.name}

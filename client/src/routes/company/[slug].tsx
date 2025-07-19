@@ -38,7 +38,7 @@ export default function CompanyPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-agentvooc-primary-bg to-agentvooc-primary-bg-dark text-agentvooc-primary">
+      <div className="min-h-screen bg-gradient-to-b from-agentvooc-secondary-bg to-agentvooc-primary-bg text-agentvooc-primary">
         <Helmet>
           <title>agentVooc | Error</title>
           <meta name="description" content="An error occurred while fetching the page." />
@@ -55,7 +55,7 @@ export default function CompanyPage() {
 
   if (!page) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-agentvooc-primary-bg to-agentvooc-primary-bg-dark text-agentvooc-primary">
+      <div className="min-h-screen bg-gradient-to-b from-agentvooc-secondary-bg to-agentvooc-primary-bg text-agentvooc-primary">
         <Helmet>
           <title>agentVooc | Loading</title>
           <meta name="description" content="Loading company page..." />
@@ -69,7 +69,7 @@ export default function CompanyPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-agentvooc-primary-bg to-agentvooc-primary-bg-dark text-agentvooc-primary">
+    <div className="min-h-screen bg-gradient-to-b from-agentvooc-secondary-bg to-agentvooc-primary-bg text-agentvooc-primary">
       <Helmet>
         <title>agentVooc | {page.title}</title>
         <meta name="description" content={`Learn more about ${page.title.toLowerCase()} at agentVooc, your AI automation platform.`} />

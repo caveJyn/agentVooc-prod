@@ -428,7 +428,7 @@ useEffect(() => {
             action: (
               <Button
                 onClick={() => navigate("/settings", { state: { from: "edit-character" } })}
-                className="bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-primary-bg"
+                className="bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-secondary-bg"
               >
                 Go to Settings
               </Button>
@@ -674,7 +674,7 @@ useEffect(() => {
         action: (
           <Button
             onClick={() => navigate("/settings", { state: { from: "edit-character" } })}
-            className="bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-primary-bg"
+            className="bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-secondary-bg"
           >
             Go to Settings
           </Button>
@@ -944,7 +944,7 @@ useEffect(() => {
 
   if (isLoading) {
     return (
-      <div className="p-6 bg-agentvooc-primary-bg border border-agentvooc-accent/30 rounded-xl shadow-agentvooc-glow max-w-2xl mx-auto">
+      <div className="p-6 bg-agentvooc-secondary-bg border border-agentvooc-accent/30 rounded-xl shadow-agentvooc-glow max-w-2xl mx-auto">
         <Loader2 className="h-6 w-6 animate-spin text-agentvooc-primary" />
       </div>
     );
@@ -952,14 +952,14 @@ useEffect(() => {
 
   if (error) {
     return (
-      <div className="p-6 bg-agentvooc-primary-bg border border-agentvooc-accent/30 rounded-xl shadow-agentvooc-glow max-w-2xl mx-auto">
+      <div className="p-6 bg-agentvooc-secondary-bg border border-agentvooc-accent/30 rounded-xl shadow-agentvooc-glow max-w-2xl mx-auto">
         <p className="text-red-500 text-sm">Error loading character data. Please try again.</p>
       </div>
     );
   }
 
   return (
-    <div className="p-6 bg-agentvooc-primary-bg border border-agentvooc-accent/30 rounded-xl shadow-agentvooc-glow w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="p-6 bg-agentvooc-secondary-bg border border-agentvooc-accent/30 rounded-xl shadow-agentvooc-glow w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
       <h3 className="text-xl font-semibold mb-6 text-agentvooc-primary">Edit Character</h3>
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
@@ -1382,7 +1382,7 @@ useEffect(() => {
                     <Button
                       type="button"
                       onClick={() => setShowEmailOutgoingPass(!showEmailOutgoingPass)}
-                      className="bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-primary-bg rounded-lg"
+                      className="bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-secondary-bg rounded-lg"
                     >
                       {showEmailOutgoingPass ? "Hide" : "Show"}
                     </Button>
@@ -1489,7 +1489,7 @@ useEffect(() => {
                     <Button
                       type="button"
                       onClick={() => setShowEmailIncomingPass(!showEmailIncomingPass)}
-                      className="bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-primary-bg rounded-lg"
+                      className="bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-secondary-bg rounded-lg"
                     >
                       {showEmailIncomingPass ? "Hide" : "Show"}
                     </Button>
@@ -1601,7 +1601,7 @@ useEffect(() => {
                   <Button
                     type="button"
                     onClick={() => setShowTwitterPassword(!showTwitterPassword)}
-                    className="bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-primary-bg rounded-lg"
+                    className="bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-secondary-bg rounded-lg"
                   >
                     {showTwitterPassword ? "Hide" : "Show"}
                   </Button>
@@ -1740,7 +1740,7 @@ useEffect(() => {
         <div className="flex gap-4">
           <Button
             type="submit"
-            className="bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-primary-bg shadow-agentvooc-glow rounded-lg px-6 py-2"
+            className="bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-secondary-bg shadow-agentvooc-glow rounded-lg px-6 py-2"
             disabled={updateCharacterMutation.isPending || uploadImageMutation.isPending}
             aria-label="Update character"
           >
@@ -1757,7 +1757,7 @@ useEffect(() => {
             type="button"
             variant="outline"
             onClick={handleCancel}
-            className="border-agentvooc-accent/30 text-agentvooc-primary hover:bg-agentvooc-accent hover:text-agentvooc-primary-bg rounded-lg px-6 py-2"
+            className="border-agentvooc-accent/30 text-agentvooc-primary hover:bg-agentvooc-accent hover:text-agentvooc-secondary-bg rounded-lg px-6 py-2"
             aria-label="Cancel"
           >
             Cancel

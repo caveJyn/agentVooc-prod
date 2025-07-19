@@ -25,6 +25,7 @@ interface LandingPage {
     secondaryCtaText?: string;
     trustSignal?: string;
     backgroundImage?: ImageVariants;
+    mascotModel?: { asset: { _id: string; url: string } };
   };
   featuresSection: {
     heading: string;
@@ -56,7 +57,9 @@ interface LandingPage {
     heading: string;
     description: string;
     ctaText: string;
+    ctaUrl?: string;
   };
+  _updatedAt?: string;
 }
 
 const fallbackLandingPage: LandingPage = {
@@ -120,17 +123,19 @@ const fallbackLandingPage: LandingPage = {
       },
     ],
     trustSignal: "Join 10,000+ happy users automating their tasks.",
+    sectionImage: undefined,
   },
   ctaSection: {
     heading: "Ready to Transform Your Workflow?",
-    description: "Learn how to automate your email generation adn Join thousands of users automating their tasks with agentVooc.",
+    description:
+      "Learn how to automate your email generation and Join thousands of users automating their tasks with agentVooc.",
     ctaText: "How it Works",
+    ctaUrl: "/blog/how-it-works",
   },
 };
 
 export default function Landing() {
   const [landingPage, setLandingPage] = useState<LandingPage | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   const heroRef = useRef<HTMLElement>(null);
   const featuresRef = useRef<HTMLElement>(null);
@@ -142,20 +147,46 @@ export default function Landing() {
 
   useEffect(() => {
     const fetchLandingPage = async () => {
+      const cacheKey = "landingPage";
+      const cacheTimestampKey = "landingPageUpdatedAt";
+      const cacheTimeKey = "landingPageCacheTime";
+      const cacheDuration = 24 * 60 * 60 * 1000; // 24 hours
+
+      const cachedData = localStorage.getItem(cacheKey);
+      const cachedUpdatedAt = localStorage.getItem(cacheTimestampKey);
+      const cachedTime = localStorage.getItem(cacheTimeKey);
+
+      if (cachedData && cachedUpdatedAt && cachedTime) {
+        const isCacheValid = Date.now() - parseInt(cachedTime) < cacheDuration;
+        if (isCacheValid) {
+          try {
+            const response = await apiClient.getLandingPage();
+            const serverUpdatedAt = response.landingPage._updatedAt;
+            if (serverUpdatedAt === cachedUpdatedAt) {
+              setLandingPage(JSON.parse(cachedData));
+              return;
+            }
+          } catch (err: any) {
+            console.error("Error checking landing page update:", err);
+            setLandingPage(JSON.parse(cachedData));
+            return;
+          }
+        }
+      }
+
       try {
         const response = await apiClient.getLandingPage();
         setLandingPage(response.landingPage);
+        localStorage.setItem(cacheKey, JSON.stringify(response.landingPage));
+        localStorage.setItem(cacheTimestampKey, response.landingPage._updatedAt || Date.now().toString());
+        localStorage.setItem(cacheTimeKey, Date.now().toString());
       } catch (err: any) {
         console.error("Error fetching landing page:", err);
-        setError(err.message || "Failed to fetch landing page");
-        setLandingPage(fallbackLandingPage);
+        setLandingPage(cachedData ? JSON.parse(cachedData) : fallbackLandingPage);
       }
     };
-    if (error) {
-      console.warn("Using fallback landing page data due to error:", error);
-    }
     fetchLandingPage();
-  }, [error]);
+  }, []);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -196,7 +227,7 @@ export default function Landing() {
   const pageData = landingPage || fallbackLandingPage;
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-agentvooc-primary-bg to-agentvooc-primary-bg-dark text-agentvooc-primary animate-fade-in">
+    <main className="min-h-screen animate-fade-in">
       <Navbar />
       <section ref={heroRef} aria-label="Hero Section">
         <Hero heroSection={pageData.heroSection} />
@@ -210,7 +241,7 @@ export default function Landing() {
       <section ref={testimonialsRef} aria-label="Testimonials Section">
         <TestimonialsSection testimonialsSection={pageData.testimonialsSection} />
       </section>
-      <section ref={subscriptionsRef} aria-label="Subscriptions Section" className="py-16 px-4">
+      <section ref={subscriptionsRef} aria-label="Subscriptions Section" className="">
         <Subscriptions />
       </section>
       <section ref={ctaRef} aria-label="Call to Action Section">

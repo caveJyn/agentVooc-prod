@@ -1,4 +1,6 @@
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { NavLink } from "react-router";
 
 interface ImageVariants {
   main: string;
@@ -45,16 +47,17 @@ export const FeaturesSection = ({ featuresSection }: FeaturesSectionProps) => {
   const ctaText = featuresSection.ctaText || "Explore All Features";
 
   return (
-    <section className="py-16 px-4 bg-agentvooc-primary-bg-dark animate-fade-in" aria-label="Features">
-      <div className="max-w-6xl mx-auto text-center">
-        <h2 className="text-4xl font-bold mb-8 text-agentvooc-primary">{heading}</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
-          {features.map((feature, index) => (
-            <article
-              key={index}
-              className="p-6 bg-agentvooc-secondary-accent rounded-lg shadow-agentvooc-glow hover:bg-agentvooc-secondary-accent/80 hover:shadow-lg hover:scale-105 transition-all duration-300"
-              aria-labelledby={`feature-${index}-title`}
-            >
+  <section className="py-16 px-4 animate-fade-in" aria-label="Features">
+    <div className="max-w-6xl mx-auto text-center">
+      <h2 className="text-4xl font-bold mb-8">{heading}</h2>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+        {features.map((feature, index) => (
+          <Card
+            key={index}
+            className=""
+            aria-labelledby={`feature-${index}-title`}
+          >
+            <CardContent className="">
               {feature.icon && feature.icon.main ? (
                 <img
                   src={feature.icon.main}
@@ -66,26 +69,31 @@ export const FeaturesSection = ({ featuresSection }: FeaturesSectionProps) => {
                   }}
                 />
               ) : (
-                <div className="w-12 h-12 mx-auto mb-4 bg-agentvooc-primary-bg rounded-full flex items-center justify-center">
+                <div className="w-12 h-12 mx-auto mb-4 bg-agentvooc-primary-bg/70 rounded-full flex items-center justify-center">
                   <span className="text-agentvooc-accent text-lg">
                     {feature.title.charAt(0)}
                   </span>
                 </div>
               )}
-              <h3 id={`feature-${index}-title`} className="text-xl font-semibold text-agentvooc-primary mb-2">
+              <h3 id={`feature-${index}-title`} className="text-xl font-semibold mb-2">
                 {feature.title}
               </h3>
-              <p className="text-agentvooc-secondary">{feature.description}</p>
-            </article>
-          ))}
-        </div>
-        <Button
-          className="mt-8 bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-button-bg-hover hover:text-agentvooc-accent-dark shadow-agentvooc-glow animate-glow-pulse rounded-full px-8 py-4 text-lg transform hover:scale-105 transition-all"
-          aria-label="Explore All Features"
-        >
-          {ctaText}
-        </Button>
+              <p>{feature.description}</p>
+            </CardContent>
+          </Card>
+        ))}
       </div>
-    </section>
-  );
+      <NavLink to="https://agentvooc.com/product/features">
+      <Button
+        variant="default"
+        size="lg"
+        className="mt-8 animate-glow-pulse"
+        aria-label="Explore All Features"
+      >
+        {ctaText}
+      </Button>
+      </NavLink>
+    </div>
+  </section>
+);
 };

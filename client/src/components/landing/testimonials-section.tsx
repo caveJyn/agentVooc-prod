@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 interface ImageVariants {
@@ -111,88 +111,86 @@ export const TestimonialsSection = ({
   };
 
   return (
-    <section className="py-16 px-4 bg-agentvooc-primary-bg-dark animate-fade-in" aria-label="Testimonials">
-      <div className="max-w-6xl mx-auto">
-        <h2 className="text-4xl font-bold mb-12 text-agentvooc-primary text-center">
-          {heading}
-        </h2>
-        <div className="flex flex-col lg:flex-row gap-8 items-center">
-          <div className="w-full lg:w-1/2 min-h-[400px] rounded-lg flex items-center justify-center">
-            {sectionImage && sectionImage.main ? (
-              <img
-                src={sectionImage.main}
-                alt="Testimonials Section"
-                className="w-full max-w-md h-auto object-cover rounded-lg border-agentvooc-border shadow-agentvooc-glow"
-                onError={(e) => {
-                  console.error("Failed to load testimonials section image:", sectionImage.main);
-                  e.currentTarget.style.display = "none";
-                }}
-              />
-            ) : (
-              <div className="w-full h-96 bg-agentvooc-secondary-accent/20 rounded-lg flex items-center justify-center">
-                <p className="text-agentvooc-secondary text-lg">
-                  Image or Component Placeholder
-                </p>
-              </div>
-            )}
-          </div>
-          <div className="w-full lg:w-1/2">
-            <div className="flex justify-center gap-4 mb-8">
-              {testimonials.map((testimonial, index) => (
-                <button
-                  key={index}
-                  onClick={() => handleProfileClick(index)}
-                  className="transition-all duration-300"
-                  aria-label={`View testimonial from ${testimonial.author}`}
-                >
-                  <Avatar
-                    className={`w-12 h-12 border-2 transition-all duration-300 ${
-                      activeIndex === index
-                        ? "border-agentvooc-accent scale-110 ring-2 ring-agentvooc-accent/30"
-                        : "border-agentvooc-secondary-accent opacity-70 hover:opacity-90 hover:scale-105"
-                    }`}
-                  >
-                    <AvatarImage src={testimonial.image?.main} alt={testimonial.author} />
-                    <AvatarFallback className="bg-agentvooc-secondary-accent text-agentvooc-primary">
-                      {testimonial.author.charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
-                </button>
-              ))}
+  <section className="py-16 px-4 animate-fade-in" aria-label="Testimonials">
+    <div className="max-w-6xl mx-auto">
+      <h2 className="text-4xl font-bold mb-12 text-center">{heading}</h2>
+      <div className="flex flex-col lg:flex-row gap-8">
+        <div className="w-full lg:w-1/2 min-h-[400px] rounded-lg flex items-center justify-center">
+          {sectionImage && sectionImage.main ? (
+            <img
+              src={sectionImage.main}
+              alt="Testimonials Section"
+              className="w-full max-w-md h-auto object-cover rounded-lg shadow-agentvooc-glow"
+              onError={(e) => {
+                console.error("Failed to load testimonials section image:", sectionImage.main);
+                e.currentTarget.style.display = "none";
+              }}
+            />
+          ) : (
+            <div className="w-full h-96 rounded-lg flex items-center justify-center bg-agentvooc-secondary-accent/20">
+              <p className="text-lg">Image or Component Placeholder</p>
             </div>
-            <div className="relative overflow-hidden min-h-[280px]">
-              <div
-                className="transition-opacity duration-600 ease-in-out"
-                style={{ opacity: isTransitioning ? 0 : 1 }}
-              >
-                <Card className="bg-agentvooc-secondary-accent shadow-agentvooc-glow">
-                  <CardContent className="p-6">
-                    <div className="flex flex-col">
-                      <span className="text-agentvooc-accent text-4xl mb-3">"</span>
-                      <p className="text-agentvooc-secondary text-lg mb-6">
-                        {testimonials[visibleIndex].quote}
-                      </p>
-                      <div className="mt-auto">
-                        <p className="text-agentvooc-primary font-semibold">
-                          {testimonials[visibleIndex].author}
-                        </p>
-                        <p className="text-agentvooc-secondary text-sm">
-                          {testimonials[visibleIndex].role}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-          </div>
+          )}
         </div>
-        <div className="mt-8 flex justify-center">
-          <Badge className="px-4 py-1 text-sm bg-agentvooc-accent/10 text-agentvooc-accent hover:bg-agentvooc-accent/20 border-agentvooc-border shadow-agentvooc-glow inline-block">
-            {trustSignal}
-          </Badge>
+        <div className="w-full lg:w-1/2">
+          <div className="flex justify-center gap-4 mb-10">
+            {testimonials.map((testimonial, index) => (
+              <button
+                key={index}
+                onClick={() => handleProfileClick(index)}
+                className="transition-all duration-300"
+                aria-label={`View testimonial from ${testimonial.author}`}
+              >
+                <Avatar
+                  className={`w-12 h-12 border-2 transition-all duration-300 ${
+                    activeIndex === index
+                      ? "border-agentvooc-accent scale-110 ring-2 ring-agentvooc-accent/30"
+                      : "border-agentvooc-secondary-accent opacity-70 hover:opacity-90 hover:scale-105"
+                  }`}
+                >
+                  <AvatarImage src={testimonial.image?.main} alt={testimonial.author} />
+                  <AvatarFallback className="bg-agentvooc-secondary-accent text-agentvooc-accent">
+                    {testimonial.author.charAt(0)}
+                  </AvatarFallback>
+                </Avatar>
+              </button>
+            ))}
+          </div>
+          <div className="relative overflow-hidden">
+            <div
+              className="transition-opacity duration-600 ease-in-out"
+              style={{ opacity: isTransitioning ? 0 : 1 }}
+            >
+              <Card
+                className="flex flex-col"
+                aria-labelledby={`testimonial-${visibleIndex}-title`}
+              >
+                <CardHeader>
+                  <CardTitle id={`testimonial-${visibleIndex}-title`}>
+                    <h3>{testimonials[visibleIndex].author}</h3>
+                  </CardTitle>
+                  <p>{testimonials[visibleIndex].role}</p>
+                </CardHeader>
+                <CardContent className="flex-grow">
+                  <span className="text-agentvooc-accent text-3xl mb-3">"</span>
+                  <p>{testimonials[visibleIndex].quote}</p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </div>
       </div>
-    </section>
-  );
+      <div className="mt-8 flex justify-center">
+        <Badge
+          variant="default"
+          className="mt-8 animate-glow-pulse"
+          aria-label={trustSignal}
+        >
+          {trustSignal}
+        </Badge>
+      </div>
+    </div>
+  </section>
+);
 };
+

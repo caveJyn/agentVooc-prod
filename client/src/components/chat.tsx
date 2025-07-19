@@ -447,7 +447,7 @@ const processEmailContent = (content: string) => {
   // console.log("Email body map:", Object.fromEntries(emailBodyMap));
 
   return (
-    <div className="flex flex-col w-full h-[calc(100dvh)] p-6 bg-agentvooc-primary-bg">
+    <div className="flex flex-col w-full h-[calc(100dvh)] p-6 bg-agentvooc-secondary-bg">
       <div className="flex-1 overflow-y-auto h-[calc(100dvh-150px)]">
         {!isLoadingImages && images.length > 0 && (
           <div className="mb-4">
@@ -646,7 +646,7 @@ const processEmailContent = (content: string) => {
                         <div className="mt-2 flex gap-2">
                           <Button
                             onClick={handleConfirmReply}
-                            className="bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-primary-bg shadow-agentvooc-glow rounded-lg"
+                            className="bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-secondary-bg shadow-agentvooc-glow rounded-lg"
                           >
                             Confirm Reply
                           </Button>
@@ -657,7 +657,7 @@ const processEmailContent = (content: string) => {
                                 message.metadata?.pendingReply?.body || message.text
                               )
                             }
-                            className="bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-primary-bg shadow-agentvooc-glow rounded-lg"
+                            className="bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-secondary-bg shadow-agentvooc-glow rounded-lg"
                           >
                             Modify Email
                           </Button>
@@ -741,7 +741,7 @@ const processEmailContent = (content: string) => {
               <div className="relative rounded-lg border border-agentvooc-accent/30 p-2">
                 <Button
                   onClick={() => setSelectedFile(null)}
-                  className="absolute -right-2 -top-2 size-[22px] ring-2 ring-agentvooc-primary-bg"
+                  className="absolute -right-2 -top-2 size-[22px] ring-2 ring-agentvooc-secondary-bg"
                   variant="outline"
                   size="icon"
                 >
@@ -820,7 +820,7 @@ const processEmailContent = (content: string) => {
               disabled={!input || sendMessageMutation.isPending}
               type="submit"
               size="sm"
-              className="ml-auto gap-1.5 h-[30px] bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-primary-bg shadow-agentvooc-glow rounded-lg"
+              className="ml-auto gap-1.5 h-[30px] bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-secondary-bg shadow-agentvooc-glow rounded-lg"
             >
               {sendMessageMutation.isPending
                 ? "..."

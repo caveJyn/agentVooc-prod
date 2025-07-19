@@ -4354,6 +4354,7 @@ router.post("/agents/:agentId/set", async (req, res) => {
   try {
     // Query the landingPage document from Sanity
     const query = `*[_type == "landingPage"][0] {
+      _updatedAt,
       title,
       slug,
       heroSection {
@@ -4925,11 +4926,41 @@ router.get("/blog-posts/:slug?", async (req, res) => {
         slug,
         content,
         publishedAt,
+        modifiedAt,
+        seoDescription,
         excerpt,
         mainImage {
           asset-> {
             _id,
             url
+          },
+          alt
+        },
+        heroImage {
+          asset-> {
+            _id,
+            url
+          },
+          alt
+        },
+        galleryImages[] {
+          asset-> {
+            _id,
+            url
+          },
+          alt
+        },
+        tags,
+        relatedContent[0..2]-> { // Limit to 3 related posts
+          _type,
+          title,
+          slug,
+          mainImage {
+            asset-> {
+              _id,
+              url
+            },
+            alt
           }
         }
       }`;
@@ -4939,13 +4970,24 @@ router.get("/blog-posts/:slug?", async (req, res) => {
         title,
         slug,
         publishedAt,
+        modifiedAt,
+        seoDescription,
         excerpt,
         mainImage {
           asset-> {
             _id,
             url
-          }
-        }
+          },
+          alt
+        },
+        heroImage {
+          asset-> {
+            _id,
+            url
+          },
+          alt
+        },
+        tags
       }`;
     }
 
@@ -4957,29 +4999,65 @@ router.get("/blog-posts/:slug?", async (req, res) => {
     }
 
     const formattedBlogPosts = Array.isArray(blogPosts)
-      ? blogPosts.map(post => ({
+      ? blogPosts.map((post) => ({
           ...post,
-          mainImage: post.mainImage
-            ? urlFor(post.mainImage).width(1200).height(630).fit("crop").quality(80).format("webp").url()
+          mainImage: post.mainImage?.asset
+            ? urlFor(post.mainImage.asset).width(1200).height(630).fit("crop").quality(80).format("webp").url()
             : null,
-          thumbnailImage: post.mainImage
-            ? urlFor(post.mainImage).width(300).height(200).fit("crop").quality(80).format("webp").url()
+          mainImageAlt: post.mainImage?.alt || post.title,
+          heroImage: post.heroImage?.asset
+            ? urlFor(post.heroImage.asset).width(1200).height(400).fit("crop").quality(80).format("webp").url()
             : null,
-          mediumImage: post.mainImage
-            ? urlFor(post.mainImage).width(600).height(400).fit("crop").quality(80).format("webp").url()
+          heroImageAlt: post.heroImage?.alt || post.title,
+          galleryImages: post.galleryImages?.map((img) => ({
+            url: img.asset ? urlFor(img.asset).width(600).height(400).fit("crop").quality(80).format("webp").url() : null,
+            alt: img.alt || post.title,
+          })) || [],
+          thumbnailImage: post.mainImage?.asset
+            ? urlFor(post.mainImage.asset).width(300).height(200).fit("crop").quality(80).format("webp").url()
             : null,
+          mediumImage: post.mainImage?.asset
+            ? urlFor(post.mainImage.asset).width(600).height(400).fit("crop").quality(80).format("webp").url()
+            : null,
+          relatedContent: post.relatedContent?.map((item) => ({
+            _type: item._type,
+            title: item.title,
+            slug: item.slug,
+            mainImage: item.mainImage?.asset
+              ? urlFor(item.mainImage.asset).width(300).height(200).fit("crop").quality(80).format("webp").url()
+              : null,
+            mainImageAlt: item.mainImage?.alt || item.title,
+          })) || [],
         }))
       : {
           ...blogPosts,
-          mainImage: blogPosts.mainImage
-            ? urlFor(blogPosts.mainImage).width(1200).height(630).fit("crop").quality(80).format("webp").url()
+          mainImage: blogPosts.mainImage?.asset
+            ? urlFor(blogPosts.mainImage.asset).width(1200).height(630).fit("crop").quality(80).format("webp").url()
             : null,
-          thumbnailImage: blogPosts.mainImage
-            ? urlFor(blogPosts.mainImage).width(300).height(200).fit("crop").quality(80).format("webp").url()
+          mainImageAlt: blogPosts.mainImage?.alt || blogPosts.title,
+          heroImage: blogPosts.heroImage?.asset
+            ? urlFor(blogPosts.heroImage.asset).width(1200).height(400).fit("crop").quality(80).format("webp").url()
             : null,
-          mediumImage: blogPosts.mainImage
-            ? urlFor(blogPosts.mainImage).width(600).height(400).fit("crop").quality(80).format("webp").url()
+          heroImageAlt: blogPosts.heroImage?.alt || blogPosts.title,
+          galleryImages: blogPosts.galleryImages?.map((img) => ({
+            url: img.asset ? urlFor(img.asset).width(600).height(400).fit("crop").quality(80).format("webp").url() : null,
+            alt: img.alt || blogPosts.title,
+          })) || [],
+          thumbnailImage: blogPosts.mainImage?.asset
+            ? urlFor(blogPosts.mainImage.asset).width(300).height(200).fit("crop").quality(80).format("webp").url()
             : null,
+          mediumImage: blogPosts.mainImage?.asset
+            ? urlFor(blogPosts.mainImage.asset).width(600).height(400).fit("crop").quality(80).format("webp").url()
+            : null,
+          relatedContent: blogPosts.relatedContent?.map((item) => ({
+            _type: item._type,
+            title: item.title,
+            slug: item.slug,
+            mainImage: item.mainImage?.asset
+              ? urlFor(item.mainImage.asset).width(300).height(200).fit("crop").quality(80).format("webp").url()
+              : null,
+            mainImageAlt: item.mainImage?.alt || item.title,
+          })) || [],
         };
 
     elizaLogger.debug(`[CLIENT-DIRECT] Fetched blog post${slug ? ` for slug: ${slug}` : "s"} from Sanity`, {
@@ -5006,11 +5084,41 @@ router.get("/press-posts/:slug?", async (req, res) => {
         slug,
         content,
         publishedAt,
+        modifiedAt,
+        seoDescription,
         excerpt,
         mainImage {
           asset-> {
             _id,
             url
+          },
+          alt
+        },
+        heroImage {
+          asset-> {
+            _id,
+            url
+          },
+          alt
+        },
+        galleryImages[] {
+          asset-> {
+            _id,
+            url
+          },
+          alt
+        },
+        tags,
+        relatedContent[0..2]-> {
+          _type,
+          title,
+          slug,
+          mainImage {
+            asset-> {
+              _id,
+              url
+            },
+            alt
           }
         }
       }`;
@@ -5020,13 +5128,24 @@ router.get("/press-posts/:slug?", async (req, res) => {
         title,
         slug,
         publishedAt,
+        modifiedAt,
+        seoDescription,
         excerpt,
         mainImage {
           asset-> {
             _id,
             url
-          }
-        }
+          },
+          alt
+        },
+        heroImage {
+          asset-> {
+            _id,
+            url
+          },
+          alt
+        },
+        tags
       }`;
     }
 
@@ -5038,29 +5157,65 @@ router.get("/press-posts/:slug?", async (req, res) => {
     }
 
     const formattedPressPosts = Array.isArray(pressPosts)
-      ? pressPosts.map(post => ({
+      ? pressPosts.map((post) => ({
           ...post,
-          mainImage: post.mainImage
-            ? urlFor(post.mainImage).width(1200).height(630).fit("crop").quality(80).format("webp").url()
+          mainImage: post.mainImage?.asset
+            ? urlFor(post.mainImage.asset).width(1200).height(630).fit("crop").quality(80).format("webp").url()
             : null,
-          thumbnailImage: post.mainImage
-            ? urlFor(post.mainImage).width(300).height(200).fit("crop").quality(80).format("webp").url()
+          mainImageAlt: post.mainImage?.alt || post.title,
+          heroImage: post.heroImage?.asset
+            ? urlFor(post.heroImage.asset).width(1200).height(400).fit("crop").quality(80).format("webp").url()
             : null,
-          mediumImage: post.mainImage
-            ? urlFor(post.mainImage).width(600).height(400).fit("crop").quality(80).format("webp").url()
+          heroImageAlt: post.heroImage?.alt || post.title,
+          galleryImages: post.galleryImages?.map((img) => ({
+            url: img.asset ? urlFor(img.asset).width(600).height(400).fit("crop").quality(80).format("webp").url() : null,
+            alt: img.alt || post.title,
+          })) || [],
+          thumbnailImage: post.mainImage?.asset
+            ? urlFor(post.mainImage.asset).width(300).height(200).fit("crop").quality(80).format("webp").url()
             : null,
+          mediumImage: post.mainImage?.asset
+            ? urlFor(post.mainImage.asset).width(600).height(400).fit("crop").quality(80).format("webp").url()
+            : null,
+          relatedContent: post.relatedContent?.map((item) => ({
+            _type: item._type,
+            title: item.title,
+            slug: item.slug,
+            mainImage: item.mainImage?.asset
+              ? urlFor(item.mainImage.asset).width(300).height(200).fit("crop").quality(80).format("webp").url()
+              : null,
+            mainImageAlt: item.mainImage?.alt || item.title,
+          })) || [],
         }))
       : {
           ...pressPosts,
-          mainImage: pressPosts.mainImage
-            ? urlFor(pressPosts.mainImage).width(1200).height(630).fit("crop").quality(80).format("webp").url()
+          mainImage: pressPosts.mainImage?.asset
+            ? urlFor(pressPosts.mainImage.asset).width(1200).height(630).fit("crop").quality(80).format("webp").url()
             : null,
-          thumbnailImage: pressPosts.mainImage
-            ? urlFor(pressPosts.mainImage).width(300).height(200).fit("crop").quality(80).format("webp").url()
+          mainImageAlt: pressPosts.mainImage?.alt || pressPosts.title,
+          heroImage: pressPosts.heroImage?.asset
+            ? urlFor(pressPosts.heroImage.asset).width(1200).height(400).fit("crop").quality(80).format("webp").url()
             : null,
-          mediumImage: pressPosts.mainImage
-            ? urlFor(pressPosts.mainImage).width(600).height(400).fit("crop").quality(80).format("webp").url()
+          heroImageAlt: pressPosts.heroImage?.alt || pressPosts.title,
+          galleryImages: pressPosts.galleryImages?.map((img) => ({
+            url: img.asset ? urlFor(img.asset).width(600).height(400).fit("crop").quality(80).format("webp").url() : null,
+            alt: img.alt || pressPosts.title,
+          })) || [],
+          thumbnailImage: pressPosts.mainImage?.asset
+            ? urlFor(pressPosts.mainImage.asset).width(300).height(200).fit("crop").quality(80).format("webp").url()
             : null,
+          mediumImage: pressPosts.mainImage?.asset
+            ? urlFor(pressPosts.mainImage.asset).width(600).height(400).fit("crop").quality(80).format("webp").url()
+            : null,
+          relatedContent: pressPosts.relatedContent?.map((item) => ({
+            _type: item._type,
+            title: item.title,
+            slug: item.slug,
+            mainImage: item.mainImage?.asset
+              ? urlFor(item.mainImage.asset).width(300).height(200).fit("crop").quality(80).format("webp").url()
+              : null,
+            mainImageAlt: item.mainImage?.alt || item.title,
+          })) || [],
         };
 
     elizaLogger.debug(`[CLIENT-DIRECT] Fetched press post${slug ? ` for slug: ${slug}` : "s"} from Sanity`, {
@@ -5152,32 +5307,73 @@ router.get("/product-pages/:slug?", async (req, res) => {
     let params = {};
 
     if (slug) {
-      // Fetch a single product page by slug
-      query = `*[_type == "productPage" && slug.current == $slug][0] {
+      query = `*[_type == "productPage" && slug.current == $slug && published == true][0] {
         title,
         slug,
         content,
-        lastUpdated,
+        publishedAt,
+        modifiedAt,
+        seoDescription,
+        excerpt,
         mainImage {
           asset-> {
             _id,
             url
+          },
+          alt
+        },
+        heroImage {
+          asset-> {
+            _id,
+            url
+          },
+          alt
+        },
+        galleryImages[] {
+          asset-> {
+            _id,
+            url
+          },
+          alt
+        },
+        tags,
+        relatedContent[0..2]-> {
+          _type,
+          title,
+          slug,
+          mainImage {
+            asset-> {
+              _id,
+              url
+            },
+            alt
           }
         }
       }`;
       params = { slug };
     } else {
-      // Fetch all product pages
-      query = `*[_type == "productPage"] | order(title asc) {
+      query = `*[_type == "productPage" && published == true] | order(publishedAt desc) {
         title,
         slug,
-        lastUpdated,
+        publishedAt,
+        modifiedAt,
+        seoDescription,
+        excerpt,
         mainImage {
           asset-> {
             _id,
             url
-          }
-        }
+          },
+          alt
+        },
+        heroImage {
+          asset-> {
+            _id,
+            url
+          },
+          alt
+        },
+        tags
       }`;
     }
 
@@ -5188,19 +5384,66 @@ router.get("/product-pages/:slug?", async (req, res) => {
       return res.status(404).json({ error: "[CLIENT-DIRECT] Product page(s) not found" });
     }
 
-    // Format mainImage URL with resizing
     const formattedProductPages = Array.isArray(productPages)
-      ? productPages.map(page => ({
+      ? productPages.map((page) => ({
           ...page,
-          mainImage: page.mainImage
-            ? urlFor(page.mainImage).width(1200).height(630).fit("crop").quality(80).format("webp").url()
+          mainImage: page.mainImage?.asset
+            ? urlFor(page.mainImage.asset).width(1200).height(630).fit("crop").quality(80).format("webp").url()
             : null,
+          mainImageAlt: page.mainImage?.alt || page.title,
+          heroImage: page.heroImage?.asset
+            ? urlFor(page.mainImage.asset).width(1200).height(400).fit("crop").quality(80).format("webp").url()
+            : null,
+          heroImageAlt: page.heroImage?.alt || page.title,
+          galleryImages: page.galleryImages?.map((img) => ({
+            url: img.asset ? urlFor(img.asset).width(600).height(400).fit("crop").quality(80).format("webp").url() : null,
+            alt: img.alt || page.title,
+          })) || [],
+          thumbnailImage: page.mainImage?.asset
+            ? urlFor(page.mainImage.asset).width(300).height(200).fit("crop").quality(80).format("webp").url()
+            : null,
+          mediumImage: page.mainImage?.asset
+            ? urlFor(page.mainImage.asset).width(600).height(400).fit("crop").quality(80).format("webp").url()
+            : null,
+          relatedContent: page.relatedContent?.map((item) => ({
+            _type: item._type,
+            title: item.title,
+            slug: item.slug,
+            mainImage: item.mainImage?.asset
+              ? urlFor(item.mainImage.asset).width(300).height(200).fit("crop").quality(80).format("webp").url()
+              : null,
+            mainImageAlt: item.mainImage?.alt || item.title,
+          })) || [],
         }))
       : {
           ...productPages,
-          mainImage: productPages.mainImage
-            ? urlFor(productPages.mainImage).width(1200).height(630).fit("crop").quality(80).format("webp").url()
+          mainImage: productPages.mainImage?.asset
+            ? urlFor(productPages.mainImage.asset).width(1200).height(630).fit("crop").quality(80).format("webp").url()
             : null,
+          mainImageAlt: productPages.mainImage?.alt || productPages.title,
+          heroImage: productPages.heroImage?.asset
+            ? urlFor(productPages.heroImage.asset).width(1200).height(400).fit("crop").quality(80).format("webp").url()
+            : null,
+          heroImageAlt: productPages.heroImage?.alt || productPages.title,
+          galleryImages: productPages.galleryImages?.map((img) => ({
+            url: img.asset ? urlFor(img.asset).width(600).height(400).fit("crop").quality(80).format("webp").url() : null,
+            alt: img.alt || productPages.title,
+          })) || [],
+          thumbnailImage: productPages.mainImage?.asset
+            ? urlFor(productPages.mainImage.asset).width(300).height(200).fit("crop").quality(80).format("webp").url()
+            : null,
+          mediumImage: productPages.mainImage?.asset
+            ? urlFor(productPages.mainImage.asset).width(600).height(400).fit("crop").quality(80).format("webp").url()
+            : null,
+          relatedContent: productPages.relatedContent?.map((item) => ({
+            _type: item._type,
+            title: item.title,
+            slug: item.slug,
+            mainImage: item.mainImage?.asset
+              ? urlFor(item.mainImage.asset).width(300).height(200).fit("crop").quality(80).format("webp").url()
+              : null,
+            mainImageAlt: item.mainImage?.alt || item.title,
+          })) || [],
         };
 
     elizaLogger.debug(`[CLIENT-DIRECT] Fetched product page${slug ? ` for slug: ${slug}` : "s"} from Sanity`, {
@@ -5225,16 +5468,16 @@ const staticRoutes = [
 
 router.get("/sitemap.xml", async (req, res) => {
   try {
-    const websiteDomain = process.env.WEBSITE_DOMAIN;
+    const baseUrl = process.env.SERVER_URL; // Align with other endpoints
 
     // Fetch all blog posts
     const blogPosts = await sanityClient.fetch(
-      `*[_type == "blogPost" && defined(slug.current) && published == true] { slug, publishedAt }`
+      `*[_type == "blogPost" && defined(slug.current) && published == true] { slug, publishedAt, modifiedAt }`
     );
 
     // Fetch all press posts
     const pressPosts = await sanityClient.fetch(
-      `*[_type == "pressPost" && defined(slug.current) && published == true] { slug, publishedAt }`
+      `*[_type == "pressPost" && defined(slug.current) && published == true] { slug, publishedAt, modifiedAt }`
     );
 
     // Fetch all company pages
@@ -5249,21 +5492,25 @@ router.get("/sitemap.xml", async (req, res) => {
 
     // Fetch all product pages
     const productPages = await sanityClient.fetch(
-      `*[_type == "productPage" && defined(slug.current)] { slug, lastUpdated }`
+      `*[_type == "productPage" && defined(slug.current) && published == true] { slug, publishedAt, modifiedAt }`
     );
 
     const currentDate = new Date().toISOString();
 
-    const formatLastmod = (date: string | undefined) =>
-      date && !isNaN(new Date(date).getTime()) ? new Date(date).toISOString() : currentDate;
+    const formatLastmod = (modifiedAt: string | undefined, publishedAt: string | undefined) =>
+      modifiedAt && !isNaN(new Date(modifiedAt).getTime())
+        ? new Date(modifiedAt).toISOString()
+        : publishedAt && !isNaN(new Date(publishedAt).getTime())
+        ? new Date(publishedAt).toISOString()
+        : currentDate;
 
     const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   ${staticRoutes
     .map(
       (route) => `
   <url>
-    <loc>${websiteDomain}${route.path}</loc>
+    <loc>${baseUrl}${route.path}</loc>
     <lastmod>${currentDate}</lastmod>
     <changefreq>${route.changefreq}</changefreq>
     <priority>${route.priority}</priority>
@@ -5274,8 +5521,8 @@ router.get("/sitemap.xml", async (req, res) => {
     .map(
       (post: any) => `
   <url>
-    <loc>${websiteDomain}/company/blog/${post.slug.current}</loc>
-    <lastmod>${formatLastmod(post.publishedAt)}</lastmod>
+    <loc>${baseUrl}/company/blog/${post.slug.current}</loc>
+    <lastmod>${formatLastmod(post.modifiedAt, post.publishedAt)}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>`
@@ -5285,8 +5532,8 @@ router.get("/sitemap.xml", async (req, res) => {
     .map(
       (post: any) => `
   <url>
-    <loc>${websiteDomain}/company/press/${post.slug.current}</loc>
-    <lastmod>${formatLastmod(post.publishedAt)}</lastmod>
+    <loc>${baseUrl}/company/press/${post.slug.current}</loc>
+    <lastmod>${formatLastmod(post.modifiedAt, post.publishedAt)}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>`
@@ -5296,8 +5543,8 @@ router.get("/sitemap.xml", async (req, res) => {
     .map(
       (page: any) => `
   <url>
-    <loc>${websiteDomain}/company/${page.slug.current}</loc>
-    <lastmod>${formatLastmod(page.lastUpdated)}</lastmod>
+    <loc>${baseUrl}/company/${page.slug.current}</loc>
+    <lastmod>${formatLastmod(page.lastUpdated, undefined)}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>`
@@ -5307,8 +5554,8 @@ router.get("/sitemap.xml", async (req, res) => {
     .map(
       (doc: any) => `
   <url>
-    <loc>${websiteDomain}/legal/${doc.slug.current}</loc>
-    <lastmod>${formatLastmod(doc.lastUpdated)}</lastmod>
+    <loc>${baseUrl}/legal/${doc.slug.current}</loc>
+    <lastmod>${formatLastmod(doc.lastUpdated, undefined)}</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.6</priority>
   </url>`
@@ -5318,10 +5565,10 @@ router.get("/sitemap.xml", async (req, res) => {
     .map(
       (page: any) => `
   <url>
-    <loc>${websiteDomain}/product/${page.slug.current}</loc>
-    <lastmod>${formatLastmod(page.lastUpdated)}</lastmod>
+    <loc>${baseUrl}/product/${page.slug.current}</loc>
+    <lastmod>${formatLastmod(page.modifiedAt, page.publishedAt)}</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.9</priority>
+    <priority>0.8</priority>
   </url>`
     )
     .join("")}
@@ -5331,7 +5578,7 @@ router.get("/sitemap.xml", async (req, res) => {
     res.send(sitemap);
   } catch (error: any) {
     elizaLogger.error("[CLIENT-DIRECT] Error generating sitemap:", error);
-    res.status(500).send("Error generating sitemap");
+    res.status(500).json({ error: "Error generating sitemap", details: error.message });
   }
 });
 

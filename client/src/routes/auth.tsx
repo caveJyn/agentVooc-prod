@@ -167,7 +167,7 @@ export default function Auth() {
 
   if (isProcessing) {
     return (
-      <div className="text-agentvooc-secondary flex items-center justify-center min-h-screen bg-gradient-to-br from-agentvooc-primary-bg to-agentvooc-primary-bg-dark">
+      <div className="text-agentvooc-secondary flex items-center justify-center min-h-screen bg-gradient-to-br from-agentvooc-secondary-bg to-agentvooc-primary-bg">
         Loading...
       </div>
     );
@@ -186,7 +186,7 @@ export default function Auth() {
           <meta name="description" content="Sign in or sign up with your email to access AgentVooc." />
         </Helmet>
         <Navbar />
-        <div className="absolute inset-0 bg-gradient-to-br from-agentvooc-primary-bg via-agentvooc-primary-bg-dark to-agentvooc-secondary-accent">
+        <div className="absolute inset-0 bg-gradient-to-br from-agentvooc-secondary-bg via-agentvooc-primary-bg to-agentvooc-secondary-accent">
           <div className="absolute inset-0 bg-black/60" />
         </div>
         <div className="absolute -top-40 -right-32 opacity-5 pointer-events-none z-0">
@@ -248,7 +248,7 @@ export default function Auth() {
           <meta name="description" content="Connect your Phantom Wallet to sign in to AgentVooc." />
         </Helmet>
         <Navbar />
-        <div className="absolute inset-0 bg-gradient-to-br from-agentvooc-primary-bg via-agentvooc-primary-bg-dark to-agentvooc-secondary-accent">
+        <div className="absolute inset-0 bg-gradient-to-br from-agentvooc-secondary-bg via-agentvooc-primary-bg to-agentvooc-secondary-accent">
           <div className="absolute inset-0 bg-black/60" />
         </div>
         <div className="absolute -top-40 -right-32 opacity-5 pointer-events-none z-0">
@@ -298,7 +298,7 @@ export default function Auth() {
         <meta name="description" content="Sign in or sign up to experience intelligent automation with AgentVooc." />
       </Helmet>
       <Navbar />
-      <div className="absolute inset-0 bg-gradient-to-br from-agentvooc-primary-bg via-agentvooc-primary-bg-dark to-agentvooc-secondary-accent">
+      <div className="absolute inset-0 bg-gradient-to-br from-agentvooc-secondary-bg via-agentvooc-primary-bg to-agentvooc-secondary-accent">
         <div className="absolute inset-0 bg-black/60" />
       </div>
       <div className="absolute -top-40 -right-32 opacity-5 pointer-events-none z-0">

@@ -6,6 +6,14 @@ import { initSuperTokens } from "./lib/superTokens";
 
 initSuperTokens();
 
+// Set initial theme
+const savedTheme = localStorage.getItem("theme");
+if (savedTheme === "dark" || (!savedTheme && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
+  document.documentElement.classList.add("dark");
+} else {
+  document.documentElement.classList.remove("dark");
+}
+
 const rootElement = document.getElementById("root");
 
 if (!rootElement) {
@@ -14,7 +22,7 @@ if (!rootElement) {
 
 createRoot(rootElement).render(
   <StrictMode>
-    <main className="min-h-screen bg-agentvooc-primary-bg dark:bg-agentvooc-primary-bg">
+    <main className="min-h-screen">
       <App />
     </main>
   </StrictMode>

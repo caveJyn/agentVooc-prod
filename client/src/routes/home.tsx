@@ -136,7 +136,7 @@ export default function Home() {
     }
 
     return (
-      <div className="flex flex-col gap-4 h-full p-4 md:p-8 bg-agentvooc-primary-bg">
+      <div className="flex flex-col gap-4 h-full p-4 md:p-8 bg-agentvooc-secondary-bg">
         <div className="flex items-center justify-between">
           <PageTitle title="Your AI Agents" />
         </div>
@@ -166,7 +166,7 @@ export default function Home() {
                 <CardTitle className="text-agentvooc-primary text-lg truncate">{agent?.name}</CardTitle>
               </CardHeader>
               <CardContent className="p-4">
-                <div className="rounded-md bg-agentvooc-primary-bg aspect-square w-full grid place-items-center">
+                <div className="rounded-md bg-agentvooc-secondary-bg aspect-square w-full grid place-items-center">
                   {agent.profile?.image ? (
                     <img
                       src={agent.profile.image}
@@ -185,7 +185,7 @@ export default function Home() {
                   <NavLink to={`/chat/${agent.id}`} className="w-full">
                     <Button
                       variant="outline"
-                      className="w-full border-agentvooc-accent/30 text-agentvooc-primary hover:bg-agentvooc-accent hover:text-agentvooc-primary-bg transition-colors text-sm py-2"
+                      className="w-full border-agentvooc-accent/30 text-agentvooc-primary hover:bg-agentvooc-accent hover:text-agentvooc-secondary-bg transition-colors text-sm py-2"
                     >
                       Chat
                     </Button>
@@ -195,7 +195,7 @@ export default function Home() {
                       <Button
                         size="icon"
                         variant="outline"
-                        className="w-9 h-9 border-agentvooc-accent/30 text-agentvooc-primary hover:bg-agentvooc-accent hover:text-agentvooc-primary-bg transition-colors"
+                        className="w-9 h-9 border-agentvooc-accent/30 text-agentvooc-primary hover:bg-agentvooc-accent hover:text-agentvooc-secondary-bg transition-colors"
                         aria-label="Settings"
                       >
                         <Cog className="h-4 w-4" />
@@ -205,7 +205,7 @@ export default function Home() {
                       <Button
                         size="icon"
                         variant="outline"
-                        className="w-9 h-9 border-agentvooc-accent/30 text-agentvooc-primary hover:bg-agentvooc-accent hover:text-agentvooc-primary-bg transition-colors"
+                        className="w-9 h-9 border-agentvooc-accent/30 text-agentvooc-primary hover:bg-agentvooc-accent hover:text-agentvooc-secondary-bg transition-colors"
                         aria-label="Knowledge"
                       >
                         <Book className="h-4 w-4" />
@@ -215,7 +215,7 @@ export default function Home() {
                       <Button
                         size="icon"
                         variant="outline"
-                        className="w-9 h-9 border-agentvooc-accent/30 text-agentvooc-primary hover:bg-agentvooc-accent hover:text-agentvooc-primary-bg transition-colors"
+                        className="w-9 h-9 border-agentvooc-accent/30 text-agentvooc-primary hover:bg-agentvooc-accent hover:text-agentvooc-secondary-bg transition-colors"
                         aria-label="Edit Character"
                       >
                         <Edit className="h-4 w-4" />

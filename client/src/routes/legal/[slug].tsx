@@ -37,7 +37,7 @@ export default function LegalDocumentPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-agentvooc-primary-bg to-agentvooc-primary-bg-dark text-agentvooc-primary">
+      <div className="min-h-screen bg-gradient-to-b from-agentvooc-secondary-bg to-agentvooc-primary-bg text-agentvooc-primary">
         <Helmet>
           <title>agentVooc | Error</title>
           <meta name="description" content="An error occurred while fetching the legal document." />
@@ -54,7 +54,7 @@ export default function LegalDocumentPage() {
 
   if (!document) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-agentvooc-primary-bg to-agentvooc-primary-bg-dark text-agentvooc-primary">
+      <div className="min-h-screen bg-gradient-to-b from-agentvooc-secondary-bg to-agentvooc-primary-bg text-agentvooc-primary">
         <Helmet>
           <title>agentVooc | Loading</title>
           <meta name="description" content="Loading legal document..." />
@@ -68,7 +68,7 @@ export default function LegalDocumentPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-agentvooc-primary-bg to-agentvooc-primary-bg-dark text-agentvooc-primary">
+    <div className="min-h-screen bg-gradient-to-b from-agentvooc-secondary-bg to-agentvooc-primary-bg text-agentvooc-primary">
       <Helmet>
         <title>agentVooc | {document.title}</title>
         <meta name="description" content={`Read the ${document.title.toLowerCase()} for agentVooc, your AI automation platform.`} />

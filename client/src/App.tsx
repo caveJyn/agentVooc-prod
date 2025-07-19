@@ -32,8 +32,7 @@ import ProductPage from "./routes/product/[slug]";
 import Demo from "./routes/demo";
 import { useEffect } from "react";
 import { Footer } from "./components/landing/footer";
-import { SubFooter } from "./components/landing/sub-footer";
-import { FooterProvider, useFooter } from "./context/footerContext";
+import { FooterProvider } from "./context/footerContext";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -46,8 +45,8 @@ const queryClient = new QueryClient({
 // Routes where the sidebar should be displayed
 const SIDEBAR_ROUTES = ["/home", "/chat", "/settings", "/create-character", "/edit-character", "/email-vault", "/knowledge"];
 
-// Routes where the footer and sub-footer should be displayed
-const FOOTER_ROUTES = ["/", "/company/:slug" ,"/company/blog", "/company/blog/:slug", "/company/press", "/company/press/:slug", "/product", "/product/:slug", "/legal/:slug", "/demo"];
+// Routes where the footer should be displayed
+const FOOTER_ROUTES = ["/", "/company/:slug", "/company/blog", "/company/blog/:slug", "/company/press", "/company/press/:slug", "/product", "/product/:slug", "/legal/:slug", "/demo"];
 
 function AppContent() {
   const location = useLocation();
@@ -59,7 +58,6 @@ function AppContent() {
       location.pathname === route ||
       (route.includes(":slug") && location.pathname.startsWith(route.split("/:")[0]))
   );
-  const { footerSection, subFooterSection } = useFooter();
 
   useEffect(() => {
     if (!window.twq) {
@@ -182,12 +180,7 @@ function AppContent() {
               element={<div>No route matched: {location.pathname}</div>}
             />
           </Routes>
-          {showFooter && (
-            <>
-              <Footer footerSection={footerSection} />
-              <SubFooter subFooterSection={subFooterSection} />
-            </>
-          )}
+          {showFooter && <Footer />}
         </div>
       </SidebarProvider>
       <Toaster />
@@ -199,7 +192,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <HelmetProvider>
-        <BackgroundWrapper className="dark antialiased">
+        <BackgroundWrapper>
           <BrowserRouter>
             <FooterProvider>
               <AppContent />

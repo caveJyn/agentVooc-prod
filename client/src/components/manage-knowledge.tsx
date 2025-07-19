@@ -166,7 +166,7 @@ export default function ManageKnowledge({ agentId }: KnowledgeVaultProps) {
 
   if (characterQuery.isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-agentvooc-primary-bg px-4 sm:px-6 lg:px-8">
+      <div className="flex items-center justify-center min-h-screen bg-agentvooc-secondary-bg px-4 sm:px-6 lg:px-8">
         <p className="text-agentvooc-secondary">Loading character settings...</p>
       </div>
     );
@@ -174,7 +174,7 @@ export default function ManageKnowledge({ agentId }: KnowledgeVaultProps) {
 
   if (characterQuery.isError) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-agentvooc-primary-bg px-4 sm:px-6 lg:px-8">
+      <div className="flex items-center justify-center min-h-screen bg-agentvooc-secondary-bg px-4 sm:px-6 lg:px-8">
         <p className="text-red-500">Error loading character: {characterQuery.error.message}</p>
       </div>
     );
@@ -182,14 +182,14 @@ export default function ManageKnowledge({ agentId }: KnowledgeVaultProps) {
 
   if (!characterQuery.data?.character?.settings?.ragKnowledge) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-agentvooc-primary-bg px-4 sm:px-6 lg:px-8">
+      <div className="flex items-center justify-center min-h-screen bg-agentvooc-secondary-bg px-4 sm:px-6 lg:px-8">
         <p className="text-agentvooc-secondary">Knowledge feature is not enabled for this character.</p>
       </div>
     );
   }
 
   return (
-    <div className="p-6 bg-agentvooc-primary-bg border border-agentvooc-accent/30 rounded-xl shadow-agentvooc-glow w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="p-6 bg-agentvooc-secondary-bg border border-agentvooc-accent/30 rounded-xl shadow-agentvooc-glow w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
       <h2 className="text-xl font-bold mb-4 text-agentvooc-primary">Knowledge Vault</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
@@ -223,7 +223,7 @@ export default function ManageKnowledge({ agentId }: KnowledgeVaultProps) {
         <div className="flex gap-2">
           <Button
             type="submit"
-            className="bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-primary-bg shadow-agentvooc-glow rounded-full"
+            className="bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-secondary-bg shadow-agentvooc-glow rounded-full"
             disabled={createKnowledgeMutation.isPending || updateKnowledgeMutation.isPending}
           >
             {editingKnowledge ? (
@@ -239,7 +239,7 @@ export default function ManageKnowledge({ agentId }: KnowledgeVaultProps) {
               type="button"
               variant="outline"
               onClick={handleCancelEdit}
-              className="border-agentvooc-accent/30 text-agentvooc-primary hover:bg-agentvooc-accent hover:text-agentvooc-primary-bg"
+              className="border-agentvooc-accent/30 text-agentvooc-primary hover:bg-agentvooc-accent hover:text-agentvooc-secondary-bg"
             >
               <X className="mr-2 h-4 w-4" /> Cancel
             </Button>
@@ -266,7 +266,7 @@ export default function ManageKnowledge({ agentId }: KnowledgeVaultProps) {
                     size="sm"
                     variant="outline"
                     onClick={() => handleEdit(item)}
-                    className="border-agentvooc-accent/30 text-agentvooc-primary hover:bg-agentvooc-accent hover:text-agentvooc-primary-bg"
+                    className="border-agentvooc-accent/30 text-agentvooc-primary hover:bg-agentvooc-accent hover:text-agentvooc-secondary-bg"
                   >
                     <Edit2 className="h-4 w-4" />
                   </Button>

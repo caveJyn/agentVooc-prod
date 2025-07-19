@@ -33,27 +33,45 @@
         --sidebar-accent-foreground: 240 5.9% 10%;
         --sidebar-border: 220 13% 91%;
         --sidebar-ring: 217.2 91.2% 59.8%;
-        /* AgentVooc Custom Colors */
-        --agentvooc-primary-bg: 180 20% 10%; /* #1A2526 - Dark teal/gray */
-        --agentvooc-primary-bg-dark: 180 20% 8%; /* #151E1F - Darker for gradients */
-        --agentvooc-primary: 0 0% 100%; /* #FFFFFF - White for text */
-        --agentvooc-primary-foreground: 180 20% 10%; /* #1A2526 - Dark teal for light backgrounds */
-        --agentvooc-secondary: 180 10% 70%; /* #B0B8B4 - Light gray */
-        --agentvooc-secondary-accent: 180 15% 20%; /* #2A3738 - Secondary backgrounds */
-        --agentvooc-secondary-dark: 180 15% 15%; /* #212A2B - Darker secondary */
-        --agentvooc-accent: 160 100% 85%; /* #00FFB3 - Neon green */
-        --agentvooc-accent-dark: 160 100% 75%; /* #00CC8F - Darker neon green */
-        --agentvooc-accent-muted: 160 50% 90%; /* #80FFD9 - Softer green */
-        --agentvooc-stars: 160 100% 15%; /* #004033 - Dim green for stars */
-        --agentvooc-button-bg: 180 15% 25%; /* #2F3D40 - Button background */
-        --agentvooc-button-bg-hover: 180 15% 30%; /* #374647 - Button hover */
-        --agentvooc-glow: 160 100% 85% / 0.5; /* #00FFB3 with 50% opacity */
-        --agentvooc-border: 180 15% 30%; /* #374647 - Borders */
-        --agentvooc-error: 0 70% 50%; /* #E63939 - Error states */
-        --agentvooc-error-foreground: 0 0% 100%; /* #FFFFFF - Error text */
-        --agentvooc-success: 140 60% 50%; /* #26A680 - Success states */
-        --agentvooc-success-foreground: 0 0% 100%; /* #FFFFFF - Success text */
+
+        
+        /* AgentVooc Light Theme */
+        --agentvooc-primary-bg: 180 10% 98%; /* Light grayish-cyan background */
+        --agentvooc-secondary-bg: 180 10% 92%; /* Slightly darker grayish-cyan */
+        --agentvooc-primary: 180 20% 10%; /* Dark teal for text */
+        --agentvooc-secondary: 180 10% 50%; /* Mid-gray for secondary text */
+        --agentvooc-accent: 160 80% 40%; /* Vibrant teal for accents */
+        --agentvooc-primary-accent: 160 60% 70%; /* Lighter teal for accents */
+        --agentvooc-secondary-accent: 160 60% 60%; /* Medium teal for accents */
+        --agentvooc-button-bg: 160 80% 40%; /* Teal button background */
+        --agentvooc-button-text: 0 0% 100%; /* White text on buttons */
+        --agentvooc-button-bg-hover: 160 80% 35%; /* Slightly darker teal on hover */
+        --agentvooc-button-text-hover: 0 0% 100%; /* White text on hover */
+        --agentvooc-glow: 160 80% 40% / 0.3; /* Teal glow with 30% opacity */
+        --agentvooc-border: 180 10% 80%; /* Light gray border */
+
+        --agentvooc-text-h1: 180 20% 10%;
+        --agentvooc-text-h2: 180 20% 10%;
+        --agentvooc-text-h3: 180 20% 10%;
+        --agentvooc-text-h4: 180 20% 10%;
+        --agentvooc-text-h5: 180 20% 10%;
+        --agentvooc-text-h6: 180 20% 10%;
+        --agentvooc-text-p: 180 10% 30%;
+        --agentvooc-text-li: 180 10% 30%;
+
+        --agentvooc-card-bg: 0 0% 100%; /* White card background */
+        --agentvooc-card-header: 180 10% 95%; /* Light gray header */
+        --agentvooc-card-title: 180 20% 10%; /* Dark teal title */
+        --agentvooc-card-content: 0 0% 100%; /* Mid-gray content */
+        --agentvooc-card-description: 180 10% 50%; /* Lighter gray description */
+
+        --agentvooc-stars: 160 80% 50%; /* Brighter teal for stars */
+        --agentvooc-error: 0 70% 50%; /* Red for errors */
+        --agentvooc-error-foreground: 0 0% 100%; /* White error text */
+        --agentvooc-success: 140 60% 50%; /* Green for success */
+        --agentvooc-success-foreground: 0 0% 100%; /* White success text */
     }
+
 
     .dark {
         /* ElizaOS Dark Mode */
@@ -84,26 +102,43 @@
         --sidebar-accent-foreground: 0 0% 100%; /* #FFFFFF */
         --sidebar-border: 180 15% 20%; /* #2A3738 */
         --sidebar-ring: 160 100% 85%; /* #00FFB3 */
-        /* AgentVooc Dark Mode */
-        --agentvooc-primary-bg: 180 20% 10%; /* #1A2526 */
-        --agentvooc-primary-bg-dark: 180 20% 8%; /* #151E1F */
-        --agentvooc-primary: 0 0% 100%; /* #FFFFFF */
-        --agentvooc-primary-foreground: 180 20% 10%; /* #1A2526 */
-        --agentvooc-secondary: 180 10% 70%; /* #B0B8B4 */
-        --agentvooc-secondary-accent: 180 19% 15%; /* #2A3738 */
-        --agentvooc-secondary-dark: 180 15% 15%; /* #212A2B */
-        --agentvooc-accent: 160 100% 85%; /* #00FFB3 */
-        --agentvooc-accent-dark: 160 100% 75%; /* #00CC8F */
-        --agentvooc-accent-muted: 160 50% 90%; /* #80FFD9 */
-        --agentvooc-stars: 160 100% 15%; /* #004033 */
-        --agentvooc-button-bg: 180 15% 25%; /* #2F3D40 */
-        --agentvooc-button-bg-hover: 180 15% 30%; /* #374647 */
-        --agentvooc-glow: 160 100% 85% / 0.1; /* #00FFB3 with 10% opacity */
-        --agentvooc-border: 180 15% 30%; /* #374647 */
-        --agentvooc-error: 0 70% 50%; /* #E63939 */
-        --agentvooc-error-foreground: 0 0% 100%; /* #FFFFFF */
-        --agentvooc-success: 140 60% 50%; /* #26A680 */
-        --agentvooc-success-foreground: 0 0% 100%; /* #FFFFFF */
+
+
+        /* AgentVooc Dark Theme */
+        --agentvooc-primary-bg: 180 20% 8%; /* #151E1F */
+        --agentvooc-secondary-bg: 180 20% 9%; /* Slightly lighter dark teal */
+        --agentvooc-primary: 0 0% 98%; /* Near-white text */
+        --agentvooc-secondary: 180 10% 70%; /* Light gray for secondary text */
+        --agentvooc-accent: 160 100% 85%; /* Neon teal accent */
+        --agentvooc-primary-accent: 180 19% 15%; /* Darker teal accent */
+        --agentvooc-secondary-accent: 180 19% 15%; /* Darker teal accent */
+        --agentvooc-button-bg: 180 15% 25%; /* Neon teal button background */
+        --agentvooc-button-text: 160 100% 85%; /* Dark teal text on buttons */
+        --agentvooc-button-bg-hover: 160 100% 85%; /* Slightly darker neon teal */
+        --agentvooc-button-text-hover: 180 20% 8%; /* Dark teal text on hover */
+        --agentvooc-glow: 160 100% 85% / 0.1; /* Neon teal glow with 10% opacity */
+        --agentvooc-border: 180 15% 30%; /* Dark gray border */
+
+        --agentvooc-text-h1: 0 0% 98%;
+        --agentvooc-text-h2: 0 0% 98%;
+        --agentvooc-text-h3: 0 0% 98%;
+        --agentvooc-text-h4: 0 0% 98%;
+        --agentvooc-text-h5: 0 0% 98%;
+        --agentvooc-text-h6: 0 0% 98%;
+        --agentvooc-text-p: 180 10% 70%;
+        --agentvooc-text-li: 180 10% 70%;
+
+        --agentvooc-card-bg: 180 19% 15%; /* Dark teal card background */
+        --agentvooc-card-header: 180 20% 8%; /* Darker teal header */
+        --agentvooc-card-title: 0 0% 98%; /* Near-white title */
+        --agentvooc-card-content: 180 19% 17%; /* Light gray content */
+        --agentvooc-card-description: 180 10% 70%; /* Light gray description */
+
+        --agentvooc-stars: 160 100% 15%; /* Dim teal for stars */
+        --agentvooc-error: 0 70% 50%; /* Red for errors */
+        --agentvooc-error-foreground: 0 0% 100%; /* White error text */
+        --agentvooc-success: 140 60% 50%; /* Green for success */
+        --agentvooc-success-foreground: 0 0% 100%; /* White success text */
     }
 }
 
@@ -116,13 +151,33 @@
         @apply bg-agentvooc-primary-bg text-agentvooc-primary font-sans;
     }
 
-    p, li {
+    p {
         line-height: 1.6;
-        @apply text-agentvooc-secondary;
+        @apply text-agentvooc-text-p;
     }
 
-    h1, h2, h3, h4, h5, h6 {
-        @apply text-agentvooc-primary font-bold;
+    li {
+        line-height: 1.6;
+        @apply text-agentvooc-text-li;
+    }
+
+    h1{
+        @apply text-agentvooc-text-h1 ;
+    }
+    h2 {
+        @apply text-agentvooc-text-h2 ;
+    }
+    h3{
+        @apply text-agentvooc-text-h3 ;
+    }
+    h4{
+        @apply text-agentvooc-text-h4 ;
+    }
+    h5{
+        @apply text-agentvooc-text-h5 ;
+    }
+    h6 {
+        @apply text-agentvooc-text-h6 ;
     }
 
     /* Custom Glow Effect for AgentVooc */
@@ -138,6 +193,13 @@
     }
     .bg-blend-overlay {
   background-blend-mode: overlay;
+}
+    /* index.css */
+.wave-mask {
+  mask: url(#wave-mask);
+  mask-repeat: no-repeat;
+  mask-position: right;
+  mask-size: contain;
 }
 
     /* Footer link underline effect */

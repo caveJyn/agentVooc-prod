@@ -278,6 +278,7 @@ interface LandingPage {
     ctaUrl: string;
     copyright: string;
   };
+  _updatedAt?: string;
 }
 
 interface Item {
@@ -343,25 +344,55 @@ interface LegalDocument {
 }
 
 interface BlogPost {
-title: string;
+  title: string;
   slug: { current: string };
   content?: Array<any>;
   publishedAt: string;
+  modifiedAt?: string;
+  seoDescription: string;
   excerpt: string;
   mainImage?: string;
+  mainImageAlt?: string;
+  heroImage?: string;
+  heroImageAlt?: string;
+  galleryImages?: Array<{ url: string; alt: string }>;
   thumbnailImage?: string;
   mediumImage?: string;
+  tags?: string[];
+  relatedContent?: Array<{
+    _type: "blogPost" | "pressPost" | "productPage";
+    title: string;
+    slug: { current: string };
+    excerpt: string;
+    mainImage?: string;
+    mainImageAlt?: string;
+  }>;
 }
 
 interface PressPost {
-title: string;
+  title: string;
   slug: { current: string };
   content?: Array<any>;
   publishedAt: string;
+  modifiedAt?: string;
+  seoDescription: string;
   excerpt: string;
   mainImage?: string;
+  mainImageAlt?: string;
+  heroImage?: string;
+  heroImageAlt?: string;
+  galleryImages?: Array<{ url: string; alt: string }>;
   thumbnailImage?: string;
   mediumImage?: string;
+  tags?: string[];
+  relatedContent?: Array<{
+    _type: "blogPost" | "pressPost" | "productPage";
+    title: string;
+    slug: { current: string };
+    excerpt?: string;
+    mainImage?: string;
+    mainImageAlt?: string;
+  }>;
 }
 
 interface CompanyPage {
@@ -379,12 +410,30 @@ interface ProductPage {
   title: string;
   slug: { current: string };
   content?: Array<any>;
+  publishedAt: string;
+  modifiedAt?: string;
+  seoDescription: string;
   excerpt: string;
-  lastUpdated: string;
   mainImage?: string;
+  mainImageAlt?: string;
+  heroImage?: string;
+  heroImageAlt?: string;
+  galleryImages?: Array<{ url: string; alt: string }>;
   thumbnailImage?: string;
   mediumImage?: string;
+  tags?: string[];
+  relatedContent?: Array<{
+    _type: "blogPost" | "pressPost" | "productPage";
+    title: string;
+    slug: { current: string };
+    excerpt?: string;
+    mainImage?: string;
+    mainImageAlt?: string;
+  }>;
 }
+
+
+
 export const apiClient = {
   sendMessage: (
     agentId: string,

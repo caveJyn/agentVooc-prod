@@ -347,7 +347,7 @@ useEffect(() => {
           action: (
             <Button
               onClick={() => navigate("/settings", { state: { from: "create-character" } })}
-              className="bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-primary-bg"
+              className="bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-secondary-bg"
             >
               Go to Settings
             </Button>
@@ -1072,14 +1072,14 @@ const handleEmailIncomingPassChange = (e: React.ChangeEvent<HTMLInputElement>) =
   
 
 return (
-  <div className="min-h-screen bg-gradient-to-br from-agentvooc-primary-bg via-agentvooc-secondary-accent/20 to-agentvooc-primary-bg p-6">
+  <div className="min-h-screen bg-gradient-to-br from-agentvooc-secondary-bg via-agentvooc-secondary-accent/20 to-agentvooc-secondary-bg p-6">
     <div className="max-w-5xl mx-auto">
       {/* Header Card */}
-      <Card className="bg-agentvooc-primary-bg/90 backdrop-blur-sm border border-agentvooc-accent/30 shadow-agentvooc-glow mb-8">
+      <Card className="bg-agentvooc-secondary-bg/90 backdrop-blur-sm border border-agentvooc-accent/30 shadow-agentvooc-glow mb-8">
         <CardHeader>
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-gradient-to-r from-agentvooc-accent to-agentvooc-button-bg rounded-lg flex items-center justify-center">
-              <User className="w-5 h-5 text-agentvooc-primary-bg" />
+              <User className="w-5 h-5 text-agentvooc-secondary-bg" />
             </div>
             <CardTitle className="text-2xl font-bold text-agentvooc-primary">
               Create New Character
@@ -1098,7 +1098,7 @@ return (
                 onClick={() => handlePresetSelect(null)}
                 className={
                   selectedPreset === null
-                    ? "bg-gradient-to-r from-agentvooc-accent to-agentvooc-button-bg text-agentvooc-primary-bg hover:bg-agentvooc-accent shadow-lg"
+                    ? "bg-gradient-to-r from-agentvooc-accent to-agentvooc-button-bg text-agentvooc-secondary-bg hover:bg-agentvooc-accent shadow-lg"
                     : "border-agentvooc-accent/30 text-agentvooc-primary hover:bg-agentvooc-accent/10"
                 }
               >
@@ -1121,7 +1121,7 @@ return (
                     onClick={() => handlePresetSelect(preset)}
                     className={
                       selectedPreset === preset._id
-                        ? "bg-gradient-to-r from-agentvooc-accent to-agentvooc-button-bg text-agentvooc-primary-bg hover:bg-agentvooc-accent shadow-lg"
+                        ? "bg-gradient-to-r from-agentvooc-accent to-agentvooc-button-bg text-agentvooc-secondary-bg hover:bg-agentvooc-accent shadow-lg"
                         : "border-agentvooc-accent/30 text-agentvooc-primary hover:bg-agentvooc-accent/10"
                     }
                   >
@@ -1136,7 +1136,7 @@ return (
 
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Basic Information Card */}
-        <Card className="bg-agentvooc-primary-bg/90 backdrop-blur-sm border border-agentvooc-accent/30 shadow-agentvooc-glow">
+        <Card className="bg-agentvooc-secondary-bg/90 backdrop-blur-sm border border-agentvooc-accent/30 shadow-agentvooc-glow">
           <CardHeader>
             <div className="flex items-center space-x-3">
               <User className="w-6 h-6 text-agentvooc-accent" />
@@ -1227,7 +1227,7 @@ return (
         </Card>
 
         {/* Personality Card */}
-        <Card className="bg-agentvooc-primary-bg/90 backdrop-blur-sm border border-agentvooc-accent/30 shadow-agentvooc-glow">
+        <Card className="bg-agentvooc-secondary-bg/90 backdrop-blur-sm border border-agentvooc-accent/30 shadow-agentvooc-glow">
           <CardHeader>
             <div className="flex items-center space-x-3">
               <Heart className="w-6 h-6 text-agentvooc-accent" />
@@ -1317,7 +1317,7 @@ return (
         </Card>
 
         {/* Communication Style Card */}
-        <Card className="bg-agentvooc-primary-bg/90 backdrop-blur-sm border border-agentvooc-accent/30 shadow-agentvooc-glow">
+        <Card className="bg-agentvooc-secondary-bg/90 backdrop-blur-sm border border-agentvooc-accent/30 shadow-agentvooc-glow">
           <CardHeader>
             <div className="flex items-center space-x-3">
               <MessageCircle className="w-6 h-6 text-agentvooc-accent" />
@@ -1390,7 +1390,7 @@ return (
         </Card>
 
         {/* Examples Card */}
-        <Card className="bg-agentvooc-primary-bg/90 backdrop-blur-sm border border-agentvooc-accent/30 shadow-agentvooc-glow">
+        <Card className="bg-agentvooc-secondary-bg/90 backdrop-blur-sm border border-agentvooc-accent/30 shadow-agentvooc-glow">
           <CardHeader>
             <div className="flex items-center space-x-3">
               <FileText className="w-6 h-6 text-agentvooc-accent" />
@@ -1445,7 +1445,7 @@ return (
         </Card>
 
         {/* Plugins Card */}
-        <Card className="bg-agentvooc-primary-bg/95 backdrop-blur-md border-2 border-agentvooc-accent/50 shadow-lg shadow-agentvooc-accent/20">
+        <Card className="bg-agentvooc-secondary-bg/95 backdrop-blur-md border-2 border-agentvooc-accent/50 shadow-lg shadow-agentvooc-accent/20">
           <CardHeader>
             <div className="flex items-center space-x-3">
               <Zap className="w-6 h-6 text-agentvooc-accent" />
@@ -1761,7 +1761,7 @@ return (
                       action: (
                         <Button
                           onClick={() => navigate("/settings", { state: { from: "create-character" } })}
-                          className="bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-primary-bg"
+                          className="bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-secondary-bg"
                         >
                           Go to Settings
                         </Button>
@@ -1787,7 +1787,7 @@ return (
         </Card>
 
         {/* Advanced Settings Card */}
-        <Card className="bg-agentvooc-primary-bg/95 backdrop-blur-md border-2 border-agentvooc-accent/50 shadow-lg shadow-agentvooc-accent/20">
+        <Card className="bg-agentvooc-secondary-bg/95 backdrop-blur-md border-2 border-agentvooc-accent/50 shadow-lg shadow-agentvooc-accent/20">
           <CardHeader>
             <div className="flex items-center space-x-3">
               <Settings className="w-6 h-6 text-agentvooc-accent" />
@@ -1883,7 +1883,7 @@ return (
               <Button
                 type="button"
                 onClick={addSecret}
-                className="mt-2 bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-primary-bg"
+                className="mt-2 bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-secondary-bg"
               >
                 Add Secret
               </Button>
@@ -1895,7 +1895,7 @@ return (
         <div className="flex justify-end gap-4">
           <Button
             type="submit"
-            className="bg-gradient-to-r from-agentvooc-accent to-agentvooc-button-bg text-agentvooc-primary-bg hover:bg-agentvooc-accent shadow-lg"
+            className="bg-gradient-to-r from-agentvooc-accent to-agentvooc-button-bg text-agentvooc-secondary-bg hover:bg-agentvooc-accent shadow-lg"
             disabled={createCharacterMutation.isPending || uploadImageMutation.isPending}
           >
             {createCharacterMutation.isPending || uploadImageMutation.isPending ? (

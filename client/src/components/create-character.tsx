@@ -381,7 +381,7 @@ export default function CreateCharacter({ setError }: CreateCharacterProps) {
             action: (
               <Button
                 onClick={() => navigate("/settings", { state: { from: "create-character" } })}
-                className="bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-primary-bg"
+                className="bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-secondary-bg"
               >
                 Go to Settings
               </Button>
@@ -911,7 +911,7 @@ export default function CreateCharacter({ setError }: CreateCharacterProps) {
   };
 
   return (
-    <div className="p-6 bg-agentvooc-primary-bg border border-agentvooc-accent/30 rounded-xl shadow-agentvooc-glow w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="p-6 bg-agentvooc-secondary-bg border border-agentvooc-accent/30 rounded-xl shadow-agentvooc-glow w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
       <h3 className="text-xl font-semibold mb-6 text-agentvooc-primary">Create New Character</h3>
       <div className="mb-6">
         <label className="block text-sm font-medium text-agentvooc-secondary mb-2">
@@ -923,8 +923,8 @@ export default function CreateCharacter({ setError }: CreateCharacterProps) {
             onClick={() => handlePresetSelect(null)}
             className={
               selectedPreset === null
-                ? "bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-primary-bg"
-                : "border-agentvooc-accent/30 text-agentvooc-primary hover:bg-agentvooc-accent hover:text-agentvooc-primary-bg"
+                ? "bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-secondary-bg"
+                : "border-agentvooc-accent/30 text-agentvooc-primary hover:bg-agentvooc-accent hover:text-agentvooc-secondary-bg"
             }
           >
             Create Your Own
@@ -941,8 +941,8 @@ export default function CreateCharacter({ setError }: CreateCharacterProps) {
                 onClick={() => handlePresetSelect(preset)}
                 className={
                   selectedPreset === preset._id
-                    ? "bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-primary-bg"
-                    : "border-agentvooc-accent/30 text-agentvooc-primary hover:bg-agentvooc-accent hover:text-agentvooc-primary-bg"
+                    ? "bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-secondary-bg"
+                    : "border-agentvooc-accent/30 text-agentvooc-primary hover:bg-agentvooc-accent hover:text-agentvooc-secondary-bg"
                 }
               >
                 {preset.name}
@@ -1713,7 +1713,7 @@ export default function CreateCharacter({ setError }: CreateCharacterProps) {
         <div className="flex gap-4">
           <Button
             type="submit"
-            className="bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-primary-bg shadow-agentvooc-glow rounded-lg px-6 py-2"
+            className="bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-secondary-bg shadow-agentvooc-glow rounded-lg px-6 py-2"
             disabled={createCharacterMutation.isPending || uploadImageMutation.isPending || isCreating}
           >
             {isCreating ? (
@@ -1729,7 +1729,7 @@ export default function CreateCharacter({ setError }: CreateCharacterProps) {
             type="button"
             variant="outline"
             onClick={handleCancel}
-            className="border-agentvooc-accent/30 text-agentvooc-primary hover:bg-agentvooc-accent hover:text-agentvooc-primary-bg rounded-lg px-6 py-2"
+            className="border-agentvooc-accent/30 text-agentvooc-primary hover:bg-agentvooc-accent hover:text-agentvooc-secondary-bg rounded-lg px-6 py-2"
             disabled={isCreating}
           >
             Cancel

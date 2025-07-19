@@ -100,7 +100,7 @@ export default function ManageEmailTemplate({ agentId }: ManageEmailTemplateProp
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-agentvooc-primary-bg px-4 sm:px-6 lg:px-8">
+      <div className="flex items-center justify-center min-h-screen bg-agentvooc-secondary-bg px-4 sm:px-6 lg:px-8">
         <p className="text-agentvooc-secondary">Loading...</p>
       </div>
     );
@@ -108,14 +108,14 @@ export default function ManageEmailTemplate({ agentId }: ManageEmailTemplateProp
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-agentvooc-primary-bg px-4 sm:px-6 lg:px-8">
+      <div className="flex items-center justify-center min-h-screen bg-agentvooc-secondary-bg px-4 sm:px-6 lg:px-8">
         <p className="text-red-500">Error: {error.message}</p>
       </div>
     );
   }
 
   return (
-    <div className="p-6 bg-agentvooc-primary-bg border border-agentvooc-accent/30 rounded-xl shadow-agentvooc-glow w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="p-6 bg-agentvooc-secondary-bg border border-agentvooc-accent/30 rounded-xl shadow-agentvooc-glow w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
       <h2 className="text-xl font-bold mb-4 text-agentvooc-primary">Manage Email Template</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
@@ -209,7 +209,7 @@ export default function ManageEmailTemplate({ agentId }: ManageEmailTemplateProp
         </div>
         <Button
           type="submit"
-          className="bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-primary-bg shadow-agentvooc-glow rounded-lg"
+          className="bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-secondary-bg shadow-agentvooc-glow rounded-lg"
         >
           Save Changes
         </Button>

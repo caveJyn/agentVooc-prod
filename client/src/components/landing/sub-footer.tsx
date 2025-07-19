@@ -16,7 +16,7 @@ export const SubFooter = ({ subFooterSection }: SubFooterProps) => {
 
   return (
     <section
-      className="text-sm py-4 px-4 bg-agentvooc-primary-bg-dark text-center border-t border-agentvooc-border animate-fade-in"
+      className="text-sm py-4 px-4 bg-agentvooc-primary-bg text-center border-t border-agentvooc-border animate-fade-in"
       aria-label="Sub Footer"
     >
       <p className="text-agentvooc-secondary mb-2">

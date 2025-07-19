@@ -238,6 +238,7 @@ export default function AuthForm({ isPhantom = false }: AuthFormProps) {
         <CardContent className="space-y-4">
           <p className="text-gray-500 text-agentvooc-secondary">Phantom Wallet integration is coming soon!</p>
           <Button
+          variant="default"
             onClick={() => navigate("/auth")}
             className="w-full py-3 text-white rounded-full shadow-lg bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-white shadow-agentvooc-glow"
           >
@@ -249,80 +250,80 @@ export default function AuthForm({ isPhantom = false }: AuthFormProps) {
   }
 
   return (
-    <Card className="w-full max-w-md bg-agentvooc-secondary-accent border-agentvooc-accent/10 shadow-lg">
-      <CardHeader>
-        <CardTitle className="text-2xl text-agentvooc-primary font-bold">{isOtpSent ? "Verify OTP" : "Sign In / Sign Up"}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <Helmet>
-          <title>{isOtpSent ? "Verify OTP | agentVooc" : "Sign In / Sign Up | agentVooc"}</title>
-          <meta name="description" content="Sign in or sign up with your email to access AgentVooc." />
-        </Helmet>
-        {!isOtpSent ? (
-          <form onSubmit={handleEmailSubmit} className="space-y-4">
-            <div>
-              <Label htmlFor="email" className="text-agentvooc-secondary">Email</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="bg-gray-100 dark:bg-agentvooc-primary-bg text-agentvooc-primary border border-agentvooc-accent/30 focus:ring-accent"
-                placeholder="Enter your email address"
-              />
-            </div>
+  <Card className="w-full max-w-md shadow-lg">
+    <CardHeader>
+      <CardTitle className="text-2xl">{isOtpSent ? "Verify OTP" : "Sign In / Sign Up"}</CardTitle>
+    </CardHeader>
+    <CardContent className="space-y-4">
+      <Helmet>
+        <title>{isOtpSent ? "Verify OTP | agentVooc" : "Sign In / Sign Up | agentVooc"}</title>
+        <meta name="description" content="Sign in or sign up with your email to access AgentVooc." />
+      </Helmet>
+      {!isOtpSent ? (
+        <form onSubmit={handleEmailSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="bg-agentvooc-secondary-bg border-agentvooc-border focus:ring-agentvooc-accent"
+              placeholder="Enter your email address"
+            />
+          </div>
+          <Button
+            variant="default"
+            size="lg"
+            type="submit"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Sending OTP..." : "Send OTP"}
+          </Button>
+        </form>
+      ) : (
+        <form onSubmit={handleOtpSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="email">Email: {email}</Label>
+            <Label htmlFor="otp">Enter OTP</Label>
+            <Input
+              id="otp"
+              name="otp"
+              value={otp}
+              onChange={(e) => setOtp(e.target.value)}
+              required
+              className="bg-agentvooc-secondary-bg border-agentvooc-border focus:ring-agentvooc-accent"
+              placeholder="Enter the OTP from your email"
+            />
+          </div>
+          <Button
+            variant="default"
+            size="lg"
+            type="submit"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Verifying..." : "Verify OTP"}
+          </Button>
+          <div className="flex justify-between">
             <Button
-              type="submit"
+              variant="link"
+              onClick={handleResendOtp}
               disabled={isSubmitting}
-              className="w-full py-3 bg-agentvooc-button-bg text-white rounded-full shadow-lg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-white shadow-agentvooc-glow"
             >
-              {isSubmitting ? "Sending OTP..." : "Send OTP"}
+              Resend OTP
             </Button>
-          </form>
-        ) : (
-          <form onSubmit={handleOtpSubmit} className="space-y-4">
-            <div>
-              <Label htmlFor="email" className="text-agentvooc-secondary">Email: {email}</Label>
-              <Label htmlFor="otp" className="text-agentvooc-secondary">Enter OTP</Label>
-              <Input
-                id="otp"
-                name="otp"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-                required
-                className="bg-gray-100 dark:bg-agentvooc-primary-bg text-agentvooc-primary border-agentvooc-accent/30 focus:ring-accent"
-                placeholder="Enter the OTP from your email"
-              />
-            </div>
             <Button
-              type="submit"
+              variant="link"
+              onClick={handleChangeEmail}
               disabled={isSubmitting}
-              className="w-full py-3 bg-agentvooc-button-bg text-white rounded-full shadow-lg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-white shadow-agentvooc-glow"
             >
-              {isSubmitting ? "Verifying..." : "Verify OTP"}
+              Change Email
             </Button>
-            <div className="flex justify-between">
-              <Button
-                variant="link"
-                onClick={handleResendOtp}
-                disabled={isSubmitting}
-                className="text-agentvooc-secondary hover:text-agentvooc-accent"
-              >
-                Resend OTP
-              </Button>
-              <Button
-                variant="link"
-                onClick={handleChangeEmail}
-                disabled={isSubmitting}
-                className="text-agentvooc-secondary hover:text-agentvooc-accent"
-              >
-                Change Email
-              </Button>
-            </div>
-          </form>
-        )}
+          </div>
+        </form>
+      )}
         {/* <Button
           variant="outline"
           className="flex items-center w-full gap-2 mt-4 text-agentvooc-primary border-agentvooc-accent/30 hover:bg-agentvooc-accent hover:text-agentvooc-white"
