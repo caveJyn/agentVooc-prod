@@ -97,7 +97,7 @@ export const Hero = ({ heroSection }: HeroProps) => {
         <h1
           className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 animate-fade-in"
           style={{
-            background: "linear-gradient(to right, hsl(var(--agentvooc-primary)), hsl(var(--agentvooc-accent)))",
+            background: "linear-gradient(to right, hsl(var(--agentvooc-text-hero-title)), hsl(var(--agentvooc-accent)))",
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent",
             animationDelay: "0.0s",

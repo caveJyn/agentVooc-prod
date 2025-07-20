@@ -6,7 +6,6 @@ import { doesSessionExist } from "supertokens-web-js/recipe/session";
 import { consumeCode, clearLoginAttemptInfo } from "supertokens-web-js/recipe/passwordless";
 import AuthForm from "@/components/auth-form";
 import AuthSelection from "@/components/auth-selection";
-import Navbar from "@/components/navbar";
 import { apiClient } from "@/lib/api";
 import { Helmet } from "react-helmet-async";
 
@@ -185,7 +184,6 @@ export default function Auth() {
           <title>Email Sign In | agentVooc</title>
           <meta name="description" content="Sign in or sign up with your email to access AgentVooc." />
         </Helmet>
-        <Navbar />
         <div className="absolute inset-0 bg-gradient-to-br from-agentvooc-secondary-bg via-agentvooc-primary-bg to-agentvooc-secondary-accent">
           <div className="absolute inset-0 bg-black/60" />
         </div>
@@ -247,7 +245,6 @@ export default function Auth() {
           <title>Phantom Wallet | agentVooc</title>
           <meta name="description" content="Connect your Phantom Wallet to sign in to AgentVooc." />
         </Helmet>
-        <Navbar />
         <div className="absolute inset-0 bg-gradient-to-br from-agentvooc-secondary-bg via-agentvooc-primary-bg to-agentvooc-secondary-accent">
           <div className="absolute inset-0 bg-black/60" />
         </div>
@@ -297,7 +294,6 @@ export default function Auth() {
         <title>agentVooc | Auth</title>
         <meta name="description" content="Sign in or sign up to experience intelligent automation with AgentVooc." />
       </Helmet>
-      <Navbar />
       <div className="absolute inset-0 bg-gradient-to-br from-agentvooc-secondary-bg via-agentvooc-primary-bg to-agentvooc-secondary-accent">
         <div className="absolute inset-0 bg-black/60" />
       </div>
@@ -321,10 +317,10 @@ export default function Auth() {
         ))}
       </div>
       <div className="relative z-10 flex flex-col items-center justify-center text-center py-20">
-        <h1 className="text-5xl font-bold mb-4 text-white">Welcome to AgentVooc</h1>
-        <p className="text-xl max-w-2xl mb-6 text-agentvooc-secondary">
+        <h1 className="text-5xl font-bold mb-4">Welcome to AgentVooc</h1>
+        <h2 className="text-xl max-w-2xl mb-6">
           Discover the future of AI agent services with AgentVooc. Sign in or sign up to experience intelligent automation.
-        </p>
+        </h2>
       </div>
       <div className="relative z-10 flex justify-center py-12">
         <AuthSelection />

@@ -135,8 +135,7 @@ export function AppSidebar() {
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarTrigger className="w-full justify-start text-agentvooc-primary hover:bg-agentvooc-secondary-accent hover:text-agentvooc-accent">
-              <span>Toggle Sidebar</span>
+            <SidebarTrigger className="hover:bg-agentvooc-secondary-accent hover:text-agentvooc-accent">
             </SidebarTrigger>
           </SidebarMenuItem>
           <SidebarMenuItem>
@@ -237,7 +236,7 @@ export function AppSidebar() {
 	  <SidebarMenuItem>
             <SidebarMenuButton asChild>
               <NavLink
-                to="https://agentvooc.com/company/blogs/how-it-works"
+                to="https://agentvooc.com/company/blog/how-it-works"
                 className="hover:bg-agentvooc-secondary-accent hover:text-agentvooc-accent"
               >
                 <Cog className="text-agentvooc-accent" />

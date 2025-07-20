@@ -69,7 +69,7 @@ export default function PaymentSection({
             {baseItems.map((item) => (
               <Card
                 key={item.id}
-                className={`cursor-pointer ${
+                className={`w-60cursor-pointer ${
                   selectedItems.some((i) => i.id === item.id)
                     ? "border-blue-500 border-2"
                     : ""

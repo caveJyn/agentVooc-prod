@@ -14,7 +14,7 @@ export default function AuthSelection() {
   };
 
   return (
-  <Card className="w-full max-w-md text-2xl font-bold shadow-lg">
+  <Card className=" text-2xl font-bold shadow-lg">
     <CardHeader>
       <h2>Sign In to agentVooc</h2>
     </CardHeader>

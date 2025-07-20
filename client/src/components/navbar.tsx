@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-// import { ThemeToggle } from "./themeToggle";
+import { ThemeToggle } from "./themeToggle";
 import { CardHeader } from "./ui/card";
 
 export default function Navbar() {
@@ -14,19 +14,19 @@ export default function Navbar() {
     >
       agentVooc <span className="text-agentvooc-accent">.</span>
     </div>
-    <ul className="flex gap-3 sm:gap-5">
+    <ul className="flex gap-3 sm:gap-5 ">
       {["Home", "Blog", "About"].map((link) => (
-        <li key={link}>
+        <li key={link} className="text-agentvooc-navbar-footer footer-link">
           <a
             href={link === "Home" ? "/home" : `/company/${link.toLowerCase()}`}
-            className="text-sm sm:text-base footer-link"
+            className=""
           >
             {link}
           </a>
         </li>
       ))}
     </ul>
-    {/* <ThemeToggle /> */}
+    <ThemeToggle />
     <Button
       variant="outline"
       size="sm"

@@ -19,7 +19,7 @@ const Card = React.forwardRef<
     style={{
       transformStyle: "preserve-3d",
       boxShadow: `
-        0 25px 50px -12px hsl(var(--agentvooc-primary-bg) / 0.8),
+        0 10px 20px -12px hsl(var(--agentvooc-primary-bg) / 0.8),
         0 0 0 1px hsl(var(--agentvooc-border) / 0.3),
         inset 0 1px 0 hsl(var(--agentvooc-accent) / 0.1),
         0 0 20px -10px hsl(var(--agentvooc-accent) / 0.2)
@@ -79,7 +79,7 @@ const CardTitle = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "font-bold text-2xl leading-tight tracking-tight bg-gradient-to-r from-agentvooc-primary via-agentvooc-accent-muted to-agentvooc-primary bg-clip-text z-30",
+      "font-bold text-md leading-tight tracking-tight bg-gradient-to-r from-agentvooc-primary via-agentvooc-accent-muted to-agentvooc-primary bg-clip-text z-30",
       "drop-shadow-[0_0_10px_hsl(var(--agentvooc-accent)/0.2)]",
       className
     )}

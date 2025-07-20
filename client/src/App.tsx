@@ -1,7 +1,9 @@
+// /home/kaijin/projects/bots/venv/elizaOS_env/agentVooc-prod/client/src/App.tsx
 import "./index.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./components/app-sidebar";
+import NavSidebar from "./components/nav-sidebar";
 import { TooltipProvider } from "./components/ui/tooltip";
 import { Toaster } from "./components/ui/toaster";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
@@ -33,6 +35,10 @@ import Demo from "./routes/demo";
 import { useEffect } from "react";
 import { Footer } from "./components/landing/footer";
 import { FooterProvider } from "./context/footerContext";
+import { ThemeToggle } from "./components/themeToggle";
+import { Menu } from "lucide-react";
+import { useIsMobile } from "./hooks/use-mobile";
+import Navbar from "./components/navbar";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -42,18 +48,57 @@ const queryClient = new QueryClient({
   },
 });
 
-// Routes where the sidebar should be displayed
-const SIDEBAR_ROUTES = ["/home", "/chat", "/settings", "/create-character", "/edit-character", "/email-vault", "/knowledge"];
+// Routes where the AppSidebar should be displayed
+const APP_SIDEBAR_ROUTES = [
+  "/home",
+  "/chat",
+  "/settings",
+  "/create-character",
+  "/edit-character",
+  "/email-vault",
+  "/knowledge",
+];
 
 // Routes where the footer should be displayed
-const FOOTER_ROUTES = ["/", "/company/:slug", "/company/blog", "/company/blog/:slug", "/company/press", "/company/press/:slug", "/product", "/product/:slug", "/legal/:slug", "/demo"];
+const FOOTER_ROUTES = [
+  "/",
+  "/company/:slug",
+  "/company/blog",
+  "/company/blog/:slug",
+  "/company/press",
+  "/company/press/:slug",
+  "/product",
+  "/product/:slug",
+  "/legal/:slug",
+  "/demo",
+];
+
+// Routes where the NavSidebar toggle should be displayed on mobile
+const NAV_SIDEBAR_ROUTES = [
+  "/",
+  "/company/:slug",
+  "/company/blog",
+  "/company/blog/:slug",
+  "/company/press",
+  "/company/press/:slug",
+  "/product",
+  "/product/:slug",
+  "/legal/:slug",
+  "/demo",
+];
 
 function AppContent() {
   const location = useLocation();
-  const showSidebar = SIDEBAR_ROUTES.some((route) =>
+  const isMobile = useIsMobile();
+  const showSidebar = APP_SIDEBAR_ROUTES.some((route) =>
     location.pathname.startsWith(route)
   );
   const showFooter = FOOTER_ROUTES.some(
+    (route) =>
+      location.pathname === route ||
+      (route.includes(":slug") && location.pathname.startsWith(route.split("/:")[0]))
+  );
+  const showNavSidebar = NAV_SIDEBAR_ROUTES.some(
     (route) =>
       location.pathname === route ||
       (route.includes(":slug") && location.pathname.startsWith(route.split("/:")[0]))
@@ -82,14 +127,34 @@ function AppContent() {
           ></script>
         </Helmet>
         {showSidebar && <AppSidebar />}
+        {showNavSidebar && isMobile && <NavSidebar />}
         <div
           className={`flex flex-1 flex-col gap-4 size-full w-full ${
             showSidebar ? "max-w-[90%] mx-auto px-4 md:px-6 mt-9" : "max-w-[100%]"
           } bg-transparent`}
         >
+          {!showSidebar && !isMobile && <Navbar />}
           {showSidebar && (
-            <div className="flex items-center p-4">
+            <div className="flex items-center p-4 gap-2">
               <SidebarTrigger className="text-agentvooc-primary hover:bg-agentvooc-secondary-accent hover:text-agentvooc-accent" />
+              <ThemeToggle />
+            </div>
+          )}
+          {showNavSidebar && isMobile && (
+            <div className="sticky top-0 z-50 flex items-center justify-between p-4 bg-agentvooc-secondary-bg shadow-agentvooc-glow">
+              <div
+                className="text-2xl font-semibold cursor-pointer hover:text-agentvooc-accent transition-all whitespace-nowrap"
+                onClick={() => window.location.href = "/"}
+              >
+                agentVooc <span className="text-agentvooc-accent">.</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <ThemeToggle />
+                <SidebarTrigger className="text-agentvooc-primary hover:bg-agentvooc-secondary-accent hover:text-agentvooc-accent">
+                  <Menu className="h-6 w-6" />
+                  <span className="sr-only">Toggle Navigation Sidebar</span>
+                </SidebarTrigger>
+              </div>
             </div>
           )}
           {showSidebar && <SidebarInset />}

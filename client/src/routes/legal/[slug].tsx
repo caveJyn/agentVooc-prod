@@ -3,7 +3,6 @@ import { useParams } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { apiClient } from "@/lib/api";
 import { PortableText } from "@portabletext/react";
-import Navbar from "@/components/navbar";
 
 interface LegalDocument {
   title: string;
@@ -43,7 +42,6 @@ export default function LegalDocumentPage() {
           <meta name="description" content="An error occurred while fetching the legal document." />
           <meta name="robots" content="noindex" />
         </Helmet>
-        <Navbar />
         <div className="max-w-6xl mx-auto py-12 px-4">
           <h1 className="text-3xl font-bold mb-4">Error</h1>
           <p>{error}</p>
@@ -59,7 +57,6 @@ export default function LegalDocumentPage() {
           <title>agentVooc | Loading</title>
           <meta name="description" content="Loading legal document..." />
         </Helmet>
-        <Navbar />
         <div className="max-w-6xl mx-auto py-12 px-4">
           <p>Loading...</p>
         </div>
@@ -88,7 +85,6 @@ export default function LegalDocumentPage() {
         <meta name="twitter:image" content={defaultImage} />
         <meta name="twitter:site" content="@agentVooc" />
       </Helmet>
-      <Navbar />
       <div className="max-w-6xl mx-auto py-12 px-4">
         <h1 className="text-3xl font-bold mb-4">{document.title}</h1>
         <p className="text-sm text-gray-500 mb-8">

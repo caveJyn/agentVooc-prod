@@ -4,7 +4,6 @@ import { Helmet } from "react-helmet-async";
 import { Loader2 } from "lucide-react";
 import { apiClient } from "@/lib/api";
 import { PortableText, PortableTextComponents } from "@portabletext/react";
-import Navbar from "@/components/navbar";
 
 interface PressPost {
   title: string;
@@ -109,7 +108,6 @@ export default function PressPostPage() {
           <meta name="robots" content="noindex" />
           <link rel="canonical" href={`${baseUrl}/company/press`} />
         </Helmet>
-        <Navbar />
         <div className="max-w-6xl mx-auto py-12 px-4">
           <h1 className="text-3xl font-bold mb-4">Error</h1>
           <p>{error}</p>
@@ -192,7 +190,6 @@ export default function PressPostPage() {
         <meta name="twitter:site" content="@agentVooc" />
         <script type="application/ld+json">{JSON.stringify(structuredData)}</script>
       </Helmet>
-      <Navbar />
       <div className="max-w-3xl mx-auto py-12 px-4">
         {post.heroImage && (
           <img

@@ -40,7 +40,7 @@
         --agentvooc-secondary-bg: 180 10% 92%; /* Slightly darker grayish-cyan */
         --agentvooc-primary: 180 20% 10%; /* Dark teal for text */
         --agentvooc-secondary: 180 10% 50%; /* Mid-gray for secondary text */
-        --agentvooc-accent: 160 80% 40%; /* Vibrant teal for accents */
+        --agentvooc-accent: 160 70% 60%; /* Vibrant teal for accents */
         --agentvooc-primary-accent: 160 60% 70%; /* Lighter teal for accents */
         --agentvooc-secondary-accent: 160 60% 60%; /* Medium teal for accents */
         --agentvooc-button-bg: 160 80% 40%; /* Teal button background */
@@ -58,6 +58,8 @@
         --agentvooc-text-h6: 180 20% 10%;
         --agentvooc-text-p: 180 10% 30%;
         --agentvooc-text-li: 180 10% 30%;
+        --agentvooc-text-navbar-footer: 160 80% 0%;
+        --agentvooc-text-hero-title: 0 0% 98%;
 
         --agentvooc-card-bg: 0 0% 100%; /* White card background */
         --agentvooc-card-header: 180 10% 95%; /* Light gray header */
@@ -127,6 +129,8 @@
         --agentvooc-text-h6: 0 0% 98%;
         --agentvooc-text-p: 180 10% 70%;
         --agentvooc-text-li: 180 10% 70%;
+        --agentvooc-text-navbar-footer: 160 100% 85%;
+        --agentvooc-text-hero-title: 0 0% 98%;
 
         --agentvooc-card-bg: 180 19% 15%; /* Dark teal card background */
         --agentvooc-card-header: 180 20% 8%; /* Darker teal header */
@@ -154,6 +158,10 @@
     p {
         line-height: 1.6;
         @apply text-agentvooc-text-p;
+    }
+
+     a {
+        @apply text-agentvooc-text-navbar-footer hover:text-agentvooc-accent;
     }
 
     li {
@@ -214,7 +222,7 @@
         height: 1px;
         bottom: 0;
         left: 0;
-        background-color: hsl(var(--agentvooc-accent-dark));
+        background-color: hsl(var(--agentvooc-accent));
         transition: width 0.3s;
     }
     .footer-link:hover::after {

@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import AuthSelection from "@/components/auth-selection";
-import Navbar from "@/components/navbar";
 import Subscriptions from "@/components/subscriptions";
 import { FeaturesSection } from "@/components/landing/features-section";
 import { BenefitsSection } from "@/components/landing/benefits-section";
@@ -228,7 +227,6 @@ export default function Landing() {
 
   return (
     <main className="min-h-screen animate-fade-in">
-      <Navbar />
       <section ref={heroRef} aria-label="Hero Section">
         <Hero heroSection={pageData.heroSection} />
       </section>
