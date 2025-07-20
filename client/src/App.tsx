@@ -59,49 +59,11 @@ const APP_SIDEBAR_ROUTES = [
   "/knowledge",
 ];
 
-// Routes where the footer should be displayed
-const FOOTER_ROUTES = [
-  "/",
-  "/company/:slug",
-  "/company/blog",
-  "/company/blog/:slug",
-  "/company/press",
-  "/company/press/:slug",
-  "/product",
-  "/product/:slug",
-  "/legal/:slug",
-  "/demo",
-];
-
-// Routes where the NavSidebar toggle should be displayed on mobile
-const NAV_SIDEBAR_ROUTES = [
-  "/",
-  "/company/:slug",
-  "/company/blog",
-  "/company/blog/:slug",
-  "/company/press",
-  "/company/press/:slug",
-  "/product",
-  "/product/:slug",
-  "/legal/:slug",
-  "/demo",
-];
-
 function AppContent() {
   const location = useLocation();
   const isMobile = useIsMobile();
   const showSidebar = APP_SIDEBAR_ROUTES.some((route) =>
     location.pathname.startsWith(route)
-  );
-  const showFooter = FOOTER_ROUTES.some(
-    (route) =>
-      location.pathname === route ||
-      (route.includes(":slug") && location.pathname.startsWith(route.split("/:")[0]))
-  );
-  const showNavSidebar = NAV_SIDEBAR_ROUTES.some(
-    (route) =>
-      location.pathname === route ||
-      (route.includes(":slug") && location.pathname.startsWith(route.split("/:")[0]))
   );
 
   useEffect(() => {
@@ -127,7 +89,7 @@ function AppContent() {
           ></script>
         </Helmet>
         {showSidebar && <AppSidebar />}
-        {showNavSidebar && isMobile && <NavSidebar />}
+        {!showSidebar && isMobile && <NavSidebar />}
         <div
           className={`flex flex-1 flex-col gap-4 size-full w-full ${
             showSidebar ? "max-w-[90%] mx-auto px-4 md:px-6 mt-9" : "max-w-[100%]"
@@ -140,7 +102,7 @@ function AppContent() {
               <ThemeToggle />
             </div>
           )}
-          {showNavSidebar && isMobile && (
+          {!showSidebar && isMobile && (
             <div className="sticky top-0 z-50 flex items-center justify-between p-4 bg-agentvooc-secondary-bg shadow-agentvooc-glow">
               <div
                 className="text-2xl font-semibold cursor-pointer hover:text-agentvooc-accent transition-all whitespace-nowrap"
@@ -237,7 +199,7 @@ function AppContent() {
             <Route path="/company/blog/:slug" element={<BlogPostPage />} />
             <Route path="/company/press" element={<PressListPage />} />
             <Route path="/company/press/:slug" element={<PressPostPage />} />
-            <Route path="/product" element={<ProductListPage />} />
+            <Route path="/product " element={<ProductListPage />} />
             <Route path="/product/:slug" element={<ProductPage />} />
             <Route path="/demo" element={<Demo />} />
             <Route
@@ -245,7 +207,7 @@ function AppContent() {
               element={<div>No route matched: {location.pathname}</div>}
             />
           </Routes>
-          {showFooter && <Footer />}
+          {!showSidebar && <Footer />}
         </div>
       </SidebarProvider>
       <Toaster />

@@ -21,7 +21,7 @@ export default function NavSidebar() {
       side="left"
       variant="sidebar"
       collapsible="offcanvas"
-      className="bg-agentvooc-secondary-bg text-agentvooc-primary border-r border-agentvooc-border shadow-agentvooc-glow"
+      className=""
     >
       <SidebarHeader className="flex items-center justify-between p-4">
         <div
@@ -41,7 +41,7 @@ export default function NavSidebar() {
             <SidebarMenuItem key={link}>
               <SidebarMenuButton
                 asChild
-                className="text-agentvooc-navbar-footer hover:bg-agentvooc-secondary-accent hover:text-agentvooc-accent"
+                className=""
               >
                 <a
                   href={link === "Home" ? "/home" : `/company/${link.toLowerCase()}`}
@@ -52,17 +52,16 @@ export default function NavSidebar() {
             </SidebarMenuItem>
           ))}
           <SidebarMenuItem>
-            <SidebarMenuButton className="hover:bg-agentvooc-secondary-accent hover:text-agentvooc-accent">
+            <SidebarMenuButton>
               <ThemeToggle />
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
               <Button
-                variant="outline"
-                size="sm"
+                variant="default"
+        size="lg"
                 onClick={() => navigate("/auth")}
-                className="w-full bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-button-bg-hover hover:text-agentvooc-accent-dark border-agentvooc-border"
                 aria-label="Sign Up for agentVooc"
               >
                 Sign Up

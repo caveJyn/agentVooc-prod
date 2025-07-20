@@ -298,4 +298,132 @@
             @apply bg-agentvooc-button-bg text-agentvooc-accent;
         }
     }
+
+
+
+
+
+
+ .hero-container {
+  perspective: 9000px;
+  perspective-origin: 100% 100%;
+  position: relative;
+  overflow: hidden;
+  min-height: 100vh;
+}
+
+/* Galaxy container for rotation */
+.galaxy-container {
+  position: absolute;
+  width: 280vw; /* 70% of 400vw to cover 70% of horizontal screen */
+  height: 280vh; /* 70% of 400vh to cover 70% of vertical screen */
+  top: 15vh; /* Center vertically: (100vh - 280vh) / 2 = -90vh, but adjust to viewport */
+  left: 15vw; /* Center horizontally: (100vw - 280vw) / 2 = -90vw, but adjust to viewport */
+  transform-origin: 50% 50%; /* Center of ellipse */
+  animation: galaxy-rotate 500s linear infinite;
+  will-change: transform;
+}
+
+/* Galaxy rotation animation (unchanged) */
+@keyframes galaxy-rotate {
+  0% {
+    transform: rotateZ(0deg);
+  }
+  100% {
+    transform: rotateZ(360deg);
+  }
+}
+
+/* Star styles (unchanged) */
+.star {
+  position: absolute;
+  background: radial-gradient(circle, hsl(var(--agentvooc-stars)) 20%, transparent 70%);
+  border-radius: 50%;
+  will-change: transform, opacity;
+  animation: star-twinkle infinite ease-in-out;
+  box-shadow: 0 0 0px 0px hsl(var(--agentvooc-stars));
+}
+
+/* Pulse styles (adjusted to align with new galaxy center) */
+.pulse {
+  position: absolute;
+  background: radial-gradient(circle, hsl(var(--agentvooc-accent)) 0%, transparent 70%);
+  border-radius: 50%;
+  will-change: transform, opacity, filter;
+  animation: pulse-loop 8s ease-in-out infinite;
+  left: 50%; /* Align with new galaxy center */
+  top: 50%;
+}
+
+.pulse-secondary {
+  animation: pulse-loop-secondary 10s ease-in-out infinite;
+  left: 50%;
+  top: 50%;
+}
+
+/* Star animation (unchanged) */
+@keyframes star-twinkle {
+  0% {
+    opacity: 0.4;
+    transform: translateZ(-200px) scale(1.08) rotate(0deg);
+    filter: brightness(100%) blur(0.01px);
+  }
+  20% {
+    opacity: 1;
+    transform: translateZ(50px) scale(1.2) rotate(10deg);
+    filter: brightness(150%) blur(0.03px);
+  }
+  40% {
+    opacity: 0.6;
+    transform: translateZ(20px) scale(1.24) rotate(-5deg);
+    filter: brightness(120%) blur(0.05px);
+  }
+  60% {
+    opacity: 0.8;
+    transform: translateZ(0px) scale(1.18) rotate(5deg);
+    filter: brightness(130%) blur(0.04px);
+  }
+  100% {
+    opacity: 0.4;
+    transform: translateZ(-200px) scale(1.11) rotate(0deg);
+    filter: brightness(100%) blur(0.02px);
+  }
+}
+
+/* Pulse animations (unchanged) */
+@keyframes pulse-loop {
+  0% {
+    opacity: 0.05;
+    transform: scale(0.8);
+    filter: blur(48px);
+  }
+  50% {
+    opacity: 0.15;
+    transform: scale(1.2);
+    filter: blur(40px);
+  }
+  100% {
+    opacity: 0.05;
+    transform: scale(0.8);
+    filter: blur(48px);
+  }
+}
+
+@keyframes pulse-loop-secondary {
+  0% {
+    opacity: 0.03;
+    transform: scale(0.9);
+    filter: blur(56px);
+  }
+  50% {
+    opacity: 0.1;
+    transform: scale(1.3);
+    filter: blur(48px);
+  }
+  100% {
+    opacity: 0.03;
+    transform: scale(0.9);
+    filter: blur(56px);
+  }
+}
 }
