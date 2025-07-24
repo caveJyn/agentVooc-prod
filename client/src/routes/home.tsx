@@ -136,7 +136,7 @@ export default function Home() {
     }
 
     return (
-      <div className="flex flex-col gap-4 h-full p-4 md:p-8 bg-agentvooc-secondary-bg">
+      <div className="flex flex-col gap-4 min-h-screen  p-4 md:p-8 bg-agentvooc-secondary-bg">
         <div className="flex items-center justify-between">
           <PageTitle title="Your AI Agents" />
         </div>
@@ -146,7 +146,7 @@ export default function Home() {
         )}
         {agentsQuery.isLoading && (
           <div className="text-agentvooc-secondary flex items-center">
-            <Loader2 className="mr-2 h-4 w-4 animate-spin text-agentvooc-accent" />
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             Loading your characters...
           </div>
         )}
@@ -160,10 +160,10 @@ export default function Home() {
           {agents.map((agent: { id: UUID; name: string; profile?: { image?: string } }) => (
             <Card
               key={agent.id}
-              className="bg-agentvooc-secondary-accent border-agentvooc-accent/30 hover:border-agentvooc-accent transition-all shadow-agentvooc-glow overflow-hidden min-w-[200px]"
+              className="border-agentvooc-accent/30 hover:border-agentvooc-accent transition-all shadow-agentvooc-glow overflow-hidden min-w-[200px]"
             >
               <CardHeader className="p-4">
-                <CardTitle className="text-agentvooc-primary text-lg truncate">{agent?.name}</CardTitle>
+                <CardTitle className="text-lg truncate">{agent?.name}</CardTitle>
               </CardHeader>
               <CardContent className="p-4">
                 <div className="rounded-md bg-agentvooc-secondary-bg aspect-square w-full grid place-items-center">
@@ -184,9 +184,7 @@ export default function Home() {
                 <div className="flex flex-col gap-2 w-full">
                   <NavLink to={`/chat/${agent.id}`} className="w-full">
                     <Button
-                      variant="outline"
-                      className="w-full border-agentvooc-accent/30 text-agentvooc-primary hover:bg-agentvooc-accent hover:text-agentvooc-secondary-bg transition-colors text-sm py-2"
-                    >
+                      variant="default"                    >
                       Chat
                     </Button>
                   </NavLink>

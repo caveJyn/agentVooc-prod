@@ -59,14 +59,14 @@ export default {
       title: "SEO Description",
       type: "string",
       description: "Description for SEO meta tags and structured data (max 160 characters)",
-      validation: (Rule: any) => Rule.required().max(160),
+      validation: (Rule: any) => Rule.required().max(300),
     },
     {
       name: "excerpt",
       title: "Excerpt",
       type: "string",
       description: "A short summary for frontend previews, e.g., in product lists (max 200 characters)",
-      validation: (Rule: any) => Rule.required().max(200),
+      validation: (Rule: any) => Rule.required().max(300),
     },
     {
       name: "mainImage",

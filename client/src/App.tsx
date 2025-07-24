@@ -39,6 +39,7 @@ import { ThemeToggle } from "./components/themeToggle";
 import { Menu } from "lucide-react";
 import { useIsMobile } from "./hooks/use-mobile";
 import Navbar from "./components/navbar";
+import InvoicesPage from "./routes/invoices";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -92,12 +93,12 @@ function AppContent() {
         {!showSidebar && isMobile && <NavSidebar />}
         <div
           className={`flex flex-1 flex-col gap-4 size-full w-full ${
-            showSidebar ? "max-w-[90%] mx-auto px-4 md:px-6 mt-9" : "max-w-[100%]"
+            showSidebar ? "max-w-[90%] mx-auto px-4 md:px-6 " : "max-w-[100%]"
           } bg-transparent`}
         >
           {!showSidebar && !isMobile && <Navbar />}
           {showSidebar && (
-            <div className="flex items-center p-4 gap-2">
+            <div className=" gap-2 mt-5 -mb-5 ">
               <SidebarTrigger className="text-agentvooc-primary hover:bg-agentvooc-secondary-accent hover:text-agentvooc-accent" />
               <ThemeToggle />
             </div>
@@ -199,8 +200,9 @@ function AppContent() {
             <Route path="/company/blog/:slug" element={<BlogPostPage />} />
             <Route path="/company/press" element={<PressListPage />} />
             <Route path="/company/press/:slug" element={<PressPostPage />} />
-            <Route path="/product " element={<ProductListPage />} />
+            <Route path="/product" element={<ProductListPage />} />
             <Route path="/product/:slug" element={<ProductPage />} />
+             <Route path="/invoices" element={<InvoicesPage />} />
             <Route path="/demo" element={<Demo />} />
             <Route
               path="*"

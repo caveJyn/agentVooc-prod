@@ -30,7 +30,12 @@ export default function NavSidebar() {
         >
           agentVooc <span className="text-agentvooc-accent">.</span>
         </div>
+        </SidebarHeader>
+
+        <SidebarHeader className="flex flex-row items-end justify-end">
+          <ThemeToggle />
         <SidebarTrigger className="hover:bg-agentvooc-secondary-accent hover:text-agentvooc-accent">
+          
           <Menu className="h-6 w-6" />
           <span className="sr-only">Toggle Navigation Sidebar</span>
         </SidebarTrigger>
@@ -52,9 +57,7 @@ export default function NavSidebar() {
             </SidebarMenuItem>
           ))}
           <SidebarMenuItem>
-            <SidebarMenuButton>
-              <ThemeToggle />
-            </SidebarMenuButton>
+            
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton asChild>

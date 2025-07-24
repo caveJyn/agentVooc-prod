@@ -1,6 +1,6 @@
 // client/src/components/app-sidebar.tsx
 import { useQuery } from "@tanstack/react-query";
-import info from "@/lib/info.json";
+// import info from "@/lib/info.json";
 import {
   Sidebar,
   SidebarContent,
@@ -127,41 +127,46 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
               <NavLink to="/home" className="hover:bg-agentvooc-secondary-accent hover:text-agentvooc-accent transition-all">
-                <div className="flex flex-col gap-0.5 leading-none">
-                  <span className="font-semibold text-agentvooc-primary">agentVooc</span>
-                  <span className="text-agentvooc-secondary">v{info?.version}</span>
+                <div className="flex gap-0.5 leading-none">
+                  <span className="font-semibold text-agentvooc-primary">agentVooc</span><span className="text-agentvooc-accent">.</span>
+                  {/* <span className="text-agentvooc-secondary mt-1">v{info?.version}</span> */}
                 </div>
               </NavLink>
             </SidebarMenuButton>
           </SidebarMenuItem>
-          <SidebarMenuItem>
+          <SidebarMenuItem className="flex justify-end mr-2">
             <SidebarTrigger className="hover:bg-agentvooc-secondary-accent hover:text-agentvooc-accent">
             </SidebarTrigger>
           </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild>
+         
               <NavLink
-                to="/create-character"
-                className="bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-button-bg-hover hover:text-agentvooc-accent-dark shadow-agentvooc-glow rounded-full animate-glow-pulse"
+                to="/create-character"  
+                className="px-1"              
               >
+                <Button 
+                variant="default"
+                className="flex justify-start"
+                > 
                 <Plus className="mr-2 h-4 w-4" />
                 Create Character
+                </Button>
+
+               
               </NavLink>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
+           
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="text-agentvooc-primary">Agents</SidebarGroupLabel>
+          <SidebarGroupLabel>Agents</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              <SidebarMenuItem>
+              <SidebarMenuItem className="mr-2">
                 <SidebarInput
                   placeholder="Search agents..."
                   value={searchQuery}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
-                  className="mx-2 bg-agentvooc-secondary-accent text-agentvooc-primary border-agentvooc-border focus:ring-agentvooc-accent"
+                  className="mx-2  border-agentvooc-accent/50 focus:ring-agentvooc-accent"
                 />
               </SidebarMenuItem>
               {query?.isPending || characterQueries.isPending ? (
@@ -185,21 +190,21 @@ export function AppSidebar() {
                       asChild
                       isActive={location.pathname.includes(agent.id)}
                       tooltip={`Chat with ${agent.name}`}
-                      className="hover:bg-agentvooc-secondary-accent hover:text-agentvooc-accent transition-all"
+                      className=" transition-all"
                     >
                       <NavLink to={`/chat/${agent.id}`}>
-                        <User className="text-agentvooc-accent" />
+                        <User className="" />
                         <span>{agent.name}</span>
                       </NavLink>
                     </SidebarMenuButton>
                     <SidebarMenuAction
                        onClick={() => handleEditAgent(agent.id)}
                        showOnHover
-                       className="hover:bg-agentvooc-accent hover:text-agentvooc-secondary-bg p-1"
+                       className="p-1"
                         >   
                        <Edit className="h-4 w-4" />
                     </SidebarMenuAction>
-                    <SidebarMenuBadge className="bg-agentvooc-accent text-agentvooc-secondary-bg">.</SidebarMenuBadge>
+                    <SidebarMenuBadge className="text-agentvooc-accent">.</SidebarMenuBadge>
                     <KnowledgeVaultLink
                       agentId={agent.id}
                       agentName={agent.name}
@@ -265,8 +270,8 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <Button
               onClick={handleLogout}
-              variant="outline"
-              className="w-full bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-button-bg-hover hover:text-agentvooc-accent-dark border-agentvooc-border"
+              variant="default"
+              className=""
             >
               Logout
             </Button>
@@ -308,7 +313,6 @@ function KnowledgeVaultLink({
           asChild
           isActive={location.pathname === `/knowledge/${agentId}`}
           tooltip={`Knowledge Vault for ${agentName}`}
-          className="hover:bg-agentvooc-secondary-accent hover:text-agentvooc-accent"
         >
           <NavLink to={`/knowledge/${agentId}`}>
             <Book className="text-agentvooc-accent" />
@@ -348,7 +352,6 @@ function EmailVaultLink({
           asChild
           isActive={location.pathname === `/email-vault/${agentId}`}
           tooltip={`Email Vault for ${agentName}`}
-          className="hover:bg-agentvooc-secondary-accent hover:text-agentvooc-accent"
         >
           <NavLink to={`/email-vault/${agentId}`}>
             <Mail className="text-agentvooc-accent" />

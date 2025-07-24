@@ -447,11 +447,11 @@ const processEmailContent = (content: string) => {
   // console.log("Email body map:", Object.fromEntries(emailBodyMap));
 
   return (
-    <div className="flex flex-col w-full h-[calc(100dvh)] p-6 bg-agentvooc-secondary-bg">
+    <div className="flex flex-col w-full h-[calc(95dvh)] p-6 bg-agentvooc-secondary-bg">
       <div className="flex-1 overflow-y-auto h-[calc(100dvh-150px)]">
         {!isLoadingImages && images.length > 0 && (
           <div className="mb-4">
-            <h3 className="text-sm font-medium text-agentvooc-secondary mb-2">Agent Images</h3>
+            <h3 className="text-sm font-medium  mb-2">Agent Images</h3>
             <div className="flex overflow-x-auto gap-2 pb-2">
               {images.map((image) => (
                 <div
@@ -470,7 +470,7 @@ const processEmailContent = (content: string) => {
                     className="w-20 h-20 object-cover rounded-lg"
                   />
                   {image.caption && (
-                    <p className="text-xs text-agentvooc-secondary truncate max-w-[80px] mt-1">
+                    <p className="text-xs  truncate max-w-[80px] mt-1">
                       {image.caption}
                     </p>
                   )}
@@ -481,11 +481,11 @@ const processEmailContent = (content: string) => {
         )}
         {isLoadingImages && (
           <div className="mb-4 flex items-center justify-center p-4">
-            <p className="text-sm text-agentvooc-secondary">Loading agent images...</p>
+            <p className="text-sm ">Loading agent images...</p>
           </div>
         )}
         {imagesError && (
-          <div className="mb-4 p-2 border border-agentvooc-accent/20 bg-agentvooc-accent/10 rounded-lg">
+          <div className="mb-4 p-2 border border-agentvooc-accent/20  rounded-lg">
             <p className="text-sm text-agentvooc-accent">Failed to load agent images</p>
           </div>
         )}
@@ -513,7 +513,7 @@ const processEmailContent = (content: string) => {
                 >
                   {message?.user !== "user" ? (
                     <Avatar className="size-8 p-1 border border-agentvooc-accent/30 rounded-full select-none">
-                      <AvatarImage src="/elizaos-icon.png" />
+                      <AvatarImage  />
                     </Avatar>
                   ) : null}
                   <div className="flex flex-col w-full">
@@ -530,14 +530,14 @@ const processEmailContent = (content: string) => {
 {(message?.metadata?.emails ?? []).length > 0 && (
   <div className="mt-2 space-y-2 max-w-full">
     {/* Custom header for email list */}
-    <div className="text-sm sm:text-base text-agentvooc-primary">
+    <div className="text-sm sm:text-base ">
       <p>Here are your emails from the last 24 hours:</p>
-      <p className="mt-1 text-xs sm:text-sm text-agentvooc-secondary">
+      <p className="mt-1 text-xs sm:text-sm ">
         Reply using 'reply to emailId: &lt;id&gt; message: &lt;text&gt;'
       </p>
-      <p className="text-xs sm:text-sm text-agentvooc-secondary">
+      <p className="text-xs sm:text-sm ">
         Or simply click on the email to autofill the chat box and hit send to generate a reply.
-      </p>
+      </p><br/><br/>
     </div>
     
     <div className="space-y-3 mt-4">
@@ -551,7 +551,7 @@ const processEmailContent = (content: string) => {
         return (
           <div key={email.emailId} className="flex items-start gap-2 sm:gap-3 w-full max-w-full">
             {/* Email Number */}
-            <div className="flex-shrink-0 w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-agentvooc-accent/20 border border-agentvooc-accent/30 flex items-center justify-center text-xs sm:text-sm font-medium text-agentvooc-accent">
+            <div className="flex-shrink-0 w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-agentvooc-accent/50 border border-agentvooc-accent/30 flex items-center justify-center text-xs sm:text-sm font-medium ">
               {index + 1}
             </div>
             
@@ -568,7 +568,7 @@ const processEmailContent = (content: string) => {
             >
               {/* From field */}
               <div className="mb-2 overflow-hidden">
-                <span className="text-sm sm:text-base font-medium">From:</span>
+                <span className="text-sm sm:text-base font-medium text-agentvooc-accent">From:</span>
                 <div className="ml-2 text-sm sm:text-base break-all overflow-wrap-anywhere overflow-hidden max-w-full">
                   {processEmailContent(email.fromName || email.from || "Unknown")}
                 </div>
@@ -576,23 +576,23 @@ const processEmailContent = (content: string) => {
               
               {/* Subject field */}
               <div className="mb-2 overflow-hidden">
-                <span className="text-sm sm:text-base font-medium">Subject:</span>
+                <span className="text-sm sm:text-base font-medium text-agentvooc-accent">Subject:</span>
                 <div className="ml-2 text-sm sm:text-base break-all overflow-wrap-anywhere overflow-hidden max-w-full">
                   {processEmailContent(email.subject || "No subject")}
                 </div>
               </div>
               
               {/* Date field */}
-              <div className="mb-2">
-                <span className="text-sm sm:text-base font-medium">Date:</span>
-                <span className="ml-2 text-sm sm:text-base">
-                  {email.date ? new Date(email.date).toLocaleString() : "Unknown"}
-                </span>
+              <div className="mb-2 overflow-hidden">
+                <span className="text-sm sm:text-base font-medium text-agentvooc-accent">Date:</span>
+                <div className="ml-2 text-sm sm:text-base break-all overflow-wrap-anywhere overflow-hidden max-w-full">
+                 {email.date ? new Date(email.date).toLocaleString() : "Unknown"}
+                </div>
               </div>
               
               {/* Body field */}
               <div className="mb-2 overflow-hidden">
-                <span className="text-sm sm:text-base font-medium">Body:</span>
+                <span className="text-sm sm:text-base font-medium text-agentvooc-accent">Body:</span>
                 <div 
                   className="ml-2 text-sm sm:text-base whitespace-pre-wrap break-all overflow-wrap-anywhere max-w-full overflow-hidden"
                   style={{ 
@@ -610,7 +610,7 @@ const processEmailContent = (content: string) => {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="mt-2 text-xs sm:text-sm text-agentvooc-accent hover:bg-agentvooc-accent/10"
+                  className="mt-2 text-xs sm:text-sm text-agentvooc-accent"
                   onClick={(e) => {
                     e.stopPropagation();
                     toggleEmailExpansion(email.emailId);
@@ -629,9 +629,9 @@ const processEmailContent = (content: string) => {
               )}
               
               {/* Email ID field */}
-              <div className="mt-3 pt-2 border-t border-agentvooc-accent/20 overflow-hidden">
+              <div className="mt-3 pt-2 border-t overflow-hidden">
                 <span className="text-xs sm:text-sm font-medium text-agentvooc-accent">Email ID:</span>
-                <div className="ml-2 text-xs sm:text-sm text-agentvooc-accent break-all font-mono bg-agentvooc-accent/10 px-2 py-1 rounded mt-1 max-w-full overflow-hidden">
+                <div className="ml-2 text-xs sm:text-sm break-all flex items-center justify center font-mono bg-agentvooc-accent/10 px-2 py-1 rounded mt-1 max-w-full overflow-hidden">
                   {email.emailId}
                 </div>
               </div>
@@ -645,19 +645,19 @@ const processEmailContent = (content: string) => {
                       {message?.metadata?.pendingReply && (
                         <div className="mt-2 flex gap-2">
                           <Button
+                          variant="default"
                             onClick={handleConfirmReply}
-                            className="bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-secondary-bg shadow-agentvooc-glow rounded-lg"
                           >
                             Confirm Reply
                           </Button>
                           <Button
+                            variant="default"
                             onClick={() =>
                               handleEditReply(
                                 message.metadata?.emailId || "",
                                 message.metadata?.pendingReply?.body || message.text
                               )
                             }
-                            className="bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-secondary-bg shadow-agentvooc-glow rounded-lg"
                           >
                             Modify Email
                           </Button>
@@ -684,7 +684,7 @@ const processEmailContent = (content: string) => {
                         ))}
                       </div>
                       {message?.metadata?.imageAssetId && (
-                        <div className="mt-2 text-xs text-agentvooc-secondary">
+                        <div className="mt-2 text-xs ">
                           Referenced image: {
                             images.find(img => img.imageAssetId === message.metadata?.imageAssetId)?.caption || 
                             "Image"
@@ -706,19 +706,19 @@ const processEmailContent = (content: string) => {
                         ])}
                       >
                         {message?.source ? (
-                          <Badge variant="outline" className="border-agentvooc-accent/30 text-agentvooc-secondary">
+                          <Badge variant="outline">
                             {message.source}
                           </Badge>
                         ) : null}
                         {message?.action ? (
-                          <Badge variant="outline" className="border-agentvooc-accent/30 text-agentvooc-secondary">
+                          <Badge variant="outline">
                             {message.action}
                           </Badge>
                         ) : null}
                         {message?.createdAt ? (
                           <ChatBubbleTimestamp
                             timestamp={moment(message?.createdAt).format("LT")}
-                            className="text-agentvooc-secondary"
+                            className=""
                           />
                         ) : null}
                       </div>
@@ -734,7 +734,7 @@ const processEmailContent = (content: string) => {
         <form
           ref={formRef}
           onSubmit={handleSendMessage}
-          className="relative rounded-lg border border-agentvooc-accent/30 bg-agentvooc-secondary-accent shadow-agentvooc-glow"
+          className="relative rounded-lg border border-agentvooc-accent/30 "
         >
           {selectedFile ? (
             <div className="p-3 flex">
@@ -745,7 +745,7 @@ const processEmailContent = (content: string) => {
                   variant="outline"
                   size="icon"
                 >
-                  <X className="text-agentvooc-accent" />
+                  <X/>
                 </Button>
                 <img
                   alt="Selected file"
@@ -757,14 +757,16 @@ const processEmailContent = (content: string) => {
               </div>
             </div>
           ) : null}
-          <ChatInput
+          <div className="px-3 py-2">
+            <ChatInput
             ref={inputRef}
             onKeyDown={handleKeyDown}
             value={input}
             onChange={({ target }) => setInput(target.value)}
             placeholder={selectedImageId ? "Ask about the selected image..." : "Type your message here..."}
-            className="min-h-12 max-h-96 resize-none rounded-lg bg-agentvooc-secondary-accent border-0 p-3 text-agentvooc-primary placeholder-agentvooc-secondary/50 focus-visible:ring-0 overflow-y-auto"
+            className="focus"
           />
+          </div>
           <div className="flex items-center p-3 pt-0">
             <Tooltip>
               <TooltipTrigger asChild>
@@ -776,9 +778,7 @@ const processEmailContent = (content: string) => {
                       if (fileInputRef.current) {
                         fileInputRef.current.click();
                       }
-                    }}
-                    className="text-agentvooc-accent hover:bg-agentvooc-accent/10"
-                  >
+                    }}                  >
                     <Paperclip className="size-4" />
                     <span className="sr-only">Attach file</span>
                   </Button>
@@ -791,7 +791,7 @@ const processEmailContent = (content: string) => {
                   />
                 </div>
               </TooltipTrigger>
-              <TooltipContent side="left" className="bg-agentvooc-secondary-accent text-agentvooc-primary border-agentvooc-accent/30">
+              <TooltipContent side="left">
                 <p>Attach file</p>
               </TooltipContent>
             </Tooltip>
@@ -802,13 +802,12 @@ const processEmailContent = (content: string) => {
                   size="icon"
                   onClick={handleUploadAgentImage}
                   disabled={!selectedFile}
-                  className="text-agentvooc-accent hover:bg-agentvooc-accent/10"
                 >
                   <ImageIcon className="size-4" />
                   <span className="sr-only">Upload image to agent</span>
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="left" className="bg-agentvooc-secondary-accent text-agentvooc-primary border-agentvooc-accent/30">
+              <TooltipContent side="left" >
                 <p>Upload image to agent</p>
               </TooltipContent>
             </Tooltip>
@@ -820,7 +819,6 @@ const processEmailContent = (content: string) => {
               disabled={!input || sendMessageMutation.isPending}
               type="submit"
               size="sm"
-              className="ml-auto gap-1.5 h-[30px] bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-secondary-bg shadow-agentvooc-glow rounded-lg"
             >
               {sendMessageMutation.isPending
                 ? "..."

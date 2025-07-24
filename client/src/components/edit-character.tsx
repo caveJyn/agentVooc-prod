@@ -96,7 +96,7 @@ export default function EditCharacter({ setError }: EditCharacterProps) {
   const [emailIncomingPass, setEmailIncomingPass] = useState("");
   const [showEmailOutgoingPass, setShowEmailOutgoingPass] = useState(false);
   const [showEmailIncomingPass, setShowEmailIncomingPass] = useState(false);
-  const [showTwitterPassword, setShowTwitterPassword] = useState(false);
+  // const [showTwitterPassword, setShowTwitterPassword] = useState(false);
   const [messageExamplesInput, setMessageExamplesInput] = useState(
     JSON.stringify(
       [
@@ -606,38 +606,38 @@ useEffect(() => {
     setTelegramBotToken(value);
   };
 
-  const handleTwitterCheckbox = (checked: boolean) => {
-    handlePluginChange("twitter", checked);
-    if (!checked) {
-      setTwitterUsername("");
-      setTwitterPassword("");
-      setTwitterEmail("");
-    }
-  };
+  // const handleTwitterCheckbox = (checked: boolean) => {
+  //   handlePluginChange("twitter", checked);
+  //   if (!checked) {
+  //     setTwitterUsername("");
+  //     setTwitterPassword("");
+  //     setTwitterEmail("");
+  //   }
+  // };
 
-  const handleTwitterUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setTwitterUsername(value);
-  };
+  // const handleTwitterUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   const value = e.target.value;
+  //   setTwitterUsername(value);
+  // };
 
-  const handleTwitterPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setTwitterPassword(value);
-  };
+  // const handleTwitterPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   const value = e.target.value;
+  //   setTwitterPassword(value);
+  // };
 
-  const handleTwitterEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    if (value && !validateEmail(value)) {
-      setError("Invalid email format for Twitter email");
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Invalid email format for Twitter email",
-      });
-      return;
-    }
-    setTwitterEmail(value);
-  };
+  // const handleTwitterEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   const value = e.target.value;
+  //   if (value && !validateEmail(value)) {
+  //     setError("Invalid email format for Twitter email");
+  //     toast({
+  //       variant: "destructive",
+  //       title: "Error",
+  //       description: "Invalid email format for Twitter email",
+  //     });
+  //     return;
+  //   }
+  //   setTwitterEmail(value);
+  // };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -659,39 +659,6 @@ useEffect(() => {
     }
   };
 
-  const handleOtherPluginsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newPlugins = e.target.value
-      .split(",")
-      .map((s) => s.trim())
-      .filter((s) => s);
-    const activePlugins = userQuery.data?.user?.activePlugins || [];
-    const invalidPlugins = newPlugins.filter((p) => !activePlugins.includes(p) && !["email", "telegram", "twitter"].includes(p));
-    if (invalidPlugins.length > 0) {
-      toast({
-        variant: "destructive",
-        title: "Subscription Required",
-        description: `You need a subscription for the following plugins: ${invalidPlugins.join(", ")}. Please subscribe in the settings page.`,
-        action: (
-          <Button
-            onClick={() => navigate("/settings", { state: { from: "edit-character" } })}
-            className="bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-secondary-bg"
-          >
-            Go to Settings
-          </Button>
-        ),
-      });
-      return;
-    }
-    setCharacterData((prev) => ({
-      ...prev,
-      plugins: [
-        ...prev.plugins.filter((p) =>
-          ["email", "telegram", "twitter"].includes(p)
-        ),
-        ...newPlugins,
-      ],
-    }));
-  };
 
   const uploadImageMutation = useMutation({
     mutationFn: async ({ characterId, file }: { characterId: UUID; file: File }) => {
@@ -942,7 +909,12 @@ useEffect(() => {
     }, 0);
   };
 
-  if (isLoading) {
+    // Define the common className for inputs and textareas
+  const inputClassName =
+  " border-agentvooc-accent/50 bg-agentvooc-secondary-bg focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg";
+
+
+   if (isLoading) {
     return (
       <div className="p-6 bg-agentvooc-secondary-bg border border-agentvooc-accent/30 rounded-xl shadow-agentvooc-glow max-w-2xl mx-auto">
         <Loader2 className="h-6 w-6 animate-spin text-agentvooc-primary" />
@@ -959,7 +931,7 @@ useEffect(() => {
   }
 
   return (
-    <div className="p-6 bg-agentvooc-secondary-bg border border-agentvooc-accent/30 rounded-xl shadow-agentvooc-glow w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="p-6 border border-agentvooc-accent/30  w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
       <h3 className="text-xl font-semibold mb-6 text-agentvooc-primary">Edit Character</h3>
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
@@ -973,7 +945,7 @@ useEffect(() => {
             value={characterData.name}
             onChange={handleInputChange}
             placeholder="Enter character name (e.g., agentVooc)"
-            className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+            className={inputClassName}
             required
             aria-required="true"
           />
@@ -997,7 +969,7 @@ useEffect(() => {
             type="file"
             accept="image/jpeg,image/png,image/gif"
             onChange={handleImageChange}
-            className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+            className={inputClassName}
             aria-describedby="profileImageDescription"
           />
           <p id="profileImageDescription" className="text-sm text-agentvooc-secondary mt-1">
@@ -1016,7 +988,7 @@ useEffect(() => {
             value={characterData.username}
             onChange={handleInputChange}
             placeholder="Enter username (e.g., eliza)"
-            className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+            className={inputClassName}
             aria-describedby="usernameDescription"
           />
           <p id="usernameDescription" className="text-sm text-agentvooc-secondary mt-1">
@@ -1033,7 +1005,7 @@ useEffect(() => {
             value={characterData.system}
             onChange={handleInputChange}
             placeholder="Enter system prompt (e.g., Roleplay as a Web3 developer)"
-            className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg resize-none"
+            className={`${inputClassName} resize-none overflow-y-auto leading-6`}
             style={{
               minHeight: "120px",
               maxHeight: "288px",
@@ -1056,7 +1028,7 @@ useEffect(() => {
             value={bioInput}
             onChange={(e) => handleArrayInputChange(e, "bio")}
             placeholder="Enter bio statements, one per line (e.g., Web3 developer\nSecurity-minded)"
-            className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg resize-none"
+            className={`${inputClassName} resize-none overflow-y-auto leading-6`}
             style={{
               minHeight: "120px",
               maxHeight: "288px",
@@ -1079,7 +1051,7 @@ useEffect(() => {
             value={loreInput}
             onChange={(e) => handleArrayInputChange(e, "lore")}
             placeholder="Enter lore snippets, one per line (e.g., Started in Web2\nContributes to Ethereum)"
-            className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg resize-none"
+            className={`${inputClassName} resize-none overflow-y-auto leading-6`}
             style={{
               minHeight: "120px",
               maxHeight: "288px",
@@ -1093,6 +1065,53 @@ useEffect(() => {
           </p>
         </div>
         <div>
+          <label htmlFor="messageExamples" className="block text-sm font-medium text-agentvooc-secondary mb-1">
+            Message Examples (JSON format, array of arrays with user and content objects)
+          </label>
+          <Textarea
+            id="messageExamples"
+            name="messageExamples"
+            value={messageExamplesInput}
+            onChange={(e) => debouncedSetMessageExamplesInput(e.target.value)}
+            placeholder={`Example format:\n[\n  [\n    {"user": "{{user1}}", "content": {"text": "Question"}},\n    {"user": "CharacterName", "content": {"text": "Answer"}}\n  ],\n  [...]\n]`}
+            className={`${inputClassName} font-mono resize-none overflow-y-auto leading-6`}
+            style={{
+              minHeight: "120px",
+              maxHeight: "288px",
+              height: `${Math.min(288, Math.max(120, (messageExamplesInput.split("\n").length + 2) * 24))}px`,
+              paddingBottom: "3rem",
+            }}
+            aria-describedby="messageExamplesDescription"
+          />
+          <p id="messageExamplesDescription" className="text-sm text-agentvooc-secondary mt-1">
+            Enter message examples in JSON format as an array of arrays.
+          </p>
+          {messageExamplesError && <p className="text-red-500 text-sm mt-1">{messageExamplesError}</p>}
+        </div>
+        <div>
+          <label htmlFor="postExamples" className="block text-sm font-medium text-agentvooc-secondary mb-1">
+            Post Examples (one per line)
+          </label>
+          <Textarea
+            id="postExamples"
+            name="postExamples"
+            value={postExamplesInput}
+            onChange={(e) => handleArrayInputChange(e, "postExamples")}
+            placeholder="Enter post examples, one per line (e.g., Debugged for 3 hours\nGas fees are forever)"
+            className={`${inputClassName} resize-none overflow-y-auto leading-6`}
+            style={{
+              minHeight: "120px",
+              maxHeight: "288px",
+              height: `${Math.min(288, Math.max(120, (postExamplesInput.split("\n").length + 2) * 24))}px`,
+              paddingBottom: "3rem",
+            }}
+            aria-describedby="postExamplesDescription"
+          />
+          <p id="postExamplesDescription" className="text-sm text-agentvooc-secondary mt-1">
+            Enter post examples, one per line.
+          </p>
+        </div>
+        <div>
           <label htmlFor="topics" className="block text-sm font-medium text-agentvooc-secondary mb-1">
             Topics (one per line)
           </label>
@@ -1102,7 +1121,7 @@ useEffect(() => {
             value={topicsInput}
             onChange={(e) => handleArrayInputChange(e, "topics")}
             placeholder="Enter topics, one per line (e.g., Web3\nBlockchain)"
-            className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg resize-none"
+            className={`${inputClassName} resize-none overflow-y-auto leading-6`}
             style={{
               minHeight: "120px",
               maxHeight: "288px",
@@ -1125,7 +1144,7 @@ useEffect(() => {
             value={adjectivesInput}
             onChange={(e) => handleArrayInputChange(e, "adjectives")}
             placeholder="Enter personality traits, one per line (e.g., witty\ntechnical)"
-            className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg resize-none"
+            className={`${inputClassName} resize-none overflow-y-auto leading-6`}
             style={{
               minHeight: "120px",
               maxHeight: "288px",
@@ -1137,71 +1156,74 @@ useEffect(() => {
           <p id="adjectivesDescription" className="text-sm text-agentvooc-secondary mt-1">
             Enter personality traits, one per line.
           </p>
-        </div>
+        </div>        
         <div>
-          <label htmlFor="postExamples" className="block text-sm font-medium text-agentvooc-secondary mb-1">
-            Post Examples (one per line)
+          <label htmlFor="styleAll" className="block text-sm font-medium text-agentvooc-secondary mb-1">
+            Style: All Contexts (one per line)
           </label>
           <Textarea
-            id="postExamples"
-            name="postExamples"
-            value={postExamplesInput}
-            onChange={(e) => handleArrayInputChange(e, "postExamples")}
-            placeholder="Enter post examples, one per line (e.g., Debugged for 3 hours\nGas fees are forever)"
-            className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg resize-none"
+            id="styleAll"
+            name="styleAll"
+            value={characterData.style.all.join("\n")}
+            onChange={(e) => handleAdvancedInputChange(e, "style", "all")}
+            placeholder="Enter styles, one per line (e.g., concise\nwitty)"
+            className={`${inputClassName} resize-none overflow-y-auto leading-6`}
             style={{
               minHeight: "120px",
               maxHeight: "288px",
-              height: `${Math.min(288, Math.max(120, (postExamplesInput.split("\n").length + 2) * 24))}px`,
+              height: `${Math.min(288, Math.max(120, (characterData.style.all.join("\n").split("\n").length + 2) * 24))}px`,
               paddingBottom: "3rem",
             }}
-            aria-describedby="postExamplesDescription"
+            aria-describedby="styleAllDescription"
           />
-          <p id="postExamplesDescription" className="text-sm text-agentvooc-secondary mt-1">
-            Enter post examples, one per line.
+          <p id="styleAllDescription" className="text-sm text-agentvooc-secondary mt-1">
+            Enter styles for all contexts, one per line.
           </p>
         </div>
         <div>
-          <label htmlFor="messageExamples" className="block text-sm font-medium text-agentvooc-secondary mb-1">
-            Message Examples (JSON format, array of arrays with user and content objects)
+          <label htmlFor="styleChat" className="block text-sm font-medium text-agentvooc-secondary mb-1">
+            Style: Chat (one per line)
           </label>
           <Textarea
-            id="messageExamples"
-            name="messageExamples"
-            value={messageExamplesInput}
-            onChange={(e) => debouncedSetMessageExamplesInput(e.target.value)}
-            placeholder={`Example format:\n[\n  [\n    {"user": "{{user1}}", "content": {"text": "Question"}},\n    {"user": "CharacterName", "content": {"text": "Answer"}}\n  ],\n  [...]\n]`}
-            className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg font-mono resize-none overflow-y-auto leading-6"
+            id="styleChat"
+            name="styleChat"
+            value={characterData.style.chat.join("\n")}
+            onChange={(e) => handleAdvancedInputChange(e, "style", "chat")}
+            placeholder="Enter chat styles, one per line (e.g., playful\ndynamic)"
+            className={`${inputClassName} resize-none overflow-y-auto leading-6`}
             style={{
               minHeight: "120px",
               maxHeight: "288px",
-              height: `${Math.min(288, Math.max(120, (messageExamplesInput.split("\n").length + 2) * 24))}px`,
+              height: `${Math.min(288, Math.max(120, (characterData.style.chat.join("\n").split("\n").length + 2) * 24))}px`,
               paddingBottom: "3rem",
             }}
-            aria-describedby="messageExamplesDescription"
+            aria-describedby="styleChatDescription"
           />
-          <p id="messageExamplesDescription" className="text-sm text-agentvooc-secondary mt-1">
-            Enter message examples in JSON format as an array of arrays.
+          <p id="styleChatDescription" className="text-sm text-agentvooc-secondary mt-1">
+            Enter styles for chat, one per line.
           </p>
-          {messageExamplesError && <p className="text-red-500 text-sm mt-1">{messageExamplesError}</p>}
         </div>
         <div>
-          <label htmlFor="enabled" className="block text-sm font-medium text-agentvooc-secondary mb-1">
-            Enabled
+          <label htmlFor="stylePost" className="block text-sm font-medium text-agentvooc-secondary mb-1">
+            Style: Post (one per line)
           </label>
-          <select
-            id="enabled"
-            name="enabled"
-            value={characterData.enabled.toString()}
-            onChange={(e) => setCharacterData((prev) => ({ ...prev, enabled: e.target.value === "true" }))}
-            className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent rounded-lg w-full p-2"
-            aria-describedby="enabledDescription"
-          >
-            <option value="true">Yes</option>
-            <option value="false">No</option>
-          </select>
-          <p id="enabledDescription" className="text-sm text-agentvooc-secondary mt-1">
-            Enable or disable the character.
+          <Textarea
+            id="stylePost"
+            name="stylePost"
+            value={characterData.style.post.join("\n")}
+            onChange={(e) => handleAdvancedInputChange(e, "style", "post")}
+            placeholder="Enter post styles, one per line (e.g., ironic\nrelevant)"
+            className={`${inputClassName} resize-none overflow-y-auto leading-6`}
+            style={{
+              minHeight: "120px",
+              maxHeight: "288px",
+              height: `${Math.min(288, Math.max(120, (characterData.style.post.join("\n").split("\n").length + 2) * 24))}px`,
+              paddingBottom: "3rem",
+            }}
+            aria-describedby="stylePostDescription"
+          />
+          <p id="stylePostDescription" className="text-sm text-agentvooc-secondary mt-1">
+            Enter styles for posts, one per line.
           </p>
         </div>
         <div>
@@ -1213,31 +1235,13 @@ useEffect(() => {
             name="modelProvider"
             value={characterData.modelProvider}
             onChange={handleInputChange}
-            className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent rounded-lg w-full p-2"
+            className={`${inputClassName} w-full p-2`}
             aria-describedby="modelProviderDescription"
           >
             <option value="OPENAI">OPENAI</option>
           </select>
           <p id="modelProviderDescription" className="text-sm text-agentvooc-secondary mt-1">
             Select the model provider for the character.
-          </p>
-        </div>
-        <div>
-          <label htmlFor="plugins" className="block text-sm font-medium text-agentvooc-secondary mb-1">
-            Additional Plugins (comma-separated)
-          </label>
-          <Input
-            id="plugins"
-            name="plugins"
-            type="text"
-            value={characterData.plugins.filter((p) => !["email", "telegram", "twitter"].includes(p)).join(",")}
-            onChange={handleOtherPluginsChange}
-            placeholder="Enter plugins (e.g., solana)"
-            className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
-            aria-describedby="pluginsDescription"
-          />
-          <p id="pluginsDescription" className="text-sm text-agentvooc-secondary mt-1">
-            Enter additional plugins as a comma-separated list.
           </p>
         </div>
         <div>
@@ -1248,7 +1252,7 @@ useEffect(() => {
             id="enableEmailPlugin"
             name="enableEmailPlugin"
             type="checkbox"
-            checked={characterData.plugins.includes("email") }
+            checked={characterData.plugins.includes("email")}
             onChange={(e) => handleEmailCheckbox(e.target.checked)}
             className="text-agentvooc-accent focus:ring-agentvooc-accent rounded"
             aria-describedby="enableEmailPluginDescription"
@@ -1257,7 +1261,7 @@ useEffect(() => {
             Enable email functionality for the character.
           </p>
         </div>
-        {(characterData.plugins.includes("email")) && (
+        {characterData.plugins.includes("email") && (
           <>
             <div>
               <h4 className="text-sm font-medium text-agentvooc-secondary mb-2">Outgoing Email Settings</h4>
@@ -1271,7 +1275,7 @@ useEffect(() => {
                     name="emailOutgoingService"
                     value={characterData.settings.email.outgoing.service}
                     onChange={(e) => handleAdvancedInputChange(e, "settings", "email.outgoing.service")}
-                    className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent rounded-lg w-full p-2"
+                    className={`${inputClassName} w-full p-2`}
                     aria-describedby="emailOutgoingServiceDescription"
                   >
                     <option value="gmail">Gmail</option>
@@ -1294,7 +1298,7 @@ useEffect(() => {
                         value={characterData.settings.email.outgoing.host}
                         onChange={(e) => handleAdvancedInputChange(e, "settings", "email.outgoing.host")}
                         placeholder="e.g., smtp.example.com"
-                        className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+                        className={inputClassName}
                         aria-describedby="emailOutgoingHostDescription"
                       />
                       <p id="emailOutgoingHostDescription" className="text-sm text-agentvooc-secondary mt-1">
@@ -1312,7 +1316,7 @@ useEffect(() => {
                         value={characterData.settings.email.outgoing.port}
                         onChange={(e) => handleAdvancedInputChange(e, "settings", "email.outgoing.port")}
                         placeholder="e.g., 587"
-                        className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+                        className={inputClassName}
                         aria-describedby="emailOutgoingPortDescription"
                       />
                       <p id="emailOutgoingPortDescription" className="text-sm text-agentvooc-secondary mt-1">
@@ -1328,7 +1332,7 @@ useEffect(() => {
                         name="emailOutgoingSecure"
                         value={characterData.settings.email.outgoing.secure.toString()}
                         onChange={(e) => handleAdvancedInputChange(e, "settings", "email.outgoing.secure")}
-                        className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent rounded-lg w-full p-2"
+                        className={`${inputClassName} w-full p-2`}
                         aria-describedby="emailOutgoingSecureDescription"
                       >
                         <option value="true">Yes</option>
@@ -1351,9 +1355,7 @@ useEffect(() => {
                     value={emailOutgoingUser}
                     onChange={handleEmailOutgoingUserChange}
                     placeholder="e.g., your-email@gmail.com"
-                    className={`text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg ${
-                      emailOutgoingUserError ? "border-red-500" : ""
-                    }`}
+                    className={`${inputClassName} ${emailOutgoingUserError ? "border-red-500" : ""}`}
                     aria-describedby="emailOutgoingUserDescription"
                     aria-invalid={!!emailOutgoingUserError}
                   />
@@ -1376,7 +1378,7 @@ useEffect(() => {
                       value={emailOutgoingPass}
                       onChange={handleEmailOutgoingPassChange}
                       placeholder="e.g., your-app-password"
-                      className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+                      className={`${inputClassName} pr-10`}
                       aria-describedby="emailOutgoingPassDescription"
                     />
                     <Button
@@ -1422,7 +1424,7 @@ useEffect(() => {
                     value={characterData.settings.email.incoming.host}
                     onChange={(e) => handleAdvancedInputChange(e, "settings", "email.incoming.host")}
                     placeholder="e.g., imap.gmail.com"
-                    className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+                    className={inputClassName}
                     aria-describedby="emailIncomingHostDescription"
                   />
                   <p id="emailIncomingHostDescription" className="text-sm text-agentvooc-secondary mt-1">
@@ -1440,7 +1442,7 @@ useEffect(() => {
                     value={characterData.settings.email.incoming.port}
                     onChange={(e) => handleAdvancedInputChange(e, "settings", "email.incoming.port")}
                     placeholder="e.g., 993"
-                    className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+                    className={inputClassName}
                     aria-describedby="emailIncomingPortDescription"
                   />
                   <p id="emailIncomingPortDescription" className="text-sm text-agentvooc-secondary mt-1">
@@ -1458,9 +1460,7 @@ useEffect(() => {
                     value={emailIncomingUser}
                     onChange={handleEmailIncomingUserChange}
                     placeholder="e.g., your-email@gmail.com"
-                    className={`text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg ${
-                      emailIncomingUserError ? "border-red-500" : ""
-                    }`}
+                    className={`${inputClassName} ${emailIncomingUserError ? "border-red-500" : ""}`}
                     aria-describedby="emailIncomingUserDescription"
                     aria-invalid={!!emailIncomingUserError}
                   />
@@ -1483,7 +1483,7 @@ useEffect(() => {
                       value={emailIncomingPass}
                       onChange={handleEmailIncomingPassChange}
                       placeholder="e.g., your-app-password"
-                      className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+                      className={`${inputClassName} pr-10`}
                       aria-describedby="emailIncomingPassDescription"
                     />
                     <Button
@@ -1534,7 +1534,7 @@ useEffect(() => {
                   value={telegramBotToken}
                   onChange={handleTelegramBotTokenChange}
                   placeholder="e.g., 123456789:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
-                  className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+                  className={inputClassName}
                   aria-describedby="telegramBotTokenDescription"
                 />
                 <p id="telegramBotTokenDescription" className="text-sm text-agentvooc-secondary mt-1">
@@ -1544,7 +1544,7 @@ useEffect(() => {
             </div>
           </div>
         )}
-        <div>
+        {/* <div>
           <label htmlFor="enableTwitterPlugin" className="block text-sm font-medium text-agentvooc-secondary mb-1">
             Enable Twitter Plugin
           </label>
@@ -1630,7 +1630,7 @@ useEffect(() => {
               </div>
             </div>
           </div>
-        )}
+        )} */}
         {/* <div>
           <label htmlFor="voiceModel" className="block text-sm font-medium text-agentvooc-secondary mb-1">
             Voice Model
@@ -1658,7 +1658,7 @@ useEffect(() => {
             name="ragKnowledge"
             value={characterData.settings.ragKnowledge.toString()}
             onChange={(e) => handleAdvancedInputChange(e, "settings", "ragKnowledge")}
-            className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent rounded-lg w-full p-2"
+            className={`${inputClassName} w-full p-2`}
             aria-describedby="ragKnowledgeDescription"
           >
             <option value="true">Yes</option>
@@ -1667,76 +1667,27 @@ useEffect(() => {
           <p id="ragKnowledgeDescription" className="text-sm text-agentvooc-secondary mt-1">
             Enable or disable RAG knowledge for the character.
           </p>
-        </div>
+        </div>    
+        
         <div>
-          <label htmlFor="styleAll" className="block text-sm font-medium text-agentvooc-secondary mb-1">
-            Style: All Contexts (one per line)
+          <label htmlFor="enabled" className="block text-sm font-medium text-agentvooc-secondary mb-1">
+            Enabled
           </label>
-          <Textarea
-            id="styleAll"
-            name="styleAll"
-            value={characterData.style.all.join("\n")}
-            onChange={(e) => handleAdvancedInputChange(e, "style", "all")}
-            placeholder="Enter styles, one per line (e.g., concise\nwitty)"
-            className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg resize-none"
-            style={{
-              minHeight: "120px",
-              maxHeight: "288px",
-              height: `${Math.min(288, Math.max(120, (characterData.style.all.join("\n").split("\n").length + 2) * 24))}px`,
-              paddingBottom: "3rem",
-            }}
-            aria-describedby="styleAllDescription"
-          />
-          <p id="styleAllDescription" className="text-sm text-agentvooc-secondary mt-1">
-            Enter styles for all contexts, one per line.
+          <select
+            id="enabled"
+            name="enabled"
+            value={characterData.enabled.toString()}
+            onChange={(e) => setCharacterData((prev) => ({ ...prev, enabled: e.target.value === "true" }))}
+            className={`${inputClassName} w-full p-2`}
+            aria-describedby="enabledDescription"
+          >
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+          <p id="enabledDescription" className="text-sm text-agentvooc-secondary mt-1">
+            Enable or disable the character.
           </p>
-        </div>
-        <div>
-          <label htmlFor="styleChat" className="block text-sm font-medium text-agentvooc-secondary mb-1">
-            Style: Chat (one per line)
-          </label>
-          <Textarea
-            id="styleChat"
-            name="styleChat"
-            value={characterData.style.chat.join("\n")}
-            onChange={(e) => handleAdvancedInputChange(e, "style", "chat")}
-            placeholder="Enter chat styles, one per line (e.g., playful\ndynamic)"
-            className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg resize-none"
-            style={{
-              minHeight: "120px",
-              maxHeight: "288px",
-              height: `${Math.min(288, Math.max(120, (characterData.style.chat.join("\n").split("\n").length + 2) * 24))}px`,
-              paddingBottom: "3rem",
-            }}
-            aria-describedby="styleChatDescription"
-          />
-          <p id="styleChatDescription" className="text-sm text-agentvooc-secondary mt-1">
-            Enter styles for chat, one per line.
-          </p>
-        </div>
-        <div>
-          <label htmlFor="stylePost" className="block text-sm font-medium text-agentvooc-secondary mb-1">
-            Style: Post (one per line)
-          </label>
-          <Textarea
-            id="stylePost"
-            name="stylePost"
-            value={characterData.style.post.join("\n")}
-            onChange={(e) => handleAdvancedInputChange(e, "style", "post")}
-            placeholder="Enter post styles, one per line (e.g., ironic\nrelevant)"
-            className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg resize-none"
-            style={{
-              minHeight: "120px",
-              maxHeight: "288px",
-              height: `${Math.min(288, Math.max(120, (characterData.style.post.join("\n").split("\n").length + 2) * 24))}px`,
-              paddingBottom: "3rem",
-            }}
-            aria-describedby="stylePostDescription"
-          />
-          <p id="stylePostDescription" className="text-sm text-agentvooc-secondary mt-1">
-            Enter styles for posts, one per line.
-          </p>
-        </div>
+        </div>    
         <div className="flex gap-4">
           <Button
             type="submit"

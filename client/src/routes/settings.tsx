@@ -9,6 +9,7 @@ import { doesSessionExist } from "supertokens-web-js/recipe/session";
 import { useSubscriptionStatus } from "@/hooks/stripe-webhook";
 import PageTitle from "@/components/page-title";
 import PaymentSection from "@/components/payment-selection";
+import InvoiceHistory from "@/components/invoice-history"; // Import InvoiceHistory
 import { Item } from "@/types/index.ts";
 import { toast } from "@/hooks/use-toast";
 
@@ -47,6 +48,7 @@ export default function Settings() {
   const [user, setUser] = useState<User | null>(null);
   const [selectedItems, setSelectedItems] = useState<Item[]>([]);
   const [selectedBaseItem, setSelectedBaseItem] = useState<Item | null>(null);
+  const [showInvoiceHistory, setShowInvoiceHistory] = useState(false); // State for toggling invoice history
 
   useEffect(() => {
     async function initialize() {
@@ -181,31 +183,31 @@ export default function Settings() {
   };
 
   const handleRemovePlugin = async (pluginName: string) => {
-  try {
-    // console.log("[Settings] Removing plugin:", pluginName);
-    await apiClient.removePlugin(pluginName);
-    setError(null);
-    toast({
-      title: "Success",
-      description: `Plugin "${pluginName}" removed successfully.`,
-      variant: "default",
-    });
-    // console.log("[Settings] Plugin removed successfully, reloading page");
-    window.location.reload();
-  } catch (error: any) {
-    const backendError = error.response?.data?.error || "Failed to remove plugin. One of the character is using the plugin";
-    const errorMessage = backendError.includes("Cannot remove plugin") && backendError.includes("characters")
-      ? "One of the character is using the plugin"
-      : backendError;
-    setError(errorMessage);
-    toast({
-      title: "Error",
-      description: errorMessage,
-      variant: "destructive",
-    });
-    console.error("[Settings] Failed to remove plugin:", errorMessage);
-  }
-};
+    try {
+      // console.log("[Settings] Removing plugin:", pluginName);
+      await apiClient.removePlugin(pluginName);
+      setError(null);
+      toast({
+        title: "Success",
+        description: `Plugin "${pluginName}" removed successfully.`,
+        variant: "default",
+      });
+      // console.log("[Settings] Plugin removed successfully, reloading page");
+      window.location.reload();
+    } catch (error: any) {
+      const backendError = error.response?.data?.error || "Failed to remove plugin. One of the character is using the plugin";
+      const errorMessage = backendError.includes("Cannot remove plugin") && backendError.includes("characters")
+        ? "One of the character is using the plugin"
+        : backendError;
+      setError(errorMessage);
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      console.error("[Settings] Failed to remove plugin:", errorMessage);
+    }
+  };
 
   const handleUpdateBasePlan = async () => {
     if (selectedBaseItem) {
@@ -259,7 +261,7 @@ export default function Settings() {
     return (
       <div className="flex items-center justify-center min-h-screen bg-agentvooc-secondary-bg">
         <Loader2 className="h-8 w-8 animate-spin text-agentvooc-accent" />
-        <p className="ml-3 text-agentvooc-secondary">Analyzing user data...</p>
+        <p className="ml-3 ">Analyzing user data...</p>
       </div>
     );
   }
@@ -269,7 +271,7 @@ export default function Settings() {
     return (
       <div className="flex items-center justify-center min-h-screen bg-agentvooc-secondary-bg">
         <Loader2 className="h-8 w-8 animate-spin text-agentvooc-accent" />
-        <p className="ml-3 text-agentvooc-secondary">Processing subscription analytics...</p>
+        <p className="ml-3 ">Processing subscription analytics...</p>
       </div>
     );
   }
@@ -318,6 +320,7 @@ export default function Settings() {
     (sum: number, item: SubscriptionItem) => sum + (item.price || 0),
     0
   ) / 100;
+
   const isCancelPending = subscriptionData.cancelAtPeriodEnd;
 
   return (
@@ -338,27 +341,28 @@ export default function Settings() {
         )}
 
         {/* Analytics Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          {analyticsMetrics.map((metric, index) => (
-            <Card key={index} className="bg-agentvooc-secondary-accent/50 border-agentvooc-accent/20 hover:border-agentvooc-accent/40 transition-all shadow-agentvooc-glow">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-agentvooc-secondary">{metric.label}</CardTitle>
-                  <div className={metric.color}>{metric.icon}</div>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="text-2xl font-bold text-agentvooc-primary mb-1">{metric.value}</div>
-                <div className={`text-xs ${metric.color} font-medium`}>{metric.trend}</div>
-              </CardContent>
-            </Card>
-          ))}
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+  {analyticsMetrics.map((metric, index) => (
+    <Card
+      key={index}
+      className=""
+    >
+      <CardContent className="flex flex-col items-center justify-center text-center p-4">
+        <div className="flex items-center justify-center mb-2">
+          <div className={metric.color}>{metric.icon}</div>
         </div>
+        <div className="text-sm font-medium ">{metric.label}</div>
+        <div className="text-2xl font-bold  my-1">{metric.value}</div>
+        <div className={`text-xs ${metric.color} font-medium`}>{metric.trend}</div>
+      </CardContent>
+    </Card>
+  ))}
+</div>
 
         {/* Current Subscription Analysis */}
-        <Card className="mb-8 bg-agentvooc-secondary-accent/30 border-agentvooc-accent/30">
+        <Card className="mb-8 ">
           <CardHeader>
-            <CardTitle className="text-xl text-agentvooc-primary flex items-center gap-2">
+            <CardTitle className="text-xl flex items-center gap-2">
               <TrendingUp className="h-6 w-6 text-agentvooc-accent" />
               Subscription Analysis
             </CardTitle>
@@ -367,11 +371,11 @@ export default function Settings() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Subscription Status */}
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-agentvooc-primary">Current Status</h3>
+                <h3 className="text-lg font-semibold">Current Status</h3>
                 {isCancelPending ? (
                   <div className="p-4 bg-red-500/20 border border-red-500/30 rounded-lg">
                     <p className="text-red-400 font-medium">⚠️ Cancellation Pending</p>
-                    <p className="text-agentvooc-secondary text-sm mt-1">
+                    <p className=" text-sm mt-1">
                       Subscription ends: {user.currentPeriodEnd ? new Date(user.currentPeriodEnd).toLocaleDateString() : "N/A"}
                     </p>
                   </div>
@@ -380,7 +384,7 @@ export default function Settings() {
                     <p className="text-green-400 font-medium">
                       {user.subscriptionStatus === "trialing" ? "🎯 Free Trial Active" : "✅ Subscription Active"}
                     </p>
-                    <p className="text-agentvooc-secondary text-sm mt-1">
+                    <p className=" text-sm mt-1">
                       {user.subscriptionStatus === "trialing"
                         ? `Trial period: ${user.trialStartDate ? new Date(user.trialStartDate).toLocaleDateString() : "N/A"} - ${user.trialEndDate ? new Date(user.trialEndDate).toLocaleDateString() : "N/A"}`
                         : `Billing cycle: ${user.currentPeriodStart ? new Date(user.currentPeriodStart).toLocaleDateString() : "N/A"} - ${user.currentPeriodEnd ? new Date(user.currentPeriodEnd).toLocaleDateString() : "N/A"}`}
@@ -390,15 +394,15 @@ export default function Settings() {
                 
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
-                    <span className="text-agentvooc-secondary">Base Plan:</span>
-                    <span className="text-agentvooc-primary font-medium">{currentBaseItem?.name || "None"}</span>
+                    <span className="">Base Plan:</span>
+                    <span className=" font-medium">{currentBaseItem?.name || "None"}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-agentvooc-secondary">Active Plugins:</span>
-                    <span className="text-agentvooc-primary font-medium">{currentPluginItems.length}</span>
+                    <span className="">Active Plugins:</span>
+                    <span className=" font-medium">{currentPluginItems.length}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-agentvooc-secondary">Monthly Total:</span>
+                    <span className="">Monthly Total:</span>
                     <span className="text-agentvooc-accent font-bold text-lg">${totalPrice.toFixed(2)}</span>
                   </div>
                 </div>
@@ -406,28 +410,28 @@ export default function Settings() {
 
               {/* Usage Analytics */}
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-agentvooc-primary">Usage Analytics</h3>
+                <h3 className="text-lg font-semibold">Usage Analytics</h3>
                 <div className="space-y-3">
                   <div className="flex justify-between items-center p-3 bg-agentvooc-secondary-bg rounded-lg">
                     <div className="flex items-center gap-2">
                       <Activity className="h-4 w-4 text-blue-400" />
-                      <span className="text-agentvooc-secondary">API Responses</span>
+                      <span className="">API Responses</span>
                     </div>
-                    <span className="text-agentvooc-primary font-bold">{user.responseCount.toLocaleString()}</span>
+                    <span className=" font-bold">{user.responseCount.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-agentvooc-secondary-bg rounded-lg">
                     <div className="flex items-center gap-2">
                       <Zap className="h-4 w-4 text-purple-400" />
-                      <span className="text-agentvooc-secondary">Tokens Processed</span>
+                      <span className="">Tokens Processed</span>
                     </div>
-                    <span className="text-agentvooc-primary font-bold">{user.tokenCount.toLocaleString()}</span>
+                    <span className=" font-bold">{user.tokenCount.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-agentvooc-secondary-bg rounded-lg">
                     <div className="flex items-center gap-2">
                       <BarChart3 className="h-4 w-4 text-green-400" />
-                      <span className="text-agentvooc-secondary">Efficiency Ratio</span>
+                      <span className="">Efficiency Ratio</span>
                     </div>
-                    <span className="text-agentvooc-primary font-bold">
+                    <span className=" font-bold">
                       {user.responseCount > 0 ? (user.tokenCount / user.responseCount).toFixed(0) : 0} tokens/response
                     </span>
                   </div>
@@ -437,19 +441,19 @@ export default function Settings() {
 
             {/* Active Items */}
             <div className="mt-6 pt-6 border-t border-agentvooc-accent/20">
-              <h4 className="text-lg font-semibold text-agentvooc-primary mb-4">Active Subscription Items</h4>
+              <h4 className="text-lg font-semibold mb-4">Active Subscription Items</h4>
               <div className="space-y-2">
                 {subscriptionData.items.map((item: SubscriptionItem) => (
                   <div key={item.stripePriceId} className="flex items-center justify-between p-3 bg-agentvooc-secondary-bg rounded-lg">
                     <div className="flex items-center gap-3">
                       <div className={`w-3 h-3 rounded-full ${item.itemType === "base" ? "bg-blue-400" : "bg-green-400"}`}></div>
-                      <span className="text-agentvooc-primary font-medium">{item.name}</span>
+                      <span className=" font-medium">{item.name}</span>
                       <span className="text-xs px-2 py-1 bg-agentvooc-accent/20 text-agentvooc-accent rounded-full">
                         {item.itemType.toUpperCase()}
                       </span>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="text-agentvooc-secondary">${(item.price / 100).toFixed(2)}/mo</span>
+                      <span className="">${(item.price / 100).toFixed(2)}/mo</span>
                       {item.itemType === "plugin" && !isCancelPending && (
                         <Button
                           onClick={() => item.pluginName && handleRemovePlugin(item.pluginName)}
@@ -473,9 +477,9 @@ export default function Settings() {
         {!isCancelPending && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             {/* Update Base Plan */}
-            <Card className="bg-agentvooc-secondary-accent/30 border-agentvooc-accent/30">
+            <Card className="">
               <CardHeader>
-                <CardTitle className="text-lg text-agentvooc-primary">Update Base Plan</CardTitle>
+                <CardTitle className="text-lg">Update Base Plan</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -485,7 +489,7 @@ export default function Settings() {
                       const selected = availableBaseItems.find(item => item.id === e.target.value) || null;
                       setSelectedBaseItem(selected);
                     }}
-                    className="w-full p-3 bg-agentvooc-secondary-bg border border-agentvooc-accent/30 rounded-lg text-agentvooc-primary focus:border-agentvooc-accent"
+                    className="w-full p-3 bg-agentvooc-secondary-bg border border-agentvooc-accent/30 rounded-lg focus:border-agentvooc-accent"
                   >
                     <option value="">Select a base plan</option>
                     {availableBaseItems.map(item => (
@@ -496,7 +500,7 @@ export default function Settings() {
                   </select>
                   <Button 
                     onClick={handleUpdateBasePlan} 
-                    className="w-full bg-agentvooc-accent hover:bg-agentvooc-accent/80 text-agentvooc-secondary-bg" 
+                    className="" 
                     disabled={!selectedBaseItem}
                   >
                     Update Base Plan
@@ -506,9 +510,9 @@ export default function Settings() {
             </Card>
 
             {/* Available Plugins */}
-            <Card className="bg-agentvooc-secondary-accent/30 border-agentvooc-accent/30">
+            <Card className="">
               <CardHeader>
-                <CardTitle className="text-lg text-agentvooc-primary">Available Plugins</CardTitle>
+                <CardTitle className="text-lg">Available Plugins</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3 max-h-64 overflow-y-auto">
@@ -516,8 +520,8 @@ export default function Settings() {
                     availablePluginItems.map(item => (
                       <div key={item.id} className="flex items-center justify-between p-3 bg-agentvooc-secondary-bg rounded-lg">
                         <div>
-                          <p className="text-agentvooc-primary font-medium">{item.name}</p>
-                          <p className="text-agentvooc-secondary text-sm">${(item.price / 100).toFixed(2)}/month</p>
+                          <p className=" font-medium">{item.name}</p>
+                          <p className=" text-sm">${(item.price / 100).toFixed(2)}/month</p>
                         </div>
                         <Button
                           onClick={() => item.pluginName && handleAddPlugin(item.pluginName)}
@@ -530,7 +534,7 @@ export default function Settings() {
                       </div>
                     ))
                   ) : (
-                    <p className="text-agentvooc-secondary text-center py-4">No additional plugins available.</p>
+                    <p className=" text-center py-4">No additional plugins available.</p>
                   )}
                 </div>
               </CardContent>
@@ -539,14 +543,21 @@ export default function Settings() {
         )}
 
         {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-col sm:flex-row gap-4 mb-8">
           <Button
+          variant="default"
             onClick={handleManageSubscription}
-            className="bg-agentvooc-accent hover:bg-agentvooc-accent/80 text-agentvooc-secondary-bg"
           >
             Manage Billing Portal
           </Button>
-          
+          <Button
+            onClick={() => setShowInvoiceHistory(!showInvoiceHistory)}
+            className=""
+            aria-label={showInvoiceHistory ? "Hide invoice history" : "Show invoice history"}
+            aria-expanded={showInvoiceHistory}
+          >
+            {showInvoiceHistory ? "Hide Invoices" : "View Invoices"}
+          </Button>
           {!isCancelPending && (
             <Button
               onClick={handleCancelSubscription}
@@ -558,6 +569,21 @@ export default function Settings() {
           )}
         </div>
 
+        {/* Invoice History */}
+        {showInvoiceHistory && user.userId && (
+          <Card className="mb-8 bg-agentvooc-secondary-accent/30 border-agentvooc-accent/30">
+            <CardHeader>
+              <CardTitle className="text-xl flex items-center gap-2">
+                <DollarSign className="h-6 w-6 text-agentvooc-accent" />
+                Invoice History
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <InvoiceHistory userId={user.userId} />
+            </CardContent>
+          </Card>
+        )}
+
         {/* Trial Auto-Continue Notice */}
         {!isCancelPending && user.subscriptionStatus === "trialing" && (
           <Card className="mt-6 bg-yellow-500/10 border-yellow-500/30">
@@ -566,7 +592,7 @@ export default function Settings() {
                 <Calendar className="h-5 w-5 text-yellow-400 mt-0.5" />
                 <div>
                   <p className="text-yellow-400 font-medium">Trial Auto-Continue Notice</p>
-                  <p className="text-agentvooc-secondary text-sm mt-1">
+                  <p className=" text-sm mt-1">
                     After your free trial ends on {user.trialEndDate ? new Date(user.trialEndDate).toLocaleDateString() : "N/A"}, 
                     this subscription will continue automatically at ${totalPrice.toFixed(2)}/month.
                   </p>

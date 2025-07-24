@@ -2,34 +2,8 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { Loader2 } from "lucide-react";
-import { apiClient } from "@/lib/api";
+import { apiClient, type ProductPage } from "@/lib/api";
 import { PortableText, PortableTextComponents } from "@portabletext/react";
-
-interface ProductPage {
-  title: string;
-  slug: { current: string };
-  content?: Array<any>;
-  publishedAt: string;
-  modifiedAt?: string;
-  seoDescription: string;
-  excerpt: string;
-  mainImage?: string;
-  mainImageAlt?: string;
-  heroImage?: string;
-  heroImageAlt?: string;
-  galleryImages?: Array<{ url: string; alt: string }>;
-  thumbnailImage?: string;
-  mediumImage?: string;
-  tags?: string[];
-  relatedContent?: Array<{
-    _type: "blogPost" | "pressPost" | "productPage";
-    title: string;
-    slug: { current: string };
-    excerpt?: string;
-    mainImage?: string;
-    mainImageAlt?: string;
-  }>;
-}
 
 export default function ProductPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -37,19 +11,25 @@ export default function ProductPage() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const baseUrl = import.meta.env.VITE_SERVER_BASE_URL;
+  const baseUrl = import.meta.env.VITE_SERVER_BASE_URL || "https://your-default-domain.com";
   const defaultImage = `${baseUrl}/images/logo.png`;
   const defaultImageAlt = "agentVooc Logo";
 
   useEffect(() => {
     const fetchPage = async () => {
-      if (!slug) return;
+      if (!slug) {
+        console.error("[ProductPage] No slug provided");
+        setError("No slug provided");
+        setIsLoading(false);
+        return;
+      }
       try {
         setIsLoading(true);
         const response = await apiClient.getProductPageBySlug(slug);
+        console.log("[ProductPage] Fetched page:", JSON.stringify(response.productPages, null, 2));
         setPage(response.productPages);
       } catch (err: any) {
-        console.error(`Error fetching product page for slug: ${slug}`, err);
+        console.error(`[ProductPage] Error fetching product page for slug: ${slug}`, err);
         setError(err.message || "Failed to fetch product page");
       } finally {
         setIsLoading(false);
@@ -59,30 +39,41 @@ export default function ProductPage() {
     fetchPage();
   }, [slug]);
 
-
   // Scroll to top on component mount
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
-
   // Custom PortableText components for SEO
   const portableTextComponents: PortableTextComponents = {
     block: {
-      h1: ({ children }) => <h1 className="text-3xl font-bold mb-4">{children}</h1>,
-      h2: ({ children }) => <h2 className="text-2xl font-semibold mb-3">{children}</h2>,
-      h3: ({ children }) => <h3 className="text-xl font-semibold mb-2">{children}</h3>,
-      normal: ({ children }) => <p className="mb-4">{children}</p>,
+      h1: ({ children }) => <h1 className="text-3xl font-bold mb-4 text-white">{children}</h1>,
+      h2: ({ children }) => <h2 className="text-2xl font-semibold mb-3 text-white">{children}</h2>,
+      h3: ({ children }) => <h3 className="text-xl font-semibold mb-2 text-white">{children}</h3>,
+      normal: ({ children }) => <p className="mb-4 text-gray-300">{children}</p>,
     },
     types: {
-      image: ({ value }) => (
-        <img
-          src={value.asset?.url ? `${value.asset.url}?w=800&auto=format` : defaultImage}
-          alt={value.alt || "Product page image"}
-          loading="lazy"
-          className="w-full h-auto my-4 rounded-lg"
-        />
-      ),
+      image: ({ value }) => {
+        if (!value?.asset?.url) {
+          console.error("[PortableText] Image asset URL is missing:", JSON.stringify(value, null, 2));
+          return null;
+        }
+        return (
+          <div className="w-full h-64 bg-gray-200 animate-pulse rounded-lg my-4">
+            <img
+              src={value.asset.url} // Use pre-formatted URL from endpoint
+              alt={value.alt || "Product page image"}
+              loading="lazy"
+              className="w-full h-auto rounded-lg"
+              onLoad={(e) => (e.currentTarget.parentElement!.style.background = "none")}
+              onError={(e) => {
+                console.error("[PortableText] Image failed to load:", value.asset.url);
+                e.currentTarget.style.display = "none";
+              }}
+            />
+          </div>
+        );
+      },
     },
   };
 
@@ -109,7 +100,7 @@ export default function ProductPage() {
           <link rel="canonical" href={`${baseUrl}/product`} />
         </Helmet>
         <div className="max-w-6xl mx-auto py-12 px-4">
-          <h1 className="text-3xl font-bold mb-4">Error</h1>
+          <h1 className="text-3xl font-bold mb-4 text-white">Error</h1>
           <p>{error}</p>
           <Link to="/product" className="text-agentvooc-accent hover:underline">
             Back to Products
@@ -120,7 +111,7 @@ export default function ProductPage() {
   }
 
   if (!page) {
-    return null; // Should not reach here due to error handling
+    return null;
   }
 
   // Structured data for WebPage
@@ -151,12 +142,14 @@ export default function ProductPage() {
     },
     mainEntityOfPage: {
       "@type": "WebPage",
-      "@id": `${baseUrl}/product/${page.slug.current}`,
+      "@id": `${baseUrl}/product/${page.slug}`,
     },
     keywords: page.tags?.join(", ") || "",
     relatedLink: page.relatedContent?.map((item) => ({
       "@type": item._type === "blogPost" ? "BlogPosting" : item._type === "pressPost" ? "NewsArticle" : "WebPage",
-      url: `${baseUrl}/company/${item._type === "blogPost" ? "blog" : item._type === "pressPost" ? "press" : "products"}/${item.slug.current}`,
+      url: `${baseUrl}/${
+        item._type === "blogPost" ? "company/blog" : item._type === "pressPost" ? "company/press" : "product"
+      }/${item.slug}`,
       name: item.title,
       image: {
         "@type": "ImageObject",
@@ -166,6 +159,13 @@ export default function ProductPage() {
     })) || [],
   };
 
+  console.log("[ProductPage] Rendering page with images:", {
+    mainImage: page.mainImage,
+    heroImage: page.heroImage,
+    galleryImages: page.galleryImages,
+    contentImages: page.content?.filter((block) => block._type === "image").map((block) => block.asset?.url),
+  });
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-agentvooc-secondary-bg to-agentvooc-primary-bg text-agentvooc-primary">
       <Helmet>
@@ -173,12 +173,12 @@ export default function ProductPage() {
         <meta name="description" content={page.seoDescription} />
         <meta name="keywords" content={page.tags?.join(", ") || "AI automation, agentVooc, products, technology"} />
         <meta name="robots" content="index, follow" />
-        <link rel="canonical" href={`${baseUrl}/product/${page.slug.current}`} />
+        <link rel="canonical" href={`${baseUrl}/product/${page.slug}`} />
         <link rel="sitemap" href={`${baseUrl}/sitemap.xml`} type="application/xml" />
         <meta property="og:title" content={`${page.title} | agentVooc`} />
         <meta property="og:description" content={page.seoDescription} />
         <meta property="og:type" content="website" />
-        <meta property="og:url" content={`${baseUrl}/product/${page.slug.current}`} />
+        <meta property="og:url" content={`${baseUrl}/product/${page.slug}`} />
         <meta property="og:image" content={page.mainImage || defaultImage} />
         <meta property="og:image:alt" content={page.mainImageAlt || defaultImageAlt} />
         <meta property="og:site_name" content="agentVooc" />
@@ -192,14 +192,36 @@ export default function ProductPage() {
       </Helmet>
       <div className="max-w-3xl mx-auto py-12 px-4">
         {page.heroImage && (
-          <img
-            src={page.heroImage}
-            alt={page.heroImageAlt || page.title}
-            loading="lazy"
-            className="w-full h-auto mb-8 rounded-lg"
-          />
+          <div className="w-full h-64 bg-gray-200 animate-pulse rounded-lg mb-8">
+            <img
+              src={page.heroImage} // Use pre-formatted URL
+              alt={page.heroImageAlt || page.title}
+              loading="lazy"
+              className="w-full h-auto rounded-lg"
+              onLoad={(e) => (e.currentTarget.parentElement!.style.background = "none")}
+              onError={(e) => {
+                console.error("[ProductPage] Hero image failed to load:", page.heroImage);
+                e.currentTarget.style.display = "none";
+              }}
+            />
+          </div>
         )}
-        <h1 className="text-3xl font-bold mb-4">{page.title}</h1>
+        {page.mainImage && (
+          <div className="w-full h-64 bg-gray-200 animate-pulse rounded-lg mb-8">
+            <img
+              src={page.mainImage} // Use pre-formatted URL
+              alt={page.mainImageAlt || page.title}
+              loading="lazy"
+              className="w-full h-auto rounded-lg"
+              onLoad={(e) => (e.currentTarget.parentElement!.style.background = "none")}
+              onError={(e) => {
+                console.error("[ProductPage] Main image failed to load:", page.mainImage);
+                e.currentTarget.style.display = "none";
+              }}
+            />
+          </div>
+        )}
+        <h1 className="text-3xl font-bold mb-4 text-white">{page.title}</h1>
         <p className="text-sm text-gray-500 mb-8">
           Published: {new Date(page.publishedAt).toLocaleDateString()}
           {page.modifiedAt && page.modifiedAt !== page.publishedAt && (
@@ -207,43 +229,60 @@ export default function ProductPage() {
           )}
         </p>
         <div className="prose prose-invert max-w-none">
-          <PortableText value={page.content} components={portableTextComponents} />
+          {page.content ? (
+            <PortableText value={page.content} components={portableTextComponents} />
+          ) : (
+            <p className="text-gray-300">No content available</p>
+          )}
         </div>
         {page.galleryImages && page.galleryImages.length > 0 && (
           <div className="mt-12">
-            <h2 className="text-2xl font-semibold mb-4">Gallery</h2>
+            <h2 className="text-2xl font-semibold mb-4 text-white">Gallery</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {page.galleryImages.map((image, index) => (
-                <img
-                  key={index}
-                  src={image.url}
-                  alt={image.alt}
-                  loading="lazy"
-                  className="w-full h-auto rounded-lg"
-                />
+                <div key={index} className="w-full h-64 bg-gray-200 animate-pulse rounded-lg">
+                  <img
+                    src={image.url} // Use pre-formatted URL
+                    alt={image.alt || page.title}
+                    loading="lazy"
+                    className="w-full h-auto rounded-lg"
+                    onLoad={(e) => (e.currentTarget.parentElement!.style.background = "none")}
+                    onError={(e) => {
+                      console.error("[ProductPage] Gallery image failed to load:", image.url);
+                      e.currentTarget.style.display = "none";
+                    }}
+                  />
+                </div>
               ))}
             </div>
           </div>
         )}
         {page.relatedContent && page.relatedContent.length > 0 && (
           <div className="mt-12">
-            <h2 className="text-2xl font-semibold mb-4">Related Content</h2>
+            <h2 className="text-2xl font-semibold mb-4 text-white">Related Content</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {page.relatedContent.slice(0, 3).map((item) => (
                 <Link
-                  key={`${item._type}-${item.slug.current}`}
-                  to={`/${item._type === "blogPost" ? "company/blog" : item._type === "pressPost" ? "company/press" : "product"}/${item.slug.current}`}
+                  key={`${item._type}-${item.slug}`}
+                  to={`/company/${item._type === "blogPost" ? "blog" : item._type === "pressPost" ? "press" : "product"}/${item.slug}`}
                   className="block p-4 bg-agentvooc-primary-bg rounded-lg border border-agentvooc-border text-white hover:bg-agentvooc-accent hover:text-black hover:shadow-lg transition-all duration-300"
                   aria-label={`View ${item._type === "blogPost" ? "blog post" : item._type === "pressPost" ? "press release" : "product"}: ${item.title}`}
                   onClick={() => window.scrollTo(0, 0)}
                 >
                   {item.mainImage && (
-                    <img
-                      src={item.mainImage}
-                      alt={item.mainImageAlt || item.title}
-                      loading="lazy"
-                      className="w-full h-32 object-cover rounded-t-lg mb-2"
-                    />
+                    <div className="w-full h-32 bg-gray-200 animate-pulse rounded-t-lg mb-2">
+                      <img
+                        src={item.mainImage} // Use pre-formatted URL
+                        alt={item.mainImageAlt || item.title}
+                        loading="lazy"
+                        className="w-full h-32 object-cover rounded-t-lg"
+                        onLoad={(e) => (e.currentTarget.parentElement!.style.background = "none")}
+                        onError={(e) => {
+                          console.error("[ProductPage] Related content image failed to load:", item.mainImage);
+                          e.currentTarget.style.display = "none";
+                        }}
+                      />
+                    </div>
                   )}
                   <h3 className="text-lg font-semibold mb-2">{item.title}</h3>
                   {item.excerpt && (

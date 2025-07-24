@@ -189,7 +189,7 @@ export default function ManageKnowledge({ agentId }: KnowledgeVaultProps) {
   }
 
   return (
-    <div className="p-6 bg-agentvooc-secondary-bg border border-agentvooc-accent/30 rounded-xl shadow-agentvooc-glow w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="p-6 border border-agentvooc-accent/30 rounded-xl w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
       <h2 className="text-xl font-bold mb-4 text-agentvooc-primary">Knowledge Vault</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
@@ -203,7 +203,7 @@ export default function ManageKnowledge({ agentId }: KnowledgeVaultProps) {
             onChange={handleInputChange}
             placeholder="Enter knowledge name"
             required
-            className="text-agentvooc-primary border-agentvooc-accent/30 bg-agentvooc-secondary-accent"
+            className="text-agentvooc-primary border-agentvooc-accent/30 bg-agentvooc-secondary-bg"
           />
         </div>
         <div>
@@ -217,13 +217,13 @@ export default function ManageKnowledge({ agentId }: KnowledgeVaultProps) {
             onChange={handleInputChange}
             placeholder="Enter knowledge content"
             required
-            className="text-agentvooc-primary border-agentvooc-accent/30 bg-agentvooc-secondary-accent"
+            className="text-agentvooc-primary border-agentvooc-accent/30 bg-agentvooc-secondary-bg"
           />
         </div>
         <div className="flex gap-2">
           <Button
             type="submit"
-            className="bg-agentvooc-button-bg text-agentvooc-accent hover:bg-agentvooc-accent hover:text-agentvooc-secondary-bg shadow-agentvooc-glow rounded-full"
+            variant="default"
             disabled={createKnowledgeMutation.isPending || updateKnowledgeMutation.isPending}
           >
             {editingKnowledge ? (
@@ -239,7 +239,6 @@ export default function ManageKnowledge({ agentId }: KnowledgeVaultProps) {
               type="button"
               variant="outline"
               onClick={handleCancelEdit}
-              className="border-agentvooc-accent/30 text-agentvooc-primary hover:bg-agentvooc-accent hover:text-agentvooc-secondary-bg"
             >
               <X className="mr-2 h-4 w-4" /> Cancel
             </Button>
@@ -247,26 +246,25 @@ export default function ManageKnowledge({ agentId }: KnowledgeVaultProps) {
         </div>
       </form>
       <div className="mt-6">
-        <h3 className="text-lg font-semibold mb-2 text-agentvooc-primary">Existing Knowledge</h3>
+        <h3 className="text-lg font-semibold mb-2 ">Existing Knowledge</h3>
         {knowledgeQuery.isLoading ? (
-          <p className="text-agentvooc-secondary">Loading knowledge...</p>
+          <p >Loading knowledge...</p>
         ) : knowledgeQuery.isError ? (
           <p className="text-red-500">Error loading knowledge: {knowledgeQuery.error.message}</p>
         ) : !knowledgeQuery.data || knowledgeQuery.data.knowledge.length === 0 ? (
-          <p className="text-agentvooc-secondary">No knowledge entries yet.</p>
+          <p >No knowledge entries yet.</p>
         ) : (
           <ul className="space-y-2">
             {knowledgeQuery.data.knowledge.map((item) => (
-              <li key={item._id} className="border border-agentvooc-accent/30 p-2 rounded flex justify-between items-center bg-agentvooc-secondary-accent">
+              <li key={item._id} className="border border-agentvooc-accent/30 p-2 rounded flex justify-between items-center ">
                 <div className="text-agentvooc-primary">
                   <strong>{item.name}</strong>: {item.text}
                 </div>
                 <div className="flex gap-2">
                   <Button
                     size="sm"
-                    variant="outline"
+                    variant="default"
                     onClick={() => handleEdit(item)}
-                    className="border-agentvooc-accent/30 text-agentvooc-primary hover:bg-agentvooc-accent hover:text-agentvooc-secondary-bg"
                   >
                     <Edit2 className="h-4 w-4" />
                   </Button>

@@ -342,7 +342,7 @@ export const replyEmailAction: Action = {
         const pendingReplyMemory: Memory = {
           id: pendingReplyId,
           content: {
-            text: `I have generated a reply for email UUID ${emailId}:\n\n---\n${body}\n---\n\nTo send this reply, please say 'confirm reply' or 'confirm reply emailId: ${emailId}'.\n\nRelevant knowledge:\n${formatKnowledgeItems(ragKnowledgeItems)}`,
+            text: `I have generated a reply for:\n\n emailId: ${emailId}:\n\n\n------\n${body}\n------\n\nTo send this reply, please say 'confirm reply' or 'confirm reply emailId: ${emailId}'.\n\nRelevant knowledge:\n${formatKnowledgeItems(ragKnowledgeItems)}`,
             thought: `Generated automated reply for ${emailId} using language model with knowledge`,
             source: "REPLY_EMAIL",
             user: runtime.character.id,

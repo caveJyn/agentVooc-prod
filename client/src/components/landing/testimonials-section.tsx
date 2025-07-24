@@ -145,11 +145,11 @@ export const TestimonialsSection = ({
                   className={`w-12 h-12 border-2 transition-all duration-300 ${
                     activeIndex === index
                       ? "border-agentvooc-accent scale-110 ring-2 ring-agentvooc-accent/30"
-                      : "border-agentvooc-secondary-accent opacity-70 hover:opacity-90 hover:scale-105"
+                      : "border-agentvooc-accent opacity-70 hover:opacity-90 hover:scale-105"
                   }`}
                 >
                   <AvatarImage src={testimonial.image?.main} alt={testimonial.author} />
-                  <AvatarFallback className="bg-agentvooc-secondary-accent text-agentvooc-accent">
+                  <AvatarFallback className="bg-agentvooc-secondary-bg text-agentvooc-accent">
                     {testimonial.author.charAt(0)}
                   </AvatarFallback>
                 </Avatar>

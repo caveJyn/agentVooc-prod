@@ -115,7 +115,7 @@ export default function ManageEmailTemplate({ agentId }: ManageEmailTemplateProp
   }
 
   return (
-    <div className="p-6 bg-agentvooc-secondary-bg border border-agentvooc-accent/30 rounded-xl shadow-agentvooc-glow w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="p-6  border border-agentvooc-accent/30 rounded-xl  w-full max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
       <h2 className="text-xl font-bold mb-4 text-agentvooc-primary">Manage Email Template</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
@@ -129,7 +129,7 @@ export default function ManageEmailTemplate({ agentId }: ManageEmailTemplateProp
             onChange={handleInputChange}
             placeholder="Use placeholders: {{sender}}, {{body}}, {{agentName}}, {{position}}, {{emailAddress}}, {{companyName}}, {{bestRegard}}"
             rows={6}
-            className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+            className="text-agentvooc-primary bg-agentvooc-secondary-bg border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
           />
           <p className="text-sm text-agentvooc-secondary mt-1">
             Define the email structure. Required: {'{{body}}'}. Optional: {'{{sender}}'}, {'{{agentName}}'}, {'{{position}}'}, {'{{emailAddress}}'}, {'{{companyName}}'}, {'{{bestRegard}}'}.
@@ -146,7 +146,7 @@ export default function ManageEmailTemplate({ agentId }: ManageEmailTemplateProp
             onChange={handleInputChange}
             placeholder="Instructions for generating the email body (e.g., tone, content guidelines)"
             rows={4}
-            className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+            className="text-agentvooc-primary bg-agentvooc-secondary-bg border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
           />
         </div>
         <div>
@@ -159,7 +159,7 @@ export default function ManageEmailTemplate({ agentId }: ManageEmailTemplateProp
             value={template.bestRegard || ""}
             onChange={handleInputChange}
             placeholder="e.g., Best regards"
-            className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+            className="text-agentvooc-primary bg-agentvooc-secondary-bg border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
           />
         </div>
         <div>
@@ -172,7 +172,7 @@ export default function ManageEmailTemplate({ agentId }: ManageEmailTemplateProp
             value={template.position || ""}
             onChange={handleInputChange}
             placeholder="e.g., Assistant"
-            className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+            className="text-agentvooc-primary bg-agentvooc-secondary-bg border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
           />
         </div>
         <div>
@@ -185,7 +185,7 @@ export default function ManageEmailTemplate({ agentId }: ManageEmailTemplateProp
             value={template.emailAddress || ""}
             onChange={handleInputChange}
             placeholder="e.g., user@gmail.com"
-            className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+            className="text-agentvooc-primary bg-agentvooc-secondary-bg border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
           />
         </div>
         <div>
@@ -198,12 +198,12 @@ export default function ManageEmailTemplate({ agentId }: ManageEmailTemplateProp
             value={template.companyName || ""}
             onChange={handleInputChange}
             placeholder="e.g., agentVooc"
-            className="text-agentvooc-primary bg-agentvooc-secondary-accent border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
+            className="text-agentvooc-primary bg-agentvooc-secondary-bg border-agentvooc-accent/30 focus:ring-agentvooc-accent focus:border-agentvooc-accent placeholder-agentvooc-secondary/50 rounded-lg"
           />
         </div>
         <div>
           <label className="block text-sm font-medium text-agentvooc-secondary">Preview</label>
-          <div className="p-4 rounded whitespace-pre-line bg-agentvooc-secondary-accent border-agentvooc-accent/30 text-agentvooc-primary">
+          <div className="p-4 rounded whitespace-pre-line bg-agentvooc-secondary-bg border-agentvooc-accent/30 text-agentvooc-primary">
             {preview || "No preview available"}
           </div>
         </div>

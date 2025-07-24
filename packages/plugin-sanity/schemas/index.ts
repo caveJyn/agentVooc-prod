@@ -11,6 +11,7 @@ import companyPage from "./companyPage";
 import blogPost from "./blogPost";
 import pressPost from "./pressPost";
 import productPages from "./productPages";
+import invoice from "./invoice";
 
 export const schemaTypes = [
   character,
@@ -26,6 +27,7 @@ export const schemaTypes = [
   blogPost,
   pressPost,
   productPages,
+  invoice
 ];
 
 export default schemaTypes;

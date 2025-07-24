@@ -5,8 +5,10 @@ import { doesSessionExist } from "supertokens-web-js/recipe/session";
 import { apiClient } from "@/lib/api";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQueryClient } from "@tanstack/react-query";
 import { Helmet } from "react-helmet-async";
+import dayjs from "dayjs";
 import { Item } from "@/types/index.ts";
 
 interface PaymentData {
@@ -24,6 +26,30 @@ interface PaymentData {
   }>;
 }
 
+interface Invoice {
+  _id: string;
+  stripeInvoiceId: string;
+  status: string;
+  amountDue: number;
+  amountPaid: number;
+  currency: string;
+  createdAt: string;
+  dueDate: string | null;
+  invoiceUrl: string | null;
+  invoicePdf: string | null;
+  periodStart: string | null;
+  periodEnd: string | null;
+  lineItems: Array<{
+    _key: string;
+    description: string;
+    amount: number;
+    currency: string;
+    quantity: number;
+    period: { start: string | null; end: string | null };
+    productName: string;
+  }>;
+}
+
 export default function SuccessPage() {
   const [user, setUser] = useState<{
     userId: string;
@@ -32,6 +58,7 @@ export default function SuccessPage() {
     subscriptionStatus?: string;
   } | null>(null);
   const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
+  const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const [searchParams] = useSearchParams();
@@ -59,6 +86,10 @@ export default function SuccessPage() {
           };
           setUser(userData);
 
+          // Fetch invoice data
+          const invoiceResponse = await apiClient.getInvoiceBySessionId(sessionId);
+          setInvoice(invoiceResponse.invoice);
+
           // Get selected items from sessionStorage
           const selectedItemsJson = sessionStorage.getItem("selectedItems");
           const selectedItems: Item[] = selectedItemsJson ? JSON.parse(selectedItemsJson) : [];
@@ -71,7 +102,7 @@ export default function SuccessPage() {
 
           setPaymentData({
             amount: totalAmount,
-            currency: "USD", // Adjust if your backend provides currency
+            currency: "USD",
             orderId: sessionId || `order_${Date.now()}`,
             email: userData.email || "unknown",
             items: selectedItems.map((item) => ({
@@ -84,7 +115,7 @@ export default function SuccessPage() {
             })),
           });
 
-          if (userData.subscriptionStatus === "active") {
+          if (userData.subscriptionStatus === "active" || userData.subscriptionStatus === "trialing") {
             queryClient.invalidateQueries({ queryKey: ["subscription-status", userData.userId] });
             // Fire X purchase event
             window.twq?.("event", "tw-q5y7y-q5y7z", {
@@ -158,7 +189,7 @@ export default function SuccessPage() {
     );
   }
 
-  if (!user || !paymentData) {
+  if (!user || !paymentData || !invoice) {
     return (
       <div className="p-4 flex flex-col items-center justify-center min-h-screen">
         <Helmet>
@@ -184,12 +215,114 @@ export default function SuccessPage() {
       <p className="text-gray-600 mb-2">
         Thank you for your subscription, {user.email || user.userId}!
       </p>
-      <p className="text-gray-600 mb-6">
-        Order ID: {paymentData.orderId} | Amount: ${paymentData.amount.toFixed(2)} {paymentData.currency}
-      </p>
-      <Link to="/home" className="text-blue-500">
-        <Button>Return to Home</Button>
-      </Link>
+      <Card className="w-full max-w-2xl">
+        <CardHeader>
+          <CardTitle>Invoice {invoice.stripeInvoiceId}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <p>
+              <strong>Status:</strong>{" "}
+              {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
+            </p>
+            <p>
+              <strong>Amount Due:</strong> ${(invoice.amountDue || 0).toFixed(2)}{" "}
+              {invoice.currency.toUpperCase()}
+            </p>
+            <p>
+              <strong>Amount Paid:</strong> ${(invoice.amountPaid || 0).toFixed(2)}{" "}
+              {invoice.currency.toUpperCase()}
+            </p>
+            <p>
+              <strong>Created:</strong>{" "}
+              {dayjs(invoice.createdAt).format("MMMM D, YYYY")}
+            </p>
+            {invoice.dueDate && (
+              <p>
+                <strong>Due Date:</strong>{" "}
+                {dayjs(invoice.dueDate).format("MMMM D, YYYY")}
+              </p>
+            )}
+            {invoice.periodStart && invoice.periodEnd && (
+              <p>
+                <strong>Billing Period:</strong>{" "}
+                {dayjs(invoice.periodStart).format("MMMM D, YYYY")} -{" "}
+                {dayjs(invoice.periodEnd).format("MMMM D, YYYY")}
+              </p>
+            )}
+            {invoice.lineItems && invoice.lineItems.length > 0 && (
+              <div className="mt-2">
+                <p>
+                  <strong>Items:</strong>
+                </p>
+                <ul className="list-disc pl-5">
+                  {invoice.lineItems.map((item, index) => (
+                    <li key={index}>
+                      {item.productName} - {item.quantity} x $
+                      {(item.amount).toFixed(2)} {item.currency.toUpperCase()}
+                      {item.period.start && item.period.end && (
+                        <span>
+                          {" "}
+                          ({dayjs(item.period.start).format("MMM D, YYYY")} -{" "}
+                          {dayjs(item.period.end).format("MMM D, YYYY")})
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {paymentData.items && paymentData.items.length > 0 && (
+              <div className="mt-2">
+                <p>
+                  <strong>Selected Items:</strong>
+                </p>
+                <ul className="list-disc pl-5">
+                  {paymentData.items.map((item, index) => (
+                    <li key={index}>
+                      {item.content_name} - {item.num_items} x $
+                      {(item.content_price).toFixed(2)} {paymentData.currency}
+                      {item.content_type === "subscription"
+                        ? " (Base Subscription)"
+                        : " (Plugin)"}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <div className="mt-4 flex flex-col sm:flex-row gap-4">
+              {invoice.invoiceUrl && (
+                <Button
+                  variant="link"
+                  onClick={() =>
+                    invoice.invoiceUrl && window.open(invoice.invoiceUrl, "_blank")
+                  }
+                >
+                  View Invoice Online
+                </Button>
+              )}
+              {invoice.invoicePdf && (
+                <Button
+                  variant="link"
+                  onClick={() =>
+                    invoice.invoicePdf && window.open(invoice.invoicePdf, "_blank")
+                  }
+                >
+                  Download PDF
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      <div className="mt-6 flex flex-col sm:flex-row gap-4">
+        <Link to="/invoices">
+          <Button>View Invoices</Button>
+        </Link>
+        <Link to="/home">
+          <Button variant="outline">Go Home</Button>
+        </Link>
+      </div>
     </div>
   );
 }

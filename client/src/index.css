@@ -58,6 +58,7 @@
         --agentvooc-text-h6: 180 20% 10%;
         --agentvooc-text-p: 180 10% 30%;
         --agentvooc-text-li: 180 10% 30%;
+        --agentvooc-text-label: 180 10% 20%;
         --agentvooc-text-navbar-footer: 160 80% 0%;
         --agentvooc-text-hero-title: 0 0% 98%;
 
@@ -107,8 +108,8 @@
 
 
         /* AgentVooc Dark Theme */
-        --agentvooc-primary-bg: 180 20% 8%; /* #151E1F */
-        --agentvooc-secondary-bg: 180 20% 9%; /* Slightly lighter dark teal */
+        --agentvooc-primary-bg: 180 20% 5%; /* #151E1F */
+        --agentvooc-secondary-bg: 180 20% 7%; /* Slightly lighter dark teal */
         --agentvooc-primary: 0 0% 98%; /* Near-white text */
         --agentvooc-secondary: 180 10% 70%; /* Light gray for secondary text */
         --agentvooc-accent: 160 100% 85%; /* Neon teal accent */
@@ -127,13 +128,14 @@
         --agentvooc-text-h4: 0 0% 98%;
         --agentvooc-text-h5: 0 0% 98%;
         --agentvooc-text-h6: 0 0% 98%;
-        --agentvooc-text-p: 180 10% 70%;
+        --agentvooc-text-p: 180 10% 60%;
         --agentvooc-text-li: 180 10% 70%;
+        --agentvooc-text-label: 180 10% 70%;
         --agentvooc-text-navbar-footer: 160 100% 85%;
         --agentvooc-text-hero-title: 0 0% 98%;
 
-        --agentvooc-card-bg: 180 19% 15%; /* Dark teal card background */
-        --agentvooc-card-header: 180 20% 8%; /* Darker teal header */
+        --agentvooc-card-bg: 180 19% 11%; /* Dark teal card background */
+        --agentvooc-card-header: 180 20% 6%; /* Darker teal header */
         --agentvooc-card-title: 0 0% 98%; /* Near-white title */
         --agentvooc-card-content: 180 19% 17%; /* Light gray content */
         --agentvooc-card-description: 180 10% 70%; /* Light gray description */
@@ -167,6 +169,10 @@
     li {
         line-height: 1.6;
         @apply text-agentvooc-text-li;
+    }
+    label {
+      @apply text-agentvooc-text-label
+
     }
 
     h1{
@@ -364,7 +370,7 @@
 /* Star animation (unchanged) */
 @keyframes star-twinkle {
   0% {
-    opacity: 0.4;
+    opacity: 0.6;
     transform: translateZ(-200px) scale(1.08) rotate(0deg);
     filter: brightness(100%) blur(0.01px);
   }
@@ -374,7 +380,7 @@
     filter: brightness(150%) blur(0.03px);
   }
   40% {
-    opacity: 0.6;
+    opacity: 0.65;
     transform: translateZ(20px) scale(1.24) rotate(-5deg);
     filter: brightness(120%) blur(0.05px);
   }
@@ -384,7 +390,7 @@
     filter: brightness(130%) blur(0.04px);
   }
   100% {
-    opacity: 0.4;
+    opacity: 0.6;
     transform: translateZ(-200px) scale(1.11) rotate(0deg);
     filter: brightness(100%) blur(0.02px);
   }

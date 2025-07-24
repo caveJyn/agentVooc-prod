@@ -6,7 +6,7 @@ import { PortableText } from "@portabletext/react";
 
 interface LegalDocument {
   title: string;
-  slug: { current: string };
+  slug: string;
   content?: Array<any>;
   lastUpdated: string;
 }
@@ -72,11 +72,11 @@ export default function LegalDocumentPage() {
         <meta name="keywords" content={`agentVooc, ${document.title.toLowerCase()}, AI automation, legal`} />
         <meta name="robots" content="index, follow" />
         <link rel="sitemap" href={`${baseUrl}/sitemap.xml`} type="application/xml" />
-        <link rel="canonical" href={`${baseUrl}/legal/${document.slug.current}`} />
+        <link rel="canonical" href={`${baseUrl}/legal/${document.slug}`} />
         <meta property="og:title" content={document.title} />
         <meta property="og:description" content={`Read the ${document.title.toLowerCase()} for agentVooc, your AI automation platform.`} />
         <meta property="og:type" content="website" />
-        <meta property="og:url" content={`${baseUrl}/legal/${document.slug.current}`} />
+        <meta property="og:url" content={`${baseUrl}/legal/${document.slug}`} />
         <meta property="og:image" content={defaultImage} />
         <meta property="og:site_name" content="agentVooc" />
         <meta name="twitter:card" content="summary_large_image" />

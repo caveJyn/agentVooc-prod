@@ -336,16 +336,18 @@ interface EmailTemplate {
   bestRegard: string;
 }
 
-interface LegalDocument {
+export interface LegalDocument {
   title: string;
-  slug: { current: string };
-  content?: Array<any>; // Portable Text content
+  slug: string;
   lastUpdated: string;
+  content?: Array<any>;
+  mainImage?: string;
+  mainImageAlt?: string;
 }
 
-interface BlogPost {
+export interface BlogPost {
   title: string;
-  slug: { current: string };
+  slug: string;
   content?: Array<any>;
   publishedAt: string;
   modifiedAt?: string;
@@ -362,16 +364,16 @@ interface BlogPost {
   relatedContent?: Array<{
     _type: "blogPost" | "pressPost" | "productPage";
     title: string;
-    slug: { current: string };
+    slug: string;
+    mainImage?: string;
+    mainImageAlt?: string;
     excerpt: string;
-    mainImage?: string;
-    mainImageAlt?: string;
   }>;
 }
 
-interface PressPost {
+export interface PressPost {
   title: string;
-  slug: { current: string };
+  slug: string;
   content?: Array<any>;
   publishedAt: string;
   modifiedAt?: string;
@@ -388,27 +390,26 @@ interface PressPost {
   relatedContent?: Array<{
     _type: "blogPost" | "pressPost" | "productPage";
     title: string;
-    slug: { current: string };
+    slug: string;
     excerpt?: string;
     mainImage?: string;
     mainImageAlt?: string;
   }>;
 }
 
-interface CompanyPage {
+export interface CompanyPage {
   title: string;
-  slug: { current: string };
-  content?: Array<any>;
+  slug: string;
   lastUpdated: string;
+  content?: Array<any>;
   mainImage?: string;
-  thumbnailImage?: string;
-  mediumImage?: string;
+  mainImageAlt?: string;
 }
 
 
-interface ProductPage {
+export interface ProductPage {
   title: string;
-  slug: { current: string };
+  slug: string;
   content?: Array<any>;
   publishedAt: string;
   modifiedAt?: string;
@@ -425,10 +426,36 @@ interface ProductPage {
   relatedContent?: Array<{
     _type: "blogPost" | "pressPost" | "productPage";
     title: string;
-    slug: { current: string };
+    slug: string;
     excerpt?: string;
     mainImage?: string;
     mainImageAlt?: string;
+  }>;
+}
+
+
+
+interface Invoice {
+  _id: string;
+  stripeInvoiceId: string;
+  status: string;
+  amountDue: number;
+  amountPaid: number;
+  currency: string;
+  createdAt: string;
+  dueDate: string | null;
+  invoiceUrl: string | null;
+  invoicePdf: string | null;
+  periodStart: string | null;
+  periodEnd: string | null;
+  lineItems: Array<{
+    _key: string;
+    description: string;
+    amount: number;
+    currency: string;
+    quantity: number;
+    period: { start: string | null; end: string | null };
+    productName: string;
   }>;
 }
 
@@ -745,51 +772,72 @@ updateEmailTemplate: (agentId: string, template: Partial<EmailTemplate>) =>
     });
   },
 
-  getBlogPosts: (): Promise<{ blogPosts: BlogPost[] }> => {
-    // console.log("[API_CLIENT] Calling getBlogPosts");
+  getBlogPosts: (slug?: string): Promise<{ blogPosts: BlogPost | BlogPost[] }> => {
     return fetcher({
-      url: "/api/blog-posts",
+      url: slug ? `/api/blog-posts/${slug}` : "/api/blog-posts",
       method: "GET",
     });
   },
-
   getBlogPostBySlug: (slug: string): Promise<{ blogPosts: BlogPost }> => {
-    // console.log("[API_CLIENT] Calling getBlogPostBySlug", { slug });
     return fetcher({
       url: `/api/blog-posts/${slug}`,
       method: "GET",
     });
   },
 
-  getPressPosts: (): Promise<{ pressPosts: PressPost[] }> => {
-    // console.log("[API_CLIENT] Calling getPressPosts");
+ getPressPosts: (slug?: string): Promise<{ pressPosts: PressPost | PressPost[] }> => {
     return fetcher({
-      url: "/api/press-posts",
+      url: slug ? `/api/press-posts/${slug}` : "/api/press-posts",
       method: "GET",
     });
   },
 
   getPressPostBySlug: (slug: string): Promise<{ pressPosts: PressPost }> => {
-    // console.log("[API_CLIENT] Calling getPressPostBySlug", { slug });
     return fetcher({
       url: `/api/press-posts/${slug}`,
       method: "GET",
     });
   },
+
   
-  getProductPages: (): Promise<{ productPages: ProductPage[] }> => {
-    // console.log("[API_CLIENT] Calling getProductPages");
+   getProductPages: (slug?: string): Promise<{ productPages: ProductPage | ProductPage[] }> => {
     return fetcher({
-      url: "/api/product-pages",
+      url: slug ? `/api/product-pages/${slug}` : "/api/product-pages",
       method: "GET",
     });
   },
 
   getProductPageBySlug: (slug: string): Promise<{ productPages: ProductPage }> => {
-    // console.log("[API_CLIENT] Calling getProductPageBySlug", { slug });
     return fetcher({
       url: `/api/product-pages/${slug}`,
       method: "GET",
     });
+  },
+
+
+   getInvoices: (): Promise<{ invoices: Invoice[]; subscriptionId: string | null }> => {
+  console.log("[API_CLIENT] Calling getInvoices");
+  return fetcher({
+    url: "/api/invoices",
+    method: "GET",
+  }).then((response) => {
+    console.log("[API_CLIENT] getInvoices response:", {
+      invoiceCount: response.invoices.length,
+      subscriptionId: response.subscriptionId,
+      invoices: response.invoices.map((inv: Invoice) => ({
+        stripeInvoiceId: inv.stripeInvoiceId,
+        status: inv.status,
+      })),
+    });
+    return response;
+  });
+},
+
+getInvoiceBySessionId: async (sessionId: string) => {
+    const response = await fetch(`/api/invoice?sessionId=${encodeURIComponent(sessionId)}`, {
+      credentials: 'include',
+    });
+    if (!response.ok) throw new Error('Failed to fetch invoice');
+    return response.json();
   },
 };

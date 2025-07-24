@@ -119,6 +119,7 @@ export default {
           "text-h6":"hsl(var(--agentvooc-text-h6))",
           "text-p":"hsl(var(--agentvooc-text-p))",
           "text-li":"hsl(var(--agentvooc-text-li))",
+          "text-label":"hsl(var(--agentvooc-text-label))",
           "text-navbar-footer":"hsl(var(--agentvooc-text-navbar-footer))",
           "text-hero-title":"hsl(var(--agentvooc-text-hero-title))",
         },

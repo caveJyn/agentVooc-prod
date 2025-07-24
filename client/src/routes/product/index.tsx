@@ -2,23 +2,8 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { Loader2 } from "lucide-react";
-import { apiClient } from "@/lib/api";
-
-interface ProductPage {
-  title: string;
-  slug: { current: string };
-  publishedAt: string;
-  modifiedAt?: string;
-  seoDescription: string;
-  excerpt: string;
-  mainImage?: string;
-  mainImageAlt?: string;
-  heroImage?: string;
-  heroImageAlt?: string;
-  thumbnailImage?: string;
-  mediumImage?: string;
-  tags?: string[];
-}
+import { apiClient, type ProductPage } from "@/lib/api";
+import { Card } from "@/components/ui/card";
 
 interface StarPosition {
   top: string;
@@ -35,23 +20,25 @@ export default function ProductListPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [starPositions, setStarPositions] = useState<StarPosition[]>([]);
 
-  const baseUrl = import.meta.env.VITE_SERVER_BASE_URL;
+  const baseUrl = import.meta.env.VITE_SERVER_BASE_URL || "https://your-default-domain.com";
   const defaultImage = `${baseUrl}/images/logo.png`;
   const defaultImageAlt = "agentVooc Logo";
 
   useEffect(() => {
-    const fetchPages = async () => {
-      try {
-        setIsLoading(true);
-        const response = await apiClient.getProductPages();
-        setPages(response.productPages);
-      } catch (err: any) {
-        console.error("Error fetching product pages:", err);
-        setError(err.message || "Failed to fetch product pages");
-      } finally {
-        setIsLoading(false);
-      }
-    };
+      const fetchPages = async () => {
+        try {
+          setIsLoading(true);
+          const response = await apiClient.getProductPages();
+          console.log("[BlogList] Fetched posts:", JSON.stringify(response.productPages, null, 2));
+          setPages(response.productPages as ProductPage[]);
+        } catch (err: any) {
+          console.error("[BlogList] Error fetching blog posts:", err);
+          setError(err.message || "Failed to fetch blog posts");
+        } finally {
+          setIsLoading(false);
+        }
+      };
+  
 
     const positions = [...Array(20)].map(() => ({
       top: `${Math.random() * 100}%`,
@@ -72,14 +59,14 @@ export default function ProductListPage() {
     "@type": "ItemList",
     name: "agentVooc Products",
     description: pages.length > 0 ? pages[0].seoDescription : "Explore agentVooc's AI-powered products for automation and innovation.",
-    url: `${baseUrl}/company/products`,
+    url: `${baseUrl}/product`,
     itemListElement: pages.map((page, index) => ({
       "@type": "ListItem",
       position: index + 1,
       item: {
         "@type": "WebPage",
         name: page.title,
-        url: `${baseUrl}/company/products/${page.slug.current}`,
+        url: `${baseUrl}/product/${page.slug}`,
         datePublished: page.publishedAt,
         dateModified: page.modifiedAt || page.publishedAt,
         description: page.seoDescription,
@@ -126,12 +113,12 @@ export default function ProductListPage() {
           <title>Products | agentVooc</title>
           <meta name="description" content="An error occurred while fetching the product pages." />
           <meta name="robots" content="noindex" />
-          <link rel="canonical" href={`${baseUrl}/company/products`} />
+          <link rel="canonical" href={`${baseUrl}/product`} />
         </Helmet>
         <div className="max-w-6xl mx-auto py-12 px-4">
-          <h1 className="text-3xl font-bold mb-4">Products</h1>
+          <h1 className="text-3xl font-bold mb-4 text-white">Products</h1>
           <p>{error}</p>
-          <Link to="/company/products" className="text-agentvooc-accent hover:underline">
+          <Link to="/product" className="text-agentvooc-accent hover:underline">
             Back to Products
           </Link>
         </div>
@@ -153,7 +140,7 @@ export default function ProductListPage() {
         />
         <meta name="keywords" content={pages[0]?.tags?.join(", ") || "AI automation, agentVooc, products, technology"} />
         <meta name="robots" content="index, follow" />
-        <link rel="canonical" href={`${baseUrl}/company/products`} />
+        <link rel="canonical" href={`${baseUrl}/product`} />
         <link rel="sitemap" href={`${baseUrl}/sitemap.xml`} type="application/xml" />
         <meta property="og:title" content="Products | agentVooc" />
         <meta
@@ -165,7 +152,7 @@ export default function ProductListPage() {
           }
         />
         <meta property="og:type" content="website" />
-        <meta property="og:url" content={`${baseUrl}/company/products`} />
+        <meta property="og:url" content={`${baseUrl}/product`} />
         <meta property="og:image" content={pages[0]?.mainImage || defaultImage} />
         <meta property="og:image:alt" content={pages[0]?.mainImageAlt || defaultImageAlt} />
         <meta property="og:site_name" content="agentVooc" />
@@ -215,29 +202,35 @@ export default function ProductListPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {pages.map((page) => (
-              <Link
-                key={page.slug.current}
-                to={`/company/products/${page.slug.current}`}
-                className="group block p-6 bg-agentvooc-primary-bg rounded-lg transition text-white border border-agentvooc-border"
-              >
-                {page.thumbnailImage && (
-                  <img
-                    src={page.thumbnailImage}
-                    alt={page.mainImageAlt || page.title}
-                    loading="lazy"
-                    className="w-full h-48 object-cover rounded-t-lg mb-4 hidden md:block"
-                  />
-                )}
-                <h2 className="text-xl font-semibold mb-2">
-                  <span className="transition duration-300 ease-in-out group-hover:bg-agentvooc-accent group-active:bg-agentvooc-accent group-hover:text-black group-active:text-black px-2 py-1 rounded-md group-hover:shadow-md">
-                    {page.title}
-                  </span>
-                </h2>
-                <p className="text-sm text-gray-300 mb-4 px-2">
-                  Published: {new Date(page.publishedAt).toLocaleDateString()}
-                </p>
-                <p className="px-2">{page.excerpt}</p>
-              </Link>
+              <Card key={page.slug} className="bg-agentvooc-primary-bg border-agentvooc-border">
+                <Link
+                  to={`/product/${page.slug}`} // Fixed from /company/products
+                  className="group block p-6"
+                  aria-label={`View product: ${page.title}`}
+                >
+                  {page.thumbnailImage && (
+                    <img
+                      src={`${page.thumbnailImage}?w=300&h=200&auto=format&q=80`}
+                      alt={page.mainImageAlt || page.title}
+                      loading="lazy"
+                      className="w-full h-48 object-cover rounded-t-lg mb-4 hidden md:block"
+                      onError={(e) => {
+                        console.error("[ProductList] Thumbnail image failed to load:", page.thumbnailImage);
+                        e.currentTarget.style.display = "none";
+                      }}
+                    />
+                  )}
+                  <h2 className="text-xl font-semibold mb-2">
+                    <span className="transition duration-300 ease-in-out group-hover:bg-agentvooc-accent group-active:bg-agentvooc-accent group-hover:text-black group-active:text-black px-2 py-1 rounded-md group-hover:shadow-md">
+                      {page.title}
+                    </span>
+                  </h2>
+                  <p className="text-sm text-gray-300 mb-4 px-2">
+                    Published: {new Date(page.publishedAt).toLocaleDateString()}
+                  </p>
+                  <p className="px-2">{page.excerpt}</p>
+                </Link>
+              </Card>
             ))}
           </div>
         )}

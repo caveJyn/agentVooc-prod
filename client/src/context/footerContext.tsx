@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { apiClient } from "@/lib/api";
+import { apiClient, LegalDocument, CompanyPage, ProductPage } from "@/lib/api"; // Import interfaces
 
 interface FooterSection {
   tagline: string;
@@ -12,25 +12,6 @@ interface SubFooterSection {
   ctaText: string;
   ctaUrl: string;
   copyright: string;
-}
-
-interface LegalDocument {
-  title: string;
-  slug: { current: string };
-  lastUpdated: string;
-}
-
-interface CompanyPage {
-  title: string;
-  slug: { current: string };
-  lastUpdated: string;
-}
-
-interface ProductPage {
-  title: string;
-  slug: { current: string };
-  publishedAt: string;
-  modifiedAt?: string;
 }
 
 const fallbackFooterSection: FooterSection = {
@@ -94,13 +75,15 @@ export function FooterProvider({ children }: { children: React.ReactNode }) {
               const cachedFooter = JSON.parse(cachedData);
               setFooterSection(cachedFooter.footerSection);
               setSubFooterSection(cachedFooter.subFooterSection);
+              console.log("[FooterProvider] Using cached footer data");
               return;
             }
           } catch (err: any) {
-            console.error("Error checking footer data update:", err);
+            console.error("[FooterProvider] Error checking footer data update:", err);
             const cachedFooter = JSON.parse(cachedData);
             setFooterSection(cachedFooter.footerSection);
             setSubFooterSection(cachedFooter.subFooterSection);
+            console.log("[FooterProvider] Fallback to cached footer data due to error");
             return;
           }
         }
@@ -123,29 +106,41 @@ export function FooterProvider({ children }: { children: React.ReactNode }) {
 
         const legalLinks = legalResponse.legalDocuments.map((doc: LegalDocument) => ({
           label: doc.title,
-          url: `/legal/${doc.slug.current}`,
+          url: `/legal/${doc.slug}`,
         }));
 
         const companyLinks = companyResponse.companyPages
-          .filter((page: CompanyPage) => !["blog", "press"].includes(page.slug.current))
+          .filter((page: CompanyPage) => !["blog", "press"].includes(page.slug))
           .map((page: CompanyPage) => ({
             label: page.title,
-            url: `/company/${page.slug.current}`,
+            url: `/company/${page.slug}`,
           }));
 
-        // Add blog and press links
-        const blogLinks = blogResponse.blogPosts.length > 0
+        // Normalize blogPosts to an array
+        const blogPosts = Array.isArray(blogResponse.blogPosts)
+          ? blogResponse.blogPosts
+          : [blogResponse.blogPosts];
+        const blogLinks = blogPosts.length > 0
           ? [{ label: "Blog", url: "/company/blog" }]
           : [];
-        const pressLinks = pressResponse.pressPosts.length > 0
+
+        // Normalize pressPosts to an array
+        const pressPosts = Array.isArray(pressResponse.pressPosts)
+          ? pressResponse.pressPosts
+          : [pressResponse.pressPosts];
+        const pressLinks = pressPosts.length > 0
           ? [{ label: "Press", url: "/company/press" }]
           : [];
 
-        const productLinks = productResponse.productPages.map((page: ProductPage) => ({
-          label: page.title,
-          url: `/product/${page.slug.current}`,
-        }));
+        // Normalize productPages to an array
+const productPages = Array.isArray(productResponse.productPages)
+  ? productResponse.productPages
+  : [productResponse.productPages];
 
+const productLinks = productPages.map((page: ProductPage) => ({
+  label: page.title,
+  url: `/product/${page.slug}`,
+}));
         const updatedFooterSection = {
           tagline: landingFooter.tagline || fallbackFooterSection.tagline,
           companyLinks: [
@@ -165,10 +160,12 @@ export function FooterProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem(cacheKey, JSON.stringify(cacheData));
         localStorage.setItem(cacheTimestampKey, landingResponse.landingPage._updatedAt || Date.now().toString());
         localStorage.setItem(cacheTimeKey, Date.now().toString());
+        console.log("[FooterProvider] Fetched and cached footer data");
       } catch (err: any) {
-        console.error("Error fetching footer data:", err);
+        console.error("[FooterProvider] Error fetching footer data:", err);
         setFooterSection(fallbackFooterSection);
         setSubFooterSection(fallbackSubFooterSection);
+        console.log("[FooterProvider] Fallback to default footer data due to error");
       }
     };
     fetchFooterData();

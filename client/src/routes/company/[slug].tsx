@@ -6,7 +6,7 @@ import { PortableText } from "@portabletext/react";
 
 interface CompanyPage {
   title: string;
-  slug: { current: string };
+  slug: string;
   content?: Array<any>;
   lastUpdated: string;
   mainImage?: string;
@@ -73,11 +73,11 @@ export default function CompanyPage() {
         <meta name="keywords" content={`agentVooc, ${page.title.toLowerCase()}, AI automation`} />
         <meta name="robots" content="index, follow" />
         <link rel="sitemap" href={`${baseUrl}/sitemap.xml`} type="application/xml" />
-        <link rel="canonical" href={`${baseUrl}/company/${page.slug.current}`} />
+        <link rel="canonical" href={`${baseUrl}/company/${page.slug}`} />
         <meta property="og:title" content={page.title} />
         <meta property="og:description" content={`Learn more about ${page.title.toLowerCase()} at agentVooc, your AI automation platform.`} />
         <meta property="og:type" content="website" />
-        <meta property="og:url" content={`${baseUrl}/company/${page.slug.current}`} />
+        <meta property="og:url" content={`${baseUrl}/company/${page.slug}`} />
         <meta property="og:image" content={page.mainImage || defaultImage} />
         <meta property="og:site_name" content="agentVooc" />
         <meta name="twitter:card" content="summary_large_image" />

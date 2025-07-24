@@ -36,6 +36,7 @@ import rateLimit from "express-rate-limit";
 import { v4 as uuidv4 } from "uuid";
 import type { EmailClient } from "@elizaos-plugins/plugin-email";
 import { computeHash,encryptValue } from './utils/cryptoUtils';
+import { randomUUID } from 'crypto';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "your-secret-key", {
   apiVersion: "2025-06-30.basil",
@@ -208,25 +209,28 @@ router.post(  "/webhook",
 
     try {
       switch (event.type) {
-        case "customer.subscription.created":
-        case "customer.subscription.updated": {
-          await handleSubscriptionUpdate(event);
-          break;
-        }
-
-        case "customer.subscription.deleted": {
-          await handleSubscriptionDelete(event);
-          break;
-        }
-
-        case "checkout.session.completed": {
-          await handleCheckoutCompleted(event);
-          break;
-        }
-
-        default:
-          elizaLogger.debug("[CLIENT-DIRECT] [WEBHOOK] Unhandled event type", { type: event.type });
-      }
+  case "customer.subscription.created":
+  case "customer.subscription.updated":
+    await handleSubscriptionUpdate(event);
+    break;
+  case "customer.subscription.deleted":
+    await handleSubscriptionDelete(event);
+    break;
+  case "checkout.session.completed":
+    await handleCheckoutCompleted(event);
+    break;
+  case "invoice.created":
+    await handleInvoiceCreated(event);
+    break;
+  case "invoice.paid":
+    await handleInvoicePaid(event);
+    break;
+  case "invoice.payment_failed":
+    await handleInvoicePaymentFailed(event);
+    break;
+  default:
+    elizaLogger.debug("[CLIENT-DIRECT] Unhandled event type", { type: event.type });
+}
       res.json({ received: true });
     } catch (err) {
       elizaLogger.error("[CLIENT-DIRECT] [WEBHOOK] Error processing webhook event", {
@@ -244,6 +248,445 @@ router.post(  "/webhook",
     }
   }
 );
+
+
+async function handleInvoiceCreated(event: Stripe.Event) {
+  const invoice = event.data.object as Stripe.Invoice;
+  elizaLogger.debug("[CLIENT-DIRECT] [WEBHOOK] Processing invoice.created event", {
+    eventType: event.type,
+    invoiceId: invoice.id,
+    customerId: invoice.customer,
+  });
+
+  // Retrieve the invoice with expanded price and product data
+  const expandedInvoice = await stripe.invoices.retrieve(invoice.id, {
+    expand: ['lines.data.price', 'lines.data.price.product'],
+  });
+
+  const customer = invoice.customer
+    ? await stripe.customers.retrieve(invoice.customer as string)
+    : null;
+
+  // Type guard to check if customer is not a DeletedCustomer
+  if (!customer || 'deleted' in customer) {
+    elizaLogger.warn("[CLIENT-DIRECT] No valid customer found for invoice", {
+      eventType: event.type,
+      invoiceId: invoice.id,
+      customerId: invoice.customer,
+    });
+    throw new Error("[CLIENT-DIRECT] No valid customer found for invoice");
+  }
+
+  const userId = customer.metadata?.userId || null;
+  if (!userId) {
+    elizaLogger.warn("[CLIENT-DIRECT] No userId in invoice customer metadata", {
+      eventType: event.type,
+      invoiceId: invoice.id,
+      customerId: invoice.customer,
+    });
+    throw new Error("[CLIENT-DIRECT] No userId in invoice customer metadata");
+  }
+
+  const user = await sanityClient.fetch(
+    `*[_type == "User" && userId == $userId][0]`,
+    { userId }
+  );
+
+  if (!user) {
+    elizaLogger.warn("[CLIENT-DIRECT] User not found for userId", {
+      userId,
+      invoiceId: invoice.id,
+    });
+    throw new Error(`[CLIENT-DIRECT] User not found for userId: ${userId}`);
+  }
+
+  // Log user subscription details for reference
+  elizaLogger.debug("[CLIENT-DIRECT] Fetched user for invoice", {
+    userId,
+    stripeSubscriptionId: user.stripeSubscriptionId,
+    subscriptionStatus: user.subscriptionStatus,
+  });
+
+  // Map line items for Sanity
+  const lineItems = expandedInvoice.lines.data.map((line: Stripe.InvoiceLineItem) => {
+    const price = line.price as Stripe.Price | null;
+    let productName = 'Unknown Product';
+
+    if (price?.product && typeof price.product !== 'string') {
+      productName = (price.product as Stripe.Product).name || line.description || 'Unknown Product';
+    } else if (line.description) {
+      // Fallback to description for trial periods or when product is not available
+      productName = line.description.replace(/^Trial period for /i, '');
+    }
+
+    return {
+      _key: randomUUID(), // Generate unique key for Sanity
+      description: line.description || 'No description',
+      amount: line.amount / 100,
+      currency: line.currency,
+      quantity: line.quantity || 1,
+      period: {
+        start: line.period?.start ? new Date(line.period.start * 1000).toISOString() : null,
+        end: line.period?.end ? new Date(line.period.end * 1000).toISOString() : null,
+      },
+      productName,
+    };
+  });
+
+  // Store invoice in Sanity with line items
+  const invoiceData = {
+    _type: "invoice",
+    user: { _type: "reference", _ref: user._id },
+    stripeInvoiceId: invoice.id,
+    status: invoice.status || "draft",
+    amountDue: invoice.amount_due / 100,
+    amountPaid: invoice.amount_paid / 100,
+    currency: invoice.currency,
+    createdAt: new Date(invoice.created * 1000).toISOString(),
+    dueDate: invoice.due_date ? new Date(invoice.due_date * 1000).toISOString() : null,
+    invoiceUrl: invoice.hosted_invoice_url || null,
+    invoicePdf: invoice.invoice_pdf || null,
+    periodStart: invoice.lines.data[0]?.period?.start
+      ? new Date(invoice.lines.data[0].period.start * 1000).toISOString()
+      : null,
+    periodEnd: invoice.lines.data[0]?.period?.end
+      ? new Date(invoice.lines.data[0].period.end * 1000).toISOString()
+      : null,
+    lineItems,
+  };
+
+  elizaLogger.debug("[CLIENT-DIRECT] Prepared invoice data for Sanity", {
+    invoiceId: invoice.id,
+    userId,
+    lineItemsCount: lineItems.length,
+  });
+
+  const existingInvoice = await sanityClient.fetch(
+    `*[_type == "invoice" && stripeInvoiceId == $stripeInvoiceId][0]`,
+    { stripeInvoiceId: invoice.id }
+  );
+
+  if (!existingInvoice) {
+    const createdInvoice = await sanityClient.create(invoiceData);
+    elizaLogger.debug("[CLIENT-DIRECT] Created invoice in Sanity", {
+      userId,
+      invoiceId: invoice.id,
+      sanityInvoiceId: createdInvoice._id,
+      lineItemsCount: lineItems.length,
+    });
+  } else {
+    const updatedInvoice = await sanityClient
+      .patch(existingInvoice._id)
+      .set({
+        status: invoice.status,
+        amountDue: invoice.amount_due / 100,
+        amountPaid: invoice.amount_paid / 100,
+        invoiceUrl: invoice.hosted_invoice_url || null,
+        invoicePdf: invoice.invoice_pdf || null,
+        lineItems,
+      })
+      .commit();
+    elizaLogger.debug("[CLIENT-DIRECT] Updated invoice in Sanity", {
+      userId,
+      invoiceId: invoice.id,
+      sanityInvoiceId: existingInvoice._id,
+      lineItemsCount: lineItems.length,
+    });
+  }
+}
+
+async function handleInvoicePaid(event: Stripe.Event) {
+  const invoice = event.data.object as Stripe.Invoice;
+  const customer = invoice.customer
+    ? await stripe.customers.retrieve(invoice.customer as string)
+    : null;
+
+  // Type guard to check if customer is not a DeletedCustomer
+  if (!customer || 'deleted' in customer) {
+    elizaLogger.warn("[CLIENT-DIRECT] No valid customer found for invoice", {
+      eventType: event.type,
+      invoiceId: invoice.id,
+    });
+    throw new Error("[CLIENT-DIRECT] No valid customer found for invoice");
+  }
+
+  const userId = customer.metadata?.userId || null;
+
+  if (!userId) {
+    elizaLogger.warn("[CLIENT-DIRECT] No userId in invoice customer metadata", {
+      eventType: event.type,
+      invoiceId: invoice.id,
+    });
+    throw new Error("[CLIENT-DIRECT] No userId in invoice customer metadata");
+  }
+
+  // Retrieve the invoice with expanded price and product data
+  const expandedInvoice = await stripe.invoices.retrieve(invoice.id, {
+    expand: ['lines.data.price', 'lines.data.price.product'],
+  });
+
+  const existingInvoice = await sanityClient.fetch(
+    `*[_type == "invoice" && stripeInvoiceId == $stripeInvoiceId][0]`,
+    { stripeInvoiceId: invoice.id }
+  );
+
+  if (existingInvoice) {
+    const lineItems = expandedInvoice.lines.data.map((line: Stripe.InvoiceLineItem) => {
+      const price = line.price as Stripe.Price | null;
+      let productName = 'Unknown Product';
+
+      if (price?.product && typeof price.product !== 'string') {
+        productName = (price.product as Stripe.Product).name || line.description || 'Unknown Product';
+      } else if (line.description) {
+        productName = line.description.replace(/^Trial period for /i, '');
+      }
+
+      return {
+        _key: randomUUID(),
+        description: line.description || 'No description',
+        amount: line.amount / 100,
+        currency: line.currency,
+        quantity: line.quantity || 1,
+        period: {
+          start: line.period?.start ? new Date(line.period.start * 1000).toISOString() : null,
+          end: line.period?.end ? new Date(line.period.end * 1000).toISOString() : null,
+        },
+        productName,
+      };
+    });
+
+    await sanityClient
+      .patch(existingInvoice._id)
+      .set({
+        status: invoice.status,
+        amountPaid: invoice.amount_paid / 100,
+        invoiceUrl: invoice.hosted_invoice_url || null,
+        invoicePdf: invoice.invoice_pdf || null,
+        lineItems,
+      })
+      .commit();
+    elizaLogger.debug("[CLIENT-DIRECT] Updated invoice status to paid", {
+      userId,
+      invoiceId: invoice.id,
+      lineItemsCount: lineItems.length,
+    });
+  }
+}
+
+async function handleInvoicePaymentFailed(event: Stripe.Event) {
+  const invoice = event.data.object as Stripe.Invoice;
+  const customer = invoice.customer
+    ? await stripe.customers.retrieve(invoice.customer as string)
+    : null;
+
+  if (!customer || 'deleted' in customer) {
+    elizaLogger.warn("[CLIENT-DIRECT] No valid customer found for invoice", {
+      eventType: event.type,
+      invoiceId: invoice.id,
+    });
+    throw new Error("[CLIENT-DIRECT] No valid customer found for invoice");
+  }
+
+  const userId = customer.metadata?.userId || null;
+
+
+  if (!userId) {
+    elizaLogger.warn("[CLIENT-DIRECT] No userId in invoice customer metadata", {
+      eventType: event.type,
+      invoiceId: invoice.id,
+    });
+    throw new Error("[CLIENT-DIRECT] No userId in invoice customer metadata");
+  }
+
+  const existingInvoice = await sanityClient.fetch(
+    `*[_type == "invoice" && stripeInvoiceId == $stripeInvoiceId][0]`,
+    { stripeInvoiceId: invoice.id }
+  );
+
+  if (existingInvoice) {
+    await sanityClient
+      .patch(existingInvoice._id)
+      .set({
+        status: invoice.status,
+        invoiceUrl: invoice.hosted_invoice_url || null,
+        invoicePdf: invoice.invoice_pdf || null,
+      })
+      .commit();
+    elizaLogger.debug("[CLIENT-DIRECT] Updated invoice status to payment_failed", {
+      userId,
+      invoiceId: invoice.id,
+    });
+
+    // Optionally notify user or trigger retry logic
+    // Example: Send email or update user status
+  }
+}
+
+// In packages/client-direct/src/api.ts
+router.get("/invoices", async (req, res) => {
+  try {
+    const session = await Session.getSession(req, res, { sessionRequired: true });
+    const userId = session.getUserId();
+
+    const user = await sanityClient.fetch(
+      `*[_type == "User" && userId == $userId][0]{_id, stripeSubscriptionId}`,
+      { userId }
+    );
+
+    if (!user) {
+      elizaLogger.warn(`[CLIENT-DIRECT] User not found for userId=${userId}`);
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const invoices = await sanityClient.fetch(
+      `*[_type == "invoice" && user._ref == $userId] | order(createdAt desc) {
+        _id,
+        stripeInvoiceId,
+        status,
+        amountDue,
+        amountPaid,
+        currency,
+        createdAt,
+        dueDate,
+        invoiceUrl,
+        invoicePdf,
+        periodStart,
+        periodEnd,
+        lineItems[] {
+          description,
+          amount,
+          currency,
+          quantity,
+          period { start, end },
+          productName
+        }
+      }`,
+      { userId: user._id }
+    );
+
+    elizaLogger.debug("[CLIENT-DIRECT] Fetched invoices for user", {
+      userId,
+      userSubscriptionId: user.stripeSubscriptionId,
+      invoiceCount: invoices.length,
+      invoices: invoices.map((inv: any) => ({
+        invoiceId: inv.stripeInvoiceId,
+        status: inv.status,
+        lineItemsCount: inv.lineItems?.length || 0,
+      })),
+    });
+
+    res.json({ invoices, subscriptionId: user.stripeSubscriptionId || null });
+  } catch (error: any) {
+    elizaLogger.error("[CLIENT-DIRECT] Error in /invoices endpoint:", {
+      message: error.message,
+      stack: error.stack,
+    });
+    res.status(500).json({ error: "Failed to fetch invoices", details: error.message });
+  }
+});
+
+
+// packages/client-direct/src/api.ts
+router.get("/invoice", async (req, res) => {
+  try {
+    const session = await Session.getSession(req, res, { sessionRequired: true });
+    const userId = session.getUserId();
+    const sessionId = req.query.sessionId as string;
+
+    if (!sessionId) {
+      elizaLogger.warn("[CLIENT-DIRECT] Missing sessionId in /invoice request");
+      return res.status(400).json({ error: "Missing session ID" });
+    }
+
+    // Fetch the Checkout session from Stripe
+    const checkoutSession = await stripe.checkout.sessions.retrieve(sessionId, {
+      expand: ['subscription.latest_invoice'],
+    });
+
+    if (!checkoutSession.customer || checkoutSession.metadata?.userId !== userId) {
+      elizaLogger.warn("[CLIENT-DIRECT] Invalid session or user mismatch", {
+        userId,
+        sessionId,
+      });
+      return res.status(403).json({ error: "Invalid session or user mismatch" });
+    }
+
+    let invoice: Stripe.Invoice | null = null;
+    if (checkoutSession.subscription && typeof checkoutSession.subscription !== 'string') {
+      invoice = checkoutSession.subscription.latest_invoice as Stripe.Invoice | null;
+    }
+
+    if (!invoice) {
+      elizaLogger.warn("[CLIENT-DIRECT] No invoice found for session", { sessionId });
+      return res.status(404).json({ error: "No invoice found for this session" });
+    }
+
+    // Fetch invoice with expanded line items
+    const expandedInvoice = await stripe.invoices.retrieve(invoice.id, {
+      expand: ['lines.data.price', 'lines.data.price.product'],
+    });
+
+    // Map line items for response
+    const lineItems = expandedInvoice.lines.data.map((line: Stripe.InvoiceLineItem) => {
+      const price = line.price as Stripe.Price | null;
+      let productName = 'Unknown Product';
+      if (price?.product && typeof price.product !== 'string') {
+        productName = (price.product as Stripe.Product).name || line.description || 'Unknown Product';
+      } else if (line.description) {
+        productName = line.description.replace(/^Trial period for /i, '');
+      }
+
+      return {
+        _key: randomUUID(),
+        description: line.description || 'No description',
+        amount: line.amount / 100,
+        currency: line.currency,
+        quantity: line.quantity || 1,
+        period: {
+          start: line.period?.start ? new Date(line.period.start * 1000).toISOString() : null,
+          end: line.period?.end ? new Date(line.period.end * 1000).toISOString() : null,
+        },
+        productName,
+      };
+    });
+
+    const invoiceData = {
+      _id: `invoice_${invoice.id}`, // Temporary ID for frontend
+      stripeInvoiceId: invoice.id,
+      status: invoice.status || "draft",
+      amountDue: invoice.amount_due / 100,
+      amountPaid: invoice.amount_paid / 100,
+      currency: invoice.currency,
+      createdAt: new Date(invoice.created * 1000).toISOString(),
+      dueDate: invoice.due_date ? new Date(invoice.due_date * 1000).toISOString() : null,
+      invoiceUrl: invoice.hosted_invoice_url || null,
+      invoicePdf: invoice.invoice_pdf || null,
+      periodStart: invoice.lines.data[0]?.period?.start
+        ? new Date(invoice.lines.data[0].period.start * 1000).toISOString()
+        : null,
+      periodEnd: invoice.lines.data[0]?.period?.end
+        ? new Date(invoice.lines.data[0].period.end * 1000).toISOString()
+        : null,
+      lineItems,
+    };
+
+    elizaLogger.debug("[CLIENT-DIRECT] Fetched invoice for session", {
+      userId,
+      sessionId,
+      invoiceId: invoice.id,
+      lineItemsCount: lineItems.length,
+    });
+
+    res.json({ invoice: invoiceData });
+  } catch (error: any) {
+    elizaLogger.error("[CLIENT-DIRECT] Error in /invoice endpoint:", {
+      message: error.message,
+      stack: error.stack,
+    });
+    res.status(500).json({ error: "Failed to fetch invoice", details: error.message });
+  }
+});
+
 
 // Helper functions for webhook handlers
 // Add this near the top of packages/client-direct/src/api.ts
@@ -302,6 +745,11 @@ async function getUserSubscriptionLimits(userId: string): Promise<{
     maxCharsPerKnowledgeDoc: subscriptionItem.maxCharsPerKnowledgeDoc || undefined,
   };
 }
+
+
+
+
+
 async function handleSubscriptionDelete(event) {
   const subscription = event.data.object;
   const userId = subscription.metadata?.userId;
@@ -346,6 +794,8 @@ async function handleSubscriptionDelete(event) {
     activePlugins: [],
   });
 }
+
+
 
 
 async function handleCheckoutCompleted(event: Stripe.Event) {
@@ -440,6 +890,9 @@ async function handleCheckoutCompleted(event: Stripe.Event) {
   });
 }
 
+
+
+
 async function handleSubscriptionUpdate(event: Stripe.Event) {
   const subscription = event.data.object as any;
   const userId = subscription.metadata?.userId;
@@ -530,6 +983,9 @@ async function handleSubscriptionUpdate(event: Stripe.Event) {
     resetUsage,
   });
 }
+
+
+
 
 // CHECKOUT SESSION ENDPOINT - IMPROVED & FIXED
 router.post("/checkout-session", checkoutLimiter, async (req, res) => {
@@ -1532,25 +1988,108 @@ router.get("/sync-subscriptions", async (req, res) => {
 
     let syncedCount = 0;
     let errorCount = 0;
+    let syncedInvoicesCount = 0;
 
     for (const user of users) {
       try {
-        // Fetch all subscriptions for the customer with expanded data
         const subscriptions = await stripe.subscriptions.list({
           customer: user.stripeCustomerId,
-          expand: ['data.items.data.price', 'data.items.data.price.product']
+          expand: ['data.items.data.price', 'data.items.data.price.product'],
         });
 
-        // Find the most recent active subscription
-        const activeSub = subscriptions.data.find(sub => 
+        const activeSub = subscriptions.data.find(sub =>
           ["active", "trialing", "past_due"].includes(sub.status)
         );
 
+        // Sync invoices for this customer
+        const invoices = await stripe.invoices.list({
+          customer: user.stripeCustomerId,
+          limit: 100,
+          expand: ['data.lines.data.price', 'data.lines.data.price.product'],
+        });
+
+        for (const invoice of invoices.data) {
+          const lineItems = invoice.lines.data.map((line: Stripe.InvoiceLineItem) => {
+            const price = line.price as Stripe.Price | null;
+            let productName = 'Unknown Product';
+
+            if (price?.product && typeof price.product !== 'string') {
+              productName = (price.product as Stripe.Product).name || line.description || 'Unknown Product';
+            } else if (line.description) {
+              productName = line.description.replace(/^Trial period for /i, '');
+            }
+
+            return {
+              _key: randomUUID(),
+              description: line.description || 'No description',
+              amount: line.amount / 100,
+              currency: line.currency,
+              quantity: line.quantity || 1,
+              period: {
+                start: line.period?.start ? new Date(line.period.start * 1000).toISOString() : null,
+                end: line.period?.end ? new Date(line.period.end * 1000).toISOString() : null,
+              },
+              productName,
+            };
+          });
+
+          const invoiceData = {
+            _type: "invoice",
+            user: { _type: "reference", _ref: user._id },
+            stripeInvoiceId: invoice.id,
+            status: invoice.status || "draft",
+            amountDue: invoice.amount_due / 100,
+            amountPaid: invoice.amount_paid / 100,
+            currency: invoice.currency,
+            createdAt: new Date(invoice.created * 1000).toISOString(),
+            dueDate: invoice.due_date ? new Date(invoice.due_date * 1000).toISOString() : null,
+            invoiceUrl: invoice.hosted_invoice_url || null,
+            invoicePdf: invoice.invoice_pdf || null,
+            periodStart: invoice.lines.data[0]?.period?.start
+              ? new Date(invoice.lines.data[0].period.start * 1000).toISOString()
+              : null,
+            periodEnd: invoice.lines.data[0]?.period?.end
+              ? new Date(invoice.lines.data[0].period.end * 1000).toISOString()
+              : null,
+            lineItems,
+          };
+
+          const existingInvoice = await sanityClient.fetch(
+            `*[_type == "invoice" && stripeInvoiceId == $stripeInvoiceId][0]`,
+            { stripeInvoiceId: invoice.id }
+          );
+
+          if (!existingInvoice) {
+            await sanityClient.create(invoiceData);
+            elizaLogger.debug("[CLIENT-DIRECT] Synced new invoice for user", {
+              userId: user.userId,
+              invoiceId: invoice.id,
+              lineItemsCount: lineItems.length,
+            });
+            syncedInvoicesCount++;
+          } else {
+            await sanityClient
+              .patch(existingInvoice._id)
+              .set({
+                status: invoice.status,
+                amountDue: invoice.amount_due / 100,
+                amountPaid: invoice.amount_paid / 100,
+                invoiceUrl: invoice.hosted_invoice_url || null,
+                invoicePdf: invoice.invoice_pdf || null,
+                lineItems,
+              })
+              .commit();
+            elizaLogger.debug("[CLIENT-DIRECT] Updated existing invoice for user", {
+              userId: user.userId,
+              invoiceId: invoice.id,
+              lineItemsCount: lineItems.length,
+            });
+            syncedInvoicesCount++;
+          }
+        }
+
         if (activeSub) {
-          // Extract price IDs from subscription items
           const activePriceIds = activeSub.items.data.map(item => item.price.id);
-          
-          // Fetch plugin names from Sanity based on price IDs
           let activePlugins = [];
           if (activePriceIds.length > 0) {
             try {
@@ -1566,8 +2105,7 @@ router.get("/sync-subscriptions", async (req, res) => {
             }
           }
 
-          // Extract subscription period information
-          const sub = activeSub as any; // Type assertion for Stripe subscription properties
+          const sub = activeSub as any;
           const subscriptionData = {
             subscriptionStatus: activeSub.status,
             stripeSubscriptionId: activeSub.id,
@@ -1580,7 +2118,6 @@ router.get("/sync-subscriptions", async (req, res) => {
             cancelAtPeriodEnd: sub.cancel_at_period_end || false
           };
 
-          // Check if any data has changed before updating
           const hasChanges = (
             activeSub.status !== user.subscriptionStatus ||
             activeSub.id !== user.stripeSubscriptionId ||
@@ -1603,11 +2140,8 @@ router.get("/sync-subscriptions", async (req, res) => {
             });
             syncedCount++;
           }
-
         } else {
-          // No active subscription found - clear subscription data if user currently has active status
           const shouldClearData = ["active", "trialing", "past_due"].includes(user.subscriptionStatus);
-          
           if (shouldClearData) {
             await sanityClient
               .patch(user._id)
@@ -1626,7 +2160,6 @@ router.get("/sync-subscriptions", async (req, res) => {
             syncedCount++;
           }
         }
-
       } catch (userError) {
         elizaLogger.error(`[CLIENT-DIRECT] Error syncing subscription for user ${user.userId}:`, {
           error: userError.message,
@@ -1640,20 +2173,21 @@ router.get("/sync-subscriptions", async (req, res) => {
     elizaLogger.debug(`[CLIENT-DIRECT] Subscription sync completed:`, {
       totalUsers: users.length,
       syncedUsers: syncedCount,
-      errors: errorCount
+      errors: errorCount,
+      syncedInvoices: syncedInvoicesCount
     });
 
     res.json({ 
       success: true,
       synced: syncedCount,
       errors: errorCount,
-      total: users.length
+      total: users.length,
+      syncedInvoices: syncedInvoicesCount
     });
-
   } catch (error: any) {
     elizaLogger.error("[CLIENT-DIRECT] Error in /sync-subscriptions endpoint:", {
       message: error.message,
-      stack: error.stack
+      stack: error.stack,
     });
     res.status(500).json({ 
       error: "Failed to sync subscriptions",
@@ -4882,19 +5416,33 @@ router.get("/legal-documents/:slug?", async (req, res) => {
 
     if (slug) {
       // Fetch a single legal document by slug
-      query = `*[_type == "legalDocument" && slug.current == $slug][0] {
+      query = `*[_type == "legalDocument" && slug.current == $slug && published == true][0] {
         title,
         slug,
         content,
-        lastUpdated
+        lastUpdated,
+        mainImage {
+          asset-> {
+            _id,
+            url
+          },
+          alt
+        }
       }`;
       params = { slug };
     } else {
       // Fetch all legal documents
-      query = `*[_type == "legalDocument"] | order(title asc) {
+      query = `*[_type == "legalDocument" && published == true] | order(title asc) {
         title,
         slug,
-        lastUpdated
+        lastUpdated,
+        mainImage {
+          asset-> {
+            _id,
+            url
+          },
+          alt
+        }
       }`;
     }
 
@@ -4902,15 +5450,40 @@ router.get("/legal-documents/:slug?", async (req, res) => {
 
     if (!legalDocuments) {
       elizaLogger.warn(`[CLIENT-DIRECT] No legal document${slug ? ` for slug: ${slug}` : "s"} found in Sanity`);
-      return res.status(404).json({ error: "[CLIENT-DIRECT] Legal document(s) not found" });
+      return res.status(404).json({ error: `[CLIENT-DIRECT] No legal document${slug ? ` for slug: ${slug}` : "s"} found` });
     }
 
-    res.json({ legalDocuments });
-  } catch (error: any) {
-    elizaLogger.error("[CLIENT-DIRECT] Error fetching legal document(s):", error);
+    // Format response to match LegalDocument interface
+    const formattedLegalDocuments = Array.isArray(legalDocuments)
+      ? legalDocuments.map((doc) => ({
+          ...doc,
+          slug: doc.slug?.current || doc.slug, // Ensure slug is string
+          mainImage: doc.mainImage?.asset?.url
+            ? urlFor(doc.mainImage.asset).width(1200).height(630).fit("crop").quality(80).format("webp").url()
+            : null,
+          mainImageAlt: doc.mainImage?.alt || doc.title,
+        }))
+      : {
+          ...legalDocuments,
+          slug: legalDocuments.slug?.current || legalDocuments.slug, // Ensure slug is string
+          mainImage: legalDocuments.mainImage?.asset?.url
+            ? urlFor(legalDocuments.mainImage.asset).width(1200).height(630).fit("crop").quality(80).format("webp").url()
+            : null,
+          mainImageAlt: legalDocuments.mainImage?.alt || legalDocuments.title,
+        };
 
+    elizaLogger.debug(`[CLIENT-DIRECT] Fetched legal document${slug ? ` for slug: ${slug}` : "s"} from Sanity`, {
+      count: Array.isArray(legalDocuments) ? legalDocuments.length : 1,
+    });
+
+    res.json({ legalDocuments: formattedLegalDocuments });
+  } catch (error: any) {
+    elizaLogger.error(`[CLIENT-DIRECT] Error fetching legal document${slug ? ` for slug: ${slug}` : "s"}:`, error);
+    res.status(500).json({ error: `[CLIENT-DIRECT] Failed to fetch legal document${slug ? ` for slug: ${slug}` : "s"}`, details: error.message });
   }
 });
+
+
 
 
 router.get("/blog-posts/:slug?", async (req, res) => {
@@ -4924,7 +5497,16 @@ router.get("/blog-posts/:slug?", async (req, res) => {
       query = `*[_type == "blogPost" && slug.current == $slug && published == true][0] {
         title,
         slug,
-        content,
+        content[] {
+          ...,
+          _type == "image" => {
+            ...,
+            asset-> {
+              _id,
+              url
+            }
+          }
+        },
         publishedAt,
         modifiedAt,
         seoDescription,
@@ -4950,11 +5532,24 @@ router.get("/blog-posts/:slug?", async (req, res) => {
           },
           alt
         },
+        thumbnailImage {
+          asset-> {
+            _id,
+            url
+          }
+        },
+        mediumImage {
+          asset-> {
+            _id,
+            url
+          }
+        },
         tags,
-        relatedContent[0..2]-> { // Limit to 3 related posts
+        relatedContent[0..2]-> {
           _type,
           title,
           slug,
+          excerpt,
           mainImage {
             asset-> {
               _id,
@@ -4987,6 +5582,18 @@ router.get("/blog-posts/:slug?", async (req, res) => {
           },
           alt
         },
+        thumbnailImage {
+          asset-> {
+            _id,
+            url
+          }
+        },
+        mediumImage {
+          asset-> {
+            _id,
+            url
+          }
+        },
         tags
       }`;
     }
@@ -4995,35 +5602,39 @@ router.get("/blog-posts/:slug?", async (req, res) => {
 
     if (!blogPosts) {
       elizaLogger.warn(`[CLIENT-DIRECT] No blog post${slug ? ` for slug: ${slug}` : "s"} found in Sanity`);
-      return res.status(404).json({ error: "[CLIENT-DIRECT] Blog post(s) not found" });
+      return res.status(404).json({ error: `[CLIENT-DIRECT] No blog post${slug ? ` for slug: ${slug}` : "s"} found` });
     }
 
     const formattedBlogPosts = Array.isArray(blogPosts)
       ? blogPosts.map((post) => ({
           ...post,
-          mainImage: post.mainImage?.asset
+          slug: post.slug?.current || post.slug, // Ensure slug is string
+          mainImage: post.mainImage?.asset?.url
             ? urlFor(post.mainImage.asset).width(1200).height(630).fit("crop").quality(80).format("webp").url()
             : null,
           mainImageAlt: post.mainImage?.alt || post.title,
-          heroImage: post.heroImage?.asset
+          heroImage: post.heroImage?.asset?.url
             ? urlFor(post.heroImage.asset).width(1200).height(400).fit("crop").quality(80).format("webp").url()
             : null,
           heroImageAlt: post.heroImage?.alt || post.title,
           galleryImages: post.galleryImages?.map((img) => ({
-            url: img.asset ? urlFor(img.asset).width(600).height(400).fit("crop").quality(80).format("webp").url() : null,
+            url: img.asset?.url
+              ? urlFor(img.asset).width(600).height(400).fit("crop").quality(80).format("webp").url()
+              : null,
             alt: img.alt || post.title,
-          })) || [],
-          thumbnailImage: post.mainImage?.asset
-            ? urlFor(post.mainImage.asset).width(300).height(200).fit("crop").quality(80).format("webp").url()
+          })).filter((img) => img.url),
+          thumbnailImage: post.thumbnailImage?.asset?.url
+            ? urlFor(post.thumbnailImage.asset).width(300).height(200).fit("crop").quality(80).format("webp").url()
             : null,
-          mediumImage: post.mainImage?.asset
-            ? urlFor(post.mainImage.asset).width(600).height(400).fit("crop").quality(80).format("webp").url()
+          mediumImage: post.mediumImage?.asset?.url
+            ? urlFor(post.mediumImage.asset).width(600).height(400).fit("crop").quality(80).format("webp").url()
             : null,
           relatedContent: post.relatedContent?.map((item) => ({
             _type: item._type,
             title: item.title,
-            slug: item.slug,
-            mainImage: item.mainImage?.asset
+            slug: item.slug?.current || item.slug, // Ensure slug is string
+            excerpt: item.excerpt || "",
+            mainImage: item.mainImage?.asset?.url
               ? urlFor(item.mainImage.asset).width(300).height(200).fit("crop").quality(80).format("webp").url()
               : null,
             mainImageAlt: item.mainImage?.alt || item.title,
@@ -5031,29 +5642,33 @@ router.get("/blog-posts/:slug?", async (req, res) => {
         }))
       : {
           ...blogPosts,
-          mainImage: blogPosts.mainImage?.asset
+          slug: blogPosts.slug?.current || blogPosts.slug, // Ensure slug is string
+          mainImage: blogPosts.mainImage?.asset?.url
             ? urlFor(blogPosts.mainImage.asset).width(1200).height(630).fit("crop").quality(80).format("webp").url()
             : null,
           mainImageAlt: blogPosts.mainImage?.alt || blogPosts.title,
-          heroImage: blogPosts.heroImage?.asset
+          heroImage: blogPosts.heroImage?.asset?.url
             ? urlFor(blogPosts.heroImage.asset).width(1200).height(400).fit("crop").quality(80).format("webp").url()
             : null,
           heroImageAlt: blogPosts.heroImage?.alt || blogPosts.title,
           galleryImages: blogPosts.galleryImages?.map((img) => ({
-            url: img.asset ? urlFor(img.asset).width(600).height(400).fit("crop").quality(80).format("webp").url() : null,
+            url: img.asset?.url
+              ? urlFor(img.asset).width(600).height(400).fit("crop").quality(80).format("webp").url()
+              : null,
             alt: img.alt || blogPosts.title,
-          })) || [],
-          thumbnailImage: blogPosts.mainImage?.asset
-            ? urlFor(blogPosts.mainImage.asset).width(300).height(200).fit("crop").quality(80).format("webp").url()
+          })).filter((img) => img.url),
+          thumbnailImage: blogPosts.thumbnailImage?.asset?.url
+            ? urlFor(blogPosts.thumbnailImage.asset).width(300).height(200).fit("crop").quality(80).format("webp").url()
             : null,
-          mediumImage: blogPosts.mainImage?.asset
-            ? urlFor(blogPosts.mainImage.asset).width(600).height(400).fit("crop").quality(80).format("webp").url()
+          mediumImage: blogPosts.mediumImage?.asset?.url
+            ? urlFor(blogPosts.mediumImage.asset).width(600).height(400).fit("crop").quality(80).format("webp").url()
             : null,
           relatedContent: blogPosts.relatedContent?.map((item) => ({
             _type: item._type,
             title: item.title,
-            slug: item.slug,
-            mainImage: item.mainImage?.asset
+            slug: item.slug?.current || item.slug, // Ensure slug is string
+            excerpt: item.excerpt || "",
+            mainImage: item.mainImage?.asset?.url
               ? urlFor(item.mainImage.asset).width(300).height(200).fit("crop").quality(80).format("webp").url()
               : null,
             mainImageAlt: item.mainImage?.alt || item.title,
@@ -5066,8 +5681,8 @@ router.get("/blog-posts/:slug?", async (req, res) => {
 
     res.json({ blogPosts: formattedBlogPosts });
   } catch (error: any) {
-    elizaLogger.error("[CLIENT-DIRECT] Error fetching blog post(s):", error);
-    res.status(500).json({ error: "[CLIENT-DIRECT] Failed to fetch blog post(s)", details: error.message });
+    elizaLogger.error(`[CLIENT-DIRECT] Error fetching blog post${slug ? ` for slug: ${slug}` : "s"}:`, error);
+    res.status(500).json({ error: `[CLIENT-DIRECT] Failed to fetch blog post${slug ? ` for slug: ${slug}` : "s"}`, details: error.message });
   }
 });
 
@@ -5082,7 +5697,16 @@ router.get("/press-posts/:slug?", async (req, res) => {
       query = `*[_type == "pressPost" && slug.current == $slug && published == true][0] {
         title,
         slug,
-        content,
+        content[] {
+          ...,
+          _type == "image" => {
+            ...,
+            asset-> {
+              _id,
+              url
+            }
+          }
+        },
         publishedAt,
         modifiedAt,
         seoDescription,
@@ -5108,11 +5732,24 @@ router.get("/press-posts/:slug?", async (req, res) => {
           },
           alt
         },
+        thumbnailImage {
+          asset-> {
+            _id,
+            url
+          }
+        },
+        mediumImage {
+          asset-> {
+            _id,
+            url
+          }
+        },
         tags,
         relatedContent[0..2]-> {
           _type,
           title,
           slug,
+          excerpt,
           mainImage {
             asset-> {
               _id,
@@ -5145,6 +5782,18 @@ router.get("/press-posts/:slug?", async (req, res) => {
           },
           alt
         },
+        thumbnailImage {
+          asset-> {
+            _id,
+            url
+          }
+        },
+        mediumImage {
+          asset-> {
+            _id,
+            url
+          }
+        },
         tags
       }`;
     }
@@ -5153,35 +5802,39 @@ router.get("/press-posts/:slug?", async (req, res) => {
 
     if (!pressPosts) {
       elizaLogger.warn(`[CLIENT-DIRECT] No press post${slug ? ` for slug: ${slug}` : "s"} found in Sanity`);
-      return res.status(404).json({ error: "[CLIENT-DIRECT] Press post(s) not found" });
+      return res.status(404).json({ error: `[CLIENT-DIRECT] No press post${slug ? ` for slug: ${slug}` : "s"} found` });
     }
 
     const formattedPressPosts = Array.isArray(pressPosts)
       ? pressPosts.map((post) => ({
           ...post,
-          mainImage: post.mainImage?.asset
+          slug: post.slug?.current || post.slug, // Ensure slug is string
+          mainImage: post.mainImage?.asset?.url
             ? urlFor(post.mainImage.asset).width(1200).height(630).fit("crop").quality(80).format("webp").url()
             : null,
           mainImageAlt: post.mainImage?.alt || post.title,
-          heroImage: post.heroImage?.asset
+          heroImage: post.heroImage?.asset?.url
             ? urlFor(post.heroImage.asset).width(1200).height(400).fit("crop").quality(80).format("webp").url()
             : null,
           heroImageAlt: post.heroImage?.alt || post.title,
           galleryImages: post.galleryImages?.map((img) => ({
-            url: img.asset ? urlFor(img.asset).width(600).height(400).fit("crop").quality(80).format("webp").url() : null,
+            url: img.asset?.url
+              ? urlFor(img.asset).width(600).height(400).fit("crop").quality(80).format("webp").url()
+              : null,
             alt: img.alt || post.title,
-          })) || [],
-          thumbnailImage: post.mainImage?.asset
-            ? urlFor(post.mainImage.asset).width(300).height(200).fit("crop").quality(80).format("webp").url()
+          })).filter((img) => img.url) || [],
+          thumbnailImage: post.thumbnailImage?.asset?.url
+            ? urlFor(post.thumbnailImage.asset).width(300).height(200).fit("crop").quality(80).format("webp").url()
             : null,
-          mediumImage: post.mainImage?.asset
-            ? urlFor(post.mainImage.asset).width(600).height(400).fit("crop").quality(80).format("webp").url()
+          mediumImage: post.mediumImage?.asset?.url
+            ? urlFor(post.mediumImage.asset).width(600).height(400).fit("crop").quality(80).format("webp").url()
             : null,
           relatedContent: post.relatedContent?.map((item) => ({
             _type: item._type,
             title: item.title,
-            slug: item.slug,
-            mainImage: item.mainImage?.asset
+            slug: item.slug?.current || item.slug, // Ensure slug is string
+            excerpt: item.excerpt || "",
+            mainImage: item.mainImage?.asset?.url
               ? urlFor(item.mainImage.asset).width(300).height(200).fit("crop").quality(80).format("webp").url()
               : null,
             mainImageAlt: item.mainImage?.alt || item.title,
@@ -5189,29 +5842,33 @@ router.get("/press-posts/:slug?", async (req, res) => {
         }))
       : {
           ...pressPosts,
-          mainImage: pressPosts.mainImage?.asset
+          slug: pressPosts.slug?.current || pressPosts.slug, // Ensure slug is string
+          mainImage: pressPosts.mainImage?.asset?.url
             ? urlFor(pressPosts.mainImage.asset).width(1200).height(630).fit("crop").quality(80).format("webp").url()
             : null,
           mainImageAlt: pressPosts.mainImage?.alt || pressPosts.title,
-          heroImage: pressPosts.heroImage?.asset
+          heroImage: pressPosts.heroImage?.asset?.url
             ? urlFor(pressPosts.heroImage.asset).width(1200).height(400).fit("crop").quality(80).format("webp").url()
             : null,
           heroImageAlt: pressPosts.heroImage?.alt || pressPosts.title,
           galleryImages: pressPosts.galleryImages?.map((img) => ({
-            url: img.asset ? urlFor(img.asset).width(600).height(400).fit("crop").quality(80).format("webp").url() : null,
+            url: img.asset?.url
+              ? urlFor(img.asset).width(600).height(400).fit("crop").quality(80).format("webp").url()
+              : null,
             alt: img.alt || pressPosts.title,
-          })) || [],
-          thumbnailImage: pressPosts.mainImage?.asset
-            ? urlFor(pressPosts.mainImage.asset).width(300).height(200).fit("crop").quality(80).format("webp").url()
+          })).filter((img) => img.url) || [],
+          thumbnailImage: pressPosts.thumbnailImage?.asset?.url
+            ? urlFor(post.thumbnailImage.asset).width(300).height(200).fit("crop").quality(80).format("webp").url()
             : null,
-          mediumImage: pressPosts.mainImage?.asset
-            ? urlFor(pressPosts.mainImage.asset).width(600).height(400).fit("crop").quality(80).format("webp").url()
+          mediumImage: pressPosts.mediumImage?.asset?.url
+            ? urlFor(post.mediumImage.asset).width(600).height(400).fit("crop").quality(80).format("webp").url()
             : null,
           relatedContent: pressPosts.relatedContent?.map((item) => ({
             _type: item._type,
             title: item.title,
-            slug: item.slug,
-            mainImage: item.mainImage?.asset
+            slug: item.slug?.current || item.slug, // Ensure slug is string
+            excerpt: item.excerpt || "",
+            mainImage: item.mainImage?.asset?.url
               ? urlFor(item.mainImage.asset).width(300).height(200).fit("crop").quality(80).format("webp").url()
               : null,
             mainImageAlt: item.mainImage?.alt || item.title,
@@ -5224,8 +5881,8 @@ router.get("/press-posts/:slug?", async (req, res) => {
 
     res.json({ pressPosts: formattedPressPosts });
   } catch (error: any) {
-    elizaLogger.error("[CLIENT-DIRECT] Error fetching press post(s):", error);
-    res.status(500).json({ error: "[CLIENT-DIRECT] Failed to fetch press post(s)", details: error.message });
+    elizaLogger.error(`[CLIENT-DIRECT] Error fetching press post${slug ? ` for slug: ${slug}` : "s"}:`, error);
+    res.status(500).json({ error: `[CLIENT-DIRECT] Failed to fetch press post${slug ? ` for slug: ${slug}` : "s"}`, details: error.message });
   }
 });
 
@@ -5238,7 +5895,7 @@ router.get("/company-pages/:slug?", async (req, res) => {
 
     if (slug) {
       // Fetch a single company page by slug
-      query = `*[_type == "companyPage" && slug.current == $slug][0] {
+      query = `*[_type == "companyPage" && slug.current == $slug && published == true][0] {
         title,
         slug,
         content,
@@ -5247,13 +5904,14 @@ router.get("/company-pages/:slug?", async (req, res) => {
           asset-> {
             _id,
             url
-          }
+          },
+          alt
         }
       }`;
       params = { slug };
     } else {
       // Fetch all company pages
-      query = `*[_type == "companyPage"] | order(title asc) {
+      query = `*[_type == "companyPage" && published == true] | order(title asc) {
         title,
         slug,
         lastUpdated,
@@ -5261,7 +5919,8 @@ router.get("/company-pages/:slug?", async (req, res) => {
           asset-> {
             _id,
             url
-          }
+          },
+          alt
         }
       }`;
     }
@@ -5270,22 +5929,26 @@ router.get("/company-pages/:slug?", async (req, res) => {
 
     if (!companyPages) {
       elizaLogger.warn(`[CLIENT-DIRECT] No company page${slug ? ` for slug: ${slug}` : "s"} found in Sanity`);
-      return res.status(404).json({ error: "[CLIENT-DIRECT] Company page(s) not found" });
+      return res.status(404).json({ error: `[CLIENT-DIRECT] No company page${slug ? ` for slug: ${slug}` : "s"} found` });
     }
 
-    // Format mainImage URL with resizing
+    // Format response to match CompanyPage interface
     const formattedCompanyPages = Array.isArray(companyPages)
-      ? companyPages.map(page => ({
+      ? companyPages.map((page) => ({
           ...page,
-          mainImage: page.mainImage
-            ? urlFor(page.mainImage).width(1200).height(630).fit("crop").quality(80).url()
+          slug: page.slug?.current || page.slug, // Ensure slug is string
+          mainImage: page.mainImage?.asset?.url
+            ? urlFor(page.mainImage.asset).width(1200).height(630).fit("crop").quality(80).format("webp").url()
             : null,
+          mainImageAlt: page.mainImage?.alt || page.title,
         }))
       : {
           ...companyPages,
-          mainImage: companyPages.mainImage
-            ? urlFor(companyPages.mainImage).width(1200).height(630).fit("crop").quality(80).url()
+          slug: companyPages.slug?.current || companyPages.slug, // Ensure slug is string
+          mainImage: companyPages.mainImage?.asset?.url
+            ? urlFor(companyPages.mainImage.asset).width(1200).height(630).fit("crop").quality(80).format("webp").url()
             : null,
+          mainImageAlt: companyPages.mainImage?.alt || companyPages.title,
         };
 
     elizaLogger.debug(`[CLIENT-DIRECT] Fetched company page${slug ? ` for slug: ${slug}` : "s"} from Sanity`, {
@@ -5294,10 +5957,11 @@ router.get("/company-pages/:slug?", async (req, res) => {
 
     res.json({ companyPages: formattedCompanyPages });
   } catch (error: any) {
-    elizaLogger.error("[CLIENT-DIRECT] Error fetching company page(s):", error);
-    res.status(500).json({ error: "[CLIENT-DIRECT] Failed to fetch company page(s)", details: error.message });
+    elizaLogger.error(`[CLIENT-DIRECT] Error fetching company page${slug ? ` for slug: ${slug}` : "s"}:`, error);
+    res.status(500).json({ error: `[CLIENT-DIRECT] Failed to fetch company page${slug ? ` for slug: ${slug}` : "s"}`, details: error.message });
   }
 });
+
 
 router.get("/product-pages/:slug?", async (req, res) => {
   try {
@@ -5310,7 +5974,16 @@ router.get("/product-pages/:slug?", async (req, res) => {
       query = `*[_type == "productPage" && slug.current == $slug && published == true][0] {
         title,
         slug,
-        content,
+        content[] {
+          ...,
+          _type == "image" => {
+            ...,
+            asset-> {
+              _id,
+              url
+            }
+          }
+        },
         publishedAt,
         modifiedAt,
         seoDescription,
@@ -5336,11 +6009,24 @@ router.get("/product-pages/:slug?", async (req, res) => {
           },
           alt
         },
+        thumbnailImage {
+          asset-> {
+            _id,
+            url
+          }
+        },
+        mediumImage {
+          asset-> {
+            _id,
+            url
+          }
+        },
         tags,
         relatedContent[0..2]-> {
           _type,
           title,
           slug,
+          excerpt,
           mainImage {
             asset-> {
               _id,
@@ -5373,7 +6059,32 @@ router.get("/product-pages/:slug?", async (req, res) => {
           },
           alt
         },
-        tags
+        thumbnailImage {
+          asset-> {
+            _id,
+            url
+          }
+        },
+        mediumImage {
+          asset-> {
+            _id,
+            url
+          }
+        },
+        tags,
+        relatedContent[0..2]-> {
+          _type,
+          title,
+          slug,
+          excerpt,
+          mainImage {
+            asset-> {
+              _id,
+              url
+            },
+            alt
+          }
+        }
       }`;
     }
 
@@ -5381,35 +6092,39 @@ router.get("/product-pages/:slug?", async (req, res) => {
 
     if (!productPages) {
       elizaLogger.warn(`[CLIENT-DIRECT] No product page${slug ? ` for slug: ${slug}` : "s"} found in Sanity`);
-      return res.status(404).json({ error: "[CLIENT-DIRECT] Product page(s) not found" });
+      return res.status(404).json({ error: `[CLIENT-DIRECT] No product page${slug ? ` for slug: ${slug}` : "s"} found` });
     }
 
     const formattedProductPages = Array.isArray(productPages)
       ? productPages.map((page) => ({
           ...page,
-          mainImage: page.mainImage?.asset
+          slug: page.slug?.current || page.slug, // Ensure slug is string
+          mainImage: page.mainImage?.asset?.url
             ? urlFor(page.mainImage.asset).width(1200).height(630).fit("crop").quality(80).format("webp").url()
             : null,
           mainImageAlt: page.mainImage?.alt || page.title,
-          heroImage: page.heroImage?.asset
-            ? urlFor(page.mainImage.asset).width(1200).height(400).fit("crop").quality(80).format("webp").url()
+          heroImage: page.heroImage?.asset?.url
+            ? urlFor(page.heroImage.asset).width(1200).height(400).fit("crop").quality(80).format("webp").url()
             : null,
           heroImageAlt: page.heroImage?.alt || page.title,
           galleryImages: page.galleryImages?.map((img) => ({
-            url: img.asset ? urlFor(img.asset).width(600).height(400).fit("crop").quality(80).format("webp").url() : null,
+            url: img.asset?.url
+              ? urlFor(img.asset).width(600).height(400).fit("crop").quality(80).format("webp").url()
+              : null,
             alt: img.alt || page.title,
-          })) || [],
-          thumbnailImage: page.mainImage?.asset
-            ? urlFor(page.mainImage.asset).width(300).height(200).fit("crop").quality(80).format("webp").url()
+          })).filter((img) => img.url) || [],
+          thumbnailImage: page.thumbnailImage?.asset?.url
+            ? urlFor(page.thumbnailImage.asset).width(300).height(200).fit("crop").quality(80).format("webp").url()
             : null,
-          mediumImage: page.mainImage?.asset
-            ? urlFor(page.mainImage.asset).width(600).height(400).fit("crop").quality(80).format("webp").url()
+          mediumImage: page.mediumImage?.asset?.url
+            ? urlFor(page.mediumImage.asset).width(600).height(400).fit("crop").quality(80).format("webp").url()
             : null,
           relatedContent: page.relatedContent?.map((item) => ({
             _type: item._type,
             title: item.title,
-            slug: item.slug,
-            mainImage: item.mainImage?.asset
+            slug: item.slug?.current || item.slug, // Ensure slug is string
+            excerpt: item.excerpt || "",
+            mainImage: item.mainImage?.asset?.url
               ? urlFor(item.mainImage.asset).width(300).height(200).fit("crop").quality(80).format("webp").url()
               : null,
             mainImageAlt: item.mainImage?.alt || item.title,
@@ -5417,29 +6132,33 @@ router.get("/product-pages/:slug?", async (req, res) => {
         }))
       : {
           ...productPages,
-          mainImage: productPages.mainImage?.asset
+          slug: productPages.slug?.current || productPages.slug, // Ensure slug is string
+          mainImage: productPages.mainImage?.asset?.url
             ? urlFor(productPages.mainImage.asset).width(1200).height(630).fit("crop").quality(80).format("webp").url()
             : null,
           mainImageAlt: productPages.mainImage?.alt || productPages.title,
-          heroImage: productPages.heroImage?.asset
+          heroImage: productPages.heroImage?.asset?.url
             ? urlFor(productPages.heroImage.asset).width(1200).height(400).fit("crop").quality(80).format("webp").url()
             : null,
           heroImageAlt: productPages.heroImage?.alt || productPages.title,
           galleryImages: productPages.galleryImages?.map((img) => ({
-            url: img.asset ? urlFor(img.asset).width(600).height(400).fit("crop").quality(80).format("webp").url() : null,
+            url: img.asset?.url
+              ? urlFor(img.asset).width(600).height(400).fit("crop").quality(80).format("webp").url()
+              : null,
             alt: img.alt || productPages.title,
-          })) || [],
-          thumbnailImage: productPages.mainImage?.asset
-            ? urlFor(productPages.mainImage.asset).width(300).height(200).fit("crop").quality(80).format("webp").url()
+          })).filter((img) => img.url) || [],
+          thumbnailImage: productPages.thumbnailImage?.asset?.url
+            ? urlFor(productPages.thumbnailImage.asset).width(300).height(200).fit("crop").quality(80).format("webp").url()
             : null,
-          mediumImage: productPages.mainImage?.asset
-            ? urlFor(productPages.mainImage.asset).width(600).height(400).fit("crop").quality(80).format("webp").url()
+          mediumImage: productPages.mediumImage?.asset?.url
+            ? urlFor(productPages.mediumImage.asset).width(600).height(400).fit("crop").quality(80).format("webp").url()
             : null,
           relatedContent: productPages.relatedContent?.map((item) => ({
             _type: item._type,
             title: item.title,
-            slug: item.slug,
-            mainImage: item.mainImage?.asset
+            slug: item.slug?.current || item.slug, // Ensure slug is string
+            excerpt: item.excerpt || "",
+            mainImage: item.mainImage?.asset?.url
               ? urlFor(item.mainImage.asset).width(300).height(200).fit("crop").quality(80).format("webp").url()
               : null,
             mainImageAlt: item.mainImage?.alt || item.title,
@@ -5452,8 +6171,8 @@ router.get("/product-pages/:slug?", async (req, res) => {
 
     res.json({ productPages: formattedProductPages });
   } catch (error: any) {
-    elizaLogger.error("[CLIENT-DIRECT] Error fetching product page(s):", error);
-    res.status(500).json({ error: "[CLIENT-DIRECT] Failed to fetch product page(s)", details: error.message });
+    elizaLogger.error(`[CLIENT-DIRECT] Error fetching product page${slug ? ` for slug: ${slug}` : "s"}:`, error);
+    res.status(500).json({ error: `[CLIENT-DIRECT] Failed to fetch product page${slug ? ` for slug: ${slug}` : "s"}`, details: error.message });
   }
 });
 

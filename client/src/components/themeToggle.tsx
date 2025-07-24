@@ -30,9 +30,9 @@ export function ThemeToggle() {
 
   return (
     <Button
-      variant="outline"
+      variant="default"
       size="icon"
-      className="text-agentvooc-accent border-agentvooc-accent/30 hover:bg-agentvooc-accent hover:text-agentvooc-secondary-bg "
+      className=""
       onClick={toggleTheme}
       aria-label={`Switch to ${theme === "light" ? "dark" : "light"} theme`}
     >

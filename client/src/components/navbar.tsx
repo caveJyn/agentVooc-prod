@@ -26,7 +26,7 @@ export default function Navbar() {
         </li>
       ))}
     </ul>
-    <ThemeToggle />
+    <div className="flex items-center gap-2"><ThemeToggle />
     <Button
       variant="outline"
       size="sm"
@@ -35,6 +35,7 @@ export default function Navbar() {
     >
       Sign Up
     </Button>
+    </div>
   </CardHeader>
 );
 }

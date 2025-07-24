@@ -2,23 +2,8 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { Loader2 } from "lucide-react";
-import { apiClient } from "@/lib/api";
-
-interface PressPost {
-  title: string;
-  slug: { current: string };
-  publishedAt: string;
-  modifiedAt?: string;
-  seoDescription: string;
-  excerpt: string;
-  mainImage?: string;
-  mainImageAlt?: string;
-  heroImage?: string;
-  heroImageAlt?: string;
-  thumbnailImage?: string;
-  mediumImage?: string;
-  tags?: string[];
-}
+import { apiClient, type PressPost } from "@/lib/api";
+import { Card } from "@/components/ui/card";
 
 interface StarPosition {
   top: string;
@@ -35,7 +20,7 @@ export default function PressListPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [starPositions, setStarPositions] = useState<StarPosition[]>([]);
 
-  const baseUrl = import.meta.env.VITE_SERVER_BASE_URL;
+  const baseUrl = import.meta.env.VITE_SERVER_BASE_URL || "https://your-default-domain.com";
   const defaultImage = `${baseUrl}/images/logo.png`;
   const defaultImageAlt = "agentVooc Logo";
 
@@ -44,9 +29,12 @@ export default function PressListPage() {
       try {
         setIsLoading(true);
         const response = await apiClient.getPressPosts();
-        setPosts(response.pressPosts);
+        console.log("[PressList] Fetched posts:", JSON.stringify(response.pressPosts, null, 2));
+        // Normalize to array
+        const pressPosts = Array.isArray(response.pressPosts) ? response.pressPosts : [response.pressPosts];
+        setPosts(pressPosts);
       } catch (err: any) {
-        console.error("Error fetching press posts:", err);
+        console.error("[PressList] Error fetching press posts:", err);
         setError(err.message || "Failed to fetch press posts");
       } finally {
         setIsLoading(false);
@@ -85,7 +73,7 @@ export default function PressListPage() {
     newsArticle: posts.map((post) => ({
       "@type": "NewsArticle",
       headline: post.title,
-      url: `${baseUrl}/company/press/${post.slug.current}`,
+      url: `${baseUrl}/company/press/${post.slug}`,
       datePublished: post.publishedAt,
       dateModified: post.modifiedAt || post.publishedAt,
       description: post.seoDescription,
@@ -134,7 +122,7 @@ export default function PressListPage() {
           <link rel="canonical" href={`${baseUrl}/company/press`} />
         </Helmet>
         <div className="max-w-6xl mx-auto py-12 px-4">
-          <h1 className="text-3xl font-bold mb-4">Press</h1>
+          <h1 className="text-3xl font-bold mb-4 text-white">Press</h1>
           <p>{error}</p>
           <Link to="/company/press" className="text-agentvooc-accent hover:underline">
             Back to Press
@@ -220,29 +208,35 @@ export default function PressListPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {posts.map((post) => (
-              <Link
-                key={post.slug.current}
-                to={`/company/press/${post.slug.current}`}
-                className="group block p-6 bg-agentvooc-primary-bg rounded-lg transition text-white border border-agentvooc-border"
-              >
-                {post.thumbnailImage && (
-                  <img
-                    src={post.thumbnailImage}
-                    alt={post.mainImageAlt || post.title}
-                    loading="lazy"
-                    className="w-full h-48 object-cover rounded-t-lg mb-4 hidden md:block"
-                  />
-                )}
-                <h2 className="text-xl font-semibold mb-2">
-                  <span className="transition duration-300 ease-in-out group-hover:bg-agentvooc-accent group-active:bg-agentvooc-accent group-hover:text-black group-active:text-black px-2 py-1 rounded-md group-hover:shadow-md">
-                    {post.title}
-                  </span>
-                </h2>
-                <p className="text-sm text-gray-300 mb-4 px-2">
-                  Published: {new Date(post.publishedAt).toLocaleDateString()}
-                </p>
-                <p className="px-2">{post.excerpt}</p>
-              </Link>
+              <Card key={post.slug} className="bg-agentvooc-primary-bg border-agentvooc-border">
+                <Link
+                  to={`/company/press/${post.slug}`}
+                  className="group block p-4 bg-agentvooc-primary-bg rounded-lg border border-agentvooc-border text-white hover:bg-agentvooc-accent hover:text-black hover:shadow-lg transition-all duration-300"
+                  aria-label={`View press release: ${post.title}`}
+                  onClick={() => window.scrollTo(0, 0)}
+                >
+                  {post.thumbnailImage && (
+                    <div className="w-full h-32 bg-gray-200 animate-pulse rounded-t-lg mb-2">
+                      <img
+                        src={post.thumbnailImage} // Use pre-formatted URL
+                        alt={post.mainImageAlt || post.title}
+                        loading="lazy"
+                        className="w-full h-32 object-cover rounded-t-lg"
+                        onLoad={(e) => (e.currentTarget.parentElement!.style.background = "none")}
+                        onError={(e) => {
+                          console.error("[PressList] Thumbnail image failed to load:", post.thumbnailImage);
+                          e.currentTarget.style.display = "none";
+                        }}
+                      />
+                    </div>
+                  )}
+                  <h2 className="text-lg font-semibold mb-2">{post.title}</h2>
+                  <p className="text-sm text-gray-300 mb-2 line-clamp-2">{post.excerpt}</p>
+                  <p className="text-xs text-gray-500">
+                    Published: {new Date(post.publishedAt).toLocaleDateString()}
+                  </p>
+                </Link>
+              </Card>
             ))}
           </div>
         )}
