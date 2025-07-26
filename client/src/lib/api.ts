@@ -375,6 +375,7 @@ export interface Docs {
   _id: string;
   title: string;
   slug: string;
+  sortOrder?: number;
   excerpt: string;
   seoDescription: string;
   publishedAt: string;

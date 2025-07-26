@@ -5697,6 +5697,7 @@ router.get("/docs/:slug?", async (req, res) => {
       query = `*[_type == "doc" && slug.current == $slug && published == true][0] {
         title,
         slug,
+        sortOrder,
         content[] {
           ...,
           _type == "image" => {
@@ -5764,6 +5765,7 @@ router.get("/docs/:slug?", async (req, res) => {
       query = `*[_type == "doc" && published == true] | order(publishedAt desc) {
   title,
   slug,
+  sortOrder,
   content[] {
     ...,
     _type == "block" => {

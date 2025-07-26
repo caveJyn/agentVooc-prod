@@ -151,6 +151,13 @@ export default {
       description: "Select up to 3 related docs, blog posts, or product pages to display at the bottom of the documentation page",
       validation: (Rule: any) => Rule.max(3),
     },
+     {
+      name: "sortOrder",
+      title: "Sort Order",
+      type: "number",
+      description: "The order in which this document should appear (e.g., 1 for first, 2 for second, etc.)",
+      validation: (Rule: any) => Rule.integer().min(1).optional(),
+    },
     {
       name: "published",
       title: "Published",

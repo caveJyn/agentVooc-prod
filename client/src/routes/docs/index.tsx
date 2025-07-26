@@ -15,13 +15,27 @@ export default function DocsList() {
   const defaultImage = `${baseUrl}/images/logo.png`;
   const defaultImageAlt = "agentVooc Logo";
 
+  // Function to sort docs by sortOrder, with fallback to title
+  const sortDocs = (docsArray: Docs[]): Docs[] => {
+    return [...docsArray].sort((a, b) => {
+      const aOrder = a.sortOrder ?? Number.MAX_SAFE_INTEGER;
+      const bOrder = b.sortOrder ?? Number.MAX_SAFE_INTEGER;
+      if (aOrder !== bOrder) {
+        return aOrder - bOrder;
+      }
+      // Fallback to title if sortOrder is the same or undefined
+      return (a.title || "").localeCompare(b.title || "");
+    });
+  };
+
   useEffect(() => {
     const fetchDocs = async () => {
       try {
         setIsLoading(true);
         const response = await apiClient.getDocs();
         console.log("[DocsList] Fetched docs:", JSON.stringify(response.docs, null, 2));
-        setDocs(response.docs as Docs[]);
+        // Sort docs before setting state
+        setDocs(sortDocs(response.docs as Docs[]));
       } catch (err: any) {
         console.error("[DocsList] Error fetching docs:", err);
         setError(err.message || "Failed to fetch documentation");

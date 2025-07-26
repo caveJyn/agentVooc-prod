@@ -1,4 +1,3 @@
-// /home/kaijin/projects/bots/venv/elizaOS_env/agentVooc-prod/client/src/components/docs-sidebar.tsx
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
@@ -35,6 +34,19 @@ export default function DocsSidebar() {
   const [expandedDocs, setExpandedDocs] = useState<Set<string>>(new Set());
   const [activeHeadingId, setActiveHeadingId] = useState<string>("");
 
+  // Function to sort docs by sortOrder, with fallback to title
+  const sortDocs = (docsArray: Docs[]): Docs[] => {
+    return [...docsArray].sort((a, b) => {
+      const aOrder = a.sortOrder ?? Number.MAX_SAFE_INTEGER;
+      const bOrder = b.sortOrder ?? Number.MAX_SAFE_INTEGER;
+      if (aOrder !== bOrder) {
+        return aOrder - bOrder;
+      }
+      // Fallback to title if sortOrder is the same or undefined
+      return (a.title || "").localeCompare(b.title || "");
+    });
+  };
+
   // Fetch all documentation pages
   useEffect(() => {
     const fetchDocs = async () => {
@@ -43,7 +55,8 @@ export default function DocsSidebar() {
         const response = await apiClient.getDocs();
         console.log("[DocsSidebar] Fetched docs:", JSON.stringify(response.docs, null, 2));
         const docsArray = Array.isArray(response.docs) ? response.docs : [response.docs];
-        setDocs(docsArray);
+        // Sort docs before setting state
+        setDocs(sortDocs(docsArray));
 
         // Auto-expand current document
         const activeSlug = location.pathname.split("/").pop() || "";
@@ -97,20 +110,24 @@ export default function DocsSidebar() {
     return items;
   }, [docs]);
 
-  // Filter docs and TOC items based on search query
+  // Filter and sort docs based on search query
   const filteredDocs = useMemo(() => {
-    if (!searchQuery) return docs;
-    return docs.filter((doc) =>
-      doc.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      doc.content?.some(
-        (block) =>
-          block._type === "block" &&
-          ["h1", "h2", "h3", "h4", "h5", "h6"].includes(block.style || "") &&
-          block.children?.some((child) =>
-            child.text?.toLowerCase().includes(searchQuery.toLowerCase())
-          )
-      )
-    );
+    let result = docs;
+    if (searchQuery) {
+      result = docs.filter((doc) =>
+        doc.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        doc.content?.some(
+          (block) =>
+            block._type === "block" &&
+            ["h1", "h2", "h3", "h4", "h5", "h6"].includes(block.style || "") &&
+            block.children?.some((child) =>
+              child.text?.toLowerCase().includes(searchQuery.toLowerCase())
+            )
+        )
+      );
+    }
+    // Sort filtered results to maintain sortOrder
+    return sortDocs(result);
   }, [docs, searchQuery]);
 
   // Group TOC items by document slug
@@ -212,7 +229,7 @@ export default function DocsSidebar() {
       className="bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
     >
       <SidebarHeader className="border-b border-border/40 bg-muted/30">
-        <div className="flex items-center justify-between px-3 py-4"> {/* Increased py-3 to py-4 for more vertical space */}
+        <div className="flex items-center justify-between px-3 py-4">
           <div
             className="flex items-center gap-3 cursor-pointer group transition-all duration-200 hover:opacity-80"
             onClick={() => navigate("/company/docs")}
@@ -221,8 +238,8 @@ export default function DocsSidebar() {
               <BookOpen className="w-4 h-4 text-primary" />
             </div>
             <div className="flex flex-col">
-              <span className="text-sm font-semibold text-foreground leading-tight">Documentation</span> {/* Adjusted leading */}
-              <span className="text-xs text-muted-foreground mt-1">Knowledge Base</span> {/* Increased mt-0.5 to mt-1 */}
+              <span className="text-sm font-semibold text-foreground leading-tight">Documentation</span>
+              <span className="text-xs text-muted-foreground mt-1">Knowledge Base</span>
             </div>
           </div>
           <div className="flex items-center gap-1">
@@ -236,7 +253,6 @@ export default function DocsSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="flex flex-col h-full">
-        {/* Search Section */}
         <div className="p-4 bg-muted/20 border-b border-border/30">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
@@ -252,7 +268,6 @@ export default function DocsSidebar() {
           </div>
         </div>
 
-        {/* Documents List */}
         <div className="flex-1 overflow-auto py-2">
           <SidebarMenu className="px-3 space-y-1">
             {isLoading ? (
@@ -282,8 +297,7 @@ export default function DocsSidebar() {
 
                 return (
                   <SidebarMenuItem key={doc.slug} className="space-y-2">
-                    {/* Document Title */}
-                    <div className="flex items-center group gap-2"> {/* Added gap-2 for spacing */}
+                    <div className="flex items-center group gap-2">
                       <SidebarMenuButton
                         asChild
                         isActive={isActive && !activeHeadingId}
@@ -305,7 +319,7 @@ export default function DocsSidebar() {
                           }`}>
                             <FileText className="w-3.5 h-3.5" />
                           </div>
-                          <span className="text-sm font-medium leading-tight flex-1 pr-2"> {/* Removed line-clamp-2, added pr-2 */}
+                          <span className="text-sm font-medium leading-tight flex-1 pr-2">
                             {doc.title || "Untitled Document"}
                           </span>
                         </button>
@@ -328,12 +342,11 @@ export default function DocsSidebar() {
                       )}
                     </div>
 
-                    {/* Table of Contents */}
                     {hasHeadings && isExpanded && (
                       <SidebarMenuSub className="ml-2 border-l-2 border-border/20 pl-0 py-2 space-y-0.5">
                         {groupedTocItems[doc.slug].map((item) => {
                           const level = getHeadingLevel(item.style);
-                          const indent = Math.max(0, (level - 1) * 4); // Reduced indent
+                          const indent = Math.max(0, (level - 1) * 4);
                           const isHeadingActive = item.slug === location.pathname.split("/").pop() && item.id === activeHeadingId;
 
                           return (
@@ -354,7 +367,7 @@ export default function DocsSidebar() {
                                   aria-label={`Go to section: ${item.text}`}
                                 >
                                   <span
-                                    className={`text-xs leading-relaxed flex-1 break-words pr-2`} 
+                                    className={`text-xs leading-relaxed flex-1 break-words pr-2`}
                                   >
                                     {item.text}
                                   </span>
@@ -369,7 +382,7 @@ export default function DocsSidebar() {
                     {hasHeadings && !isExpanded && (
                       <div className="ml-6 mt-1">
                         <div className="flex items-center gap-2 px-2 py-1 rounded-md bg-muted/30">
-                          <p className="text-xs text-muted-foreground/70 font-medium">
+                          <p className="text-xs text-muted-foregroundetlen/70 font-medium">
                             {groupedTocItems[doc.slug].length} section{groupedTocItems[doc.slug].length !== 1 ? "s" : ""}
                           </p>
                         </div>
@@ -382,7 +395,6 @@ export default function DocsSidebar() {
           </SidebarMenu>
         </div>
 
-        {/* Footer */}
         <div className="p-4 border-t border-border/30 bg-muted/20">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
