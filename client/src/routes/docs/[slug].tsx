@@ -695,7 +695,7 @@ export default function DocPage() {
           className="transition-all duration-200 hover:shadow-lg"
         >
           <Link
-            to={`/${
+            to={`/company/${
               item._type === "doc"
                 ? "docs"
                 : item._type === "blogPost"
