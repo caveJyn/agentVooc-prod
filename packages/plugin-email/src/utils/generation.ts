@@ -35,7 +35,14 @@ export async function generateEmailReply({
     const bestRegard = template?.bestRegard || 'Best regards';
     const instructions = template?.instructions || `
 # Instructions:
-
+- Generate only the body of the email reply, without greetings or signatures.
+- Write a concise, professional, and context-aware reply to the email.
+- Directly answer the question or topic raised in the Email Body using the provided Relevant Knowledge if applicable.
+- If the Relevant Knowledge contains specific information (e.g., names, places, or facts) relevant to the Email Body, include it explicitly in the response.
+- Keep the tone friendly and appropriate for an email response.
+- Do not include sensitive information or fabricate details.
+- Avoid using placeholders like [Your University/Institution Name]; use the knowledge provided or omit if no relevant knowledge exists.
+- Return only the email body text, without greetings, signatures, or subject line.
 `;
 
     const formattedKnowledge = context.length

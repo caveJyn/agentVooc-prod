@@ -50,7 +50,7 @@ export const FeaturesSection = ({ featuresSection }: FeaturesSectionProps) => {
   <section className="py-16 px-4 animate-fade-in" aria-label="Features">
     <div className="max-w-6xl mx-auto text-center">
       <h2 className="text-4xl font-bold mb-8">{heading}</h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
         {features.map((feature, index) => (
           <Card
             key={index}

@@ -371,6 +371,58 @@ export interface BlogPost {
   }>;
 }
 
+export interface Docs {
+  _id: string;
+  title: string;
+  slug: string;
+  excerpt: string;
+  seoDescription: string;
+  publishedAt: string;
+  modifiedAt?: string | null;
+  mainImage?: string;
+  mainImageAlt?: string;
+  heroImage?: string;
+  heroImageAlt?: string;
+  thumbnailImage?: string | null;
+  mediumImage?: string | null;
+  tags?: string[] | null;
+  relatedContent?: Array<{
+    _type: string;
+    slug: string;
+    title: string;
+    mainImage?: string;
+    mainImageAlt?: string;
+    excerpt?: string;
+    publishedAt: string;
+  }>;
+  content?: Array<
+    | {
+        _key: string;
+        _type: "block";
+        style?: string;
+        children?: Array<{
+          _key: string;
+          _type: string;
+          text?: string;
+          marks?: string[];
+        }>;
+        markDefs?: Array<any>;
+      }
+    | {
+        _key: string;
+        _type: "image";
+        asset?: {
+          url: string;
+        };
+        alt?: string;
+      }
+  >;
+  galleryImages?: Array<{
+    url: string;
+    alt?: string;
+  }>;
+}
+
 export interface PressPost {
   title: string;
   slug: string;
@@ -394,6 +446,7 @@ export interface PressPost {
     excerpt?: string;
     mainImage?: string;
     mainImageAlt?: string;
+    publishedAt: string;
   }>;
 }
 
@@ -430,6 +483,7 @@ export interface ProductPage {
     excerpt?: string;
     mainImage?: string;
     mainImageAlt?: string;
+    publishedAt: string;
   }>;
 }
 
@@ -781,6 +835,19 @@ updateEmailTemplate: (agentId: string, template: Partial<EmailTemplate>) =>
   getBlogPostBySlug: (slug: string): Promise<{ blogPosts: BlogPost }> => {
     return fetcher({
       url: `/api/blog-posts/${slug}`,
+      method: "GET",
+    });
+  },
+
+    getDocs: (slug?: string): Promise<{ docs: Docs | Docs[] }> => {
+    return fetcher({
+      url: slug ? `/api/docs/${slug}` : "/api/docs",
+      method: "GET",
+    });
+  },
+  getDocBySlug: (slug: string): Promise<{ docs: Docs }> => {
+    return fetcher({
+      url: `/api/docs/${slug}`,
       method: "GET",
     });
   },

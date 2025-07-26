@@ -744,7 +744,7 @@ const SidebarMenuSubButton = React.forwardRef<
             data-size={size}
             data-active={isActive}
             className={cn(
-                "flex h-7 min-w-0 -translate-x-px items-center gap-2 overflow-hidden rounded-md px-2 text-sidebar-foreground outline-none ring-sidebar-ring hover:bg-card-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-card-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:text-sidebar-accent-foreground",
+                "flex h-8 min-w-0 items-center gap-2 rounded-md px-3 py-1 text-sidebar-foreground outline-none ring-sidebar-ring hover:bg-card-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-card-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:text-sidebar-accent-foreground",
                 "data-[active=true]:bg-card-accent data-[active=true]:text-sidebar-accent-foreground",
                 size === "sm" && "text-xs",
                 size === "md" && "text-sm",
@@ -756,6 +756,7 @@ const SidebarMenuSubButton = React.forwardRef<
     );
 });
 SidebarMenuSubButton.displayName = "SidebarMenuSubButton";
+
 
 export {
     Sidebar,

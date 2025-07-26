@@ -40,6 +40,23 @@ export default {
         hotspot: true,
       },
       description: "Featured image for social media and previews",
+      fields: [
+        {
+          name: "alt",
+          title: "Alternative Text",
+          type: "string",
+          description: "Alt text for accessibility and SEO",
+          validation: (Rule: any) => Rule.required().min(5).max(200),
+        },
+      ],
+    },
+    {
+      name: "published",
+      title: "Published",
+      type: "boolean",
+      description: "Set to true to make this page publicly visible",
+      initialValue: false,
+      validation: (Rule: any) => Rule.required(),
     },
   ],
 };

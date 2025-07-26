@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { apiClient, LegalDocument, CompanyPage, ProductPage } from "@/lib/api"; // Import interfaces
+import { apiClient, LegalDocument, CompanyPage, ProductPage } from "@/lib/api";
 
 interface FooterSection {
   tagline: string;
@@ -56,67 +56,37 @@ export function FooterProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const fetchFooterData = async () => {
-      const cacheKey = "footerData";
-      const cacheTimestampKey = "footerDataUpdatedAt";
-      const cacheTimeKey = "footerDataCacheTime";
-      const cacheDuration = 24 * 60 * 60 * 1000; // 24 hours
-
-      const cachedData = localStorage.getItem(cacheKey);
-      const cachedUpdatedAt = localStorage.getItem(cacheTimestampKey);
-      const cachedTime = localStorage.getItem(cacheTimeKey);
-
-      if (cachedData && cachedUpdatedAt && cachedTime) {
-        const isCacheValid = Date.now() - parseInt(cachedTime) < cacheDuration;
-        if (isCacheValid) {
-          try {
-            const response = await apiClient.getLandingPage();
-            const serverUpdatedAt = response.landingPage._updatedAt;
-            if (serverUpdatedAt === cachedUpdatedAt) {
-              const cachedFooter = JSON.parse(cachedData);
-              setFooterSection(cachedFooter.footerSection);
-              setSubFooterSection(cachedFooter.subFooterSection);
-              console.log("[FooterProvider] Using cached footer data");
-              return;
-            }
-          } catch (err: any) {
-            console.error("[FooterProvider] Error checking footer data update:", err);
-            const cachedFooter = JSON.parse(cachedData);
-            setFooterSection(cachedFooter.footerSection);
-            setSubFooterSection(cachedFooter.subFooterSection);
-            console.log("[FooterProvider] Fallback to cached footer data due to error");
-            return;
-          }
-        }
-      }
-
       try {
-        // Fetch landing page for footerSection and subFooterSection
-        const landingResponse = await apiClient.getLandingPage();
-        const landingFooter = landingResponse.landingPage.footerSection || fallbackFooterSection;
-        const landingSubFooter = landingResponse.landingPage.subFooterSection || fallbackSubFooterSection;
-
-        // Fetch dynamic links
-        const [legalResponse, companyResponse, productResponse, blogResponse, pressResponse] = await Promise.all([
+        const [landingResponse, legalResponse, companyResponse, productResponse, blogResponse, pressResponse, docsResponse] = await Promise.all([
+          apiClient.getLandingPage(),
           apiClient.getLegalDocuments(),
           apiClient.getCompanyPages(),
           apiClient.getProductPages(),
           apiClient.getBlogPosts(),
           apiClient.getPressPosts(),
+          apiClient.getDocs(),
         ]);
+
+        console.log("[FooterProvider] Company Pages:", companyResponse); // Debug log
+
+        const landingFooter = landingResponse.landingPage.footerSection || fallbackFooterSection;
+        const landingSubFooter = landingResponse.landingPage.subFooterSection || fallbackSubFooterSection;
 
         const legalLinks = legalResponse.legalDocuments.map((doc: LegalDocument) => ({
           label: doc.title,
           url: `/legal/${doc.slug}`,
         }));
 
-        const companyLinks = companyResponse.companyPages
-          .filter((page: CompanyPage) => !["blog", "press"].includes(page.slug))
+        const companyPages = Array.isArray(companyResponse.companyPages)
+          ? companyResponse.companyPages
+          : [companyResponse.companyPages];
+        const companyLinks = companyPages
+          .filter((page: CompanyPage) => page && page.slug && page.title)
           .map((page: CompanyPage) => ({
             label: page.title,
             url: `/company/${page.slug}`,
           }));
 
-        // Normalize blogPosts to an array
         const blogPosts = Array.isArray(blogResponse.blogPosts)
           ? blogResponse.blogPosts
           : [blogResponse.blogPosts];
@@ -124,7 +94,6 @@ export function FooterProvider({ children }: { children: React.ReactNode }) {
           ? [{ label: "Blog", url: "/company/blog" }]
           : [];
 
-        // Normalize pressPosts to an array
         const pressPosts = Array.isArray(pressResponse.pressPosts)
           ? pressResponse.pressPosts
           : [pressResponse.pressPosts];
@@ -132,21 +101,28 @@ export function FooterProvider({ children }: { children: React.ReactNode }) {
           ? [{ label: "Press", url: "/company/press" }]
           : [];
 
-        // Normalize productPages to an array
-const productPages = Array.isArray(productResponse.productPages)
-  ? productResponse.productPages
-  : [productResponse.productPages];
+        const docs = Array.isArray(docsResponse.docs)
+          ? docsResponse.docs
+          : [docsResponse.docs];
+        const docsLinks = docs.length > 0
+          ? [{ label: "Documentation", url: "/company/docs" }]
+          : [];
 
-const productLinks = productPages.map((page: ProductPage) => ({
-  label: page.title,
-  url: `/product/${page.slug}`,
-}));
+        const productPages = Array.isArray(productResponse.productPages)
+          ? productResponse.productPages
+          : [productResponse.productPages];
+        const productLinks = productPages.map((page: ProductPage) => ({
+          label: page.title,
+          url: `/product/${page.slug}`,
+        }));
+
         const updatedFooterSection = {
           tagline: landingFooter.tagline || fallbackFooterSection.tagline,
           companyLinks: [
-            ...(companyLinks.length > 0 ? companyLinks : landingFooter.companyLinks || []),
+            ...companyLinks,
             ...blogLinks,
             ...pressLinks,
+            ...docsLinks,
           ],
           productLinks: productLinks.length > 0 ? productLinks : landingFooter.productLinks || fallbackFooterSection.productLinks,
           legalLinks: legalLinks.length > 0 ? legalLinks : landingFooter.legalLinks || fallbackFooterSection.legalLinks,
@@ -155,13 +131,12 @@ const productLinks = productPages.map((page: ProductPage) => ({
         setFooterSection(updatedFooterSection);
         setSubFooterSection(landingSubFooter);
 
-        // Cache the data
         const cacheData = { footerSection: updatedFooterSection, subFooterSection: landingSubFooter };
-        localStorage.setItem(cacheKey, JSON.stringify(cacheData));
-        localStorage.setItem(cacheTimestampKey, landingResponse.landingPage._updatedAt || Date.now().toString());
-        localStorage.setItem(cacheTimeKey, Date.now().toString());
+        localStorage.setItem("footerData", JSON.stringify(cacheData));
+        localStorage.setItem("footerDataUpdatedAt", landingResponse.landingPage._updatedAt || Date.now().toString());
+        localStorage.setItem("footerDataCacheTime", Date.now().toString());
         console.log("[FooterProvider] Fetched and cached footer data");
-      } catch (err: any) {
+      } catch (err) {
         console.error("[FooterProvider] Error fetching footer data:", err);
         setFooterSection(fallbackFooterSection);
         setSubFooterSection(fallbackSubFooterSection);

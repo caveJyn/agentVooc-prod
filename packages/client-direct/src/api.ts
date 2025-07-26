@@ -5686,6 +5686,241 @@ router.get("/blog-posts/:slug?", async (req, res) => {
   }
 });
 
+router.get("/docs/:slug?", async (req, res) => {
+  try {
+    const { slug } = req.params;
+
+    let query;
+    let params = {};
+
+    if (slug) {
+      query = `*[_type == "doc" && slug.current == $slug && published == true][0] {
+        title,
+        slug,
+        content[] {
+          ...,
+          _type == "image" => {
+            ...,
+            asset-> {
+              _id,
+              url
+            }
+          }
+        },
+        publishedAt,
+        modifiedAt,
+        seoDescription,
+        excerpt,
+        mainImage {
+          asset-> {
+            _id,
+            url
+          },
+          alt
+        },
+        heroImage {
+          asset-> {
+            _id,
+            url
+          },
+          alt
+        },
+        galleryImages[] {
+          asset-> {
+            _id,
+            url
+          },
+          alt
+        },
+        thumbnailImage {
+          asset-> {
+            _id,
+            url
+          }
+        },
+        mediumImage {
+          asset-> {
+            _id,
+            url
+          }
+        },
+        tags,
+        relatedContent[0..2]-> {
+          _type,
+          title,
+          slug,
+          excerpt,
+          mainImage {
+            asset-> {
+              _id,
+              url
+            },
+            alt
+          }
+        }
+      }`;
+      params = { slug };
+    } else {
+      query = `*[_type == "doc" && published == true] | order(publishedAt desc) {
+  title,
+  slug,
+  content[] {
+    ...,
+    _type == "block" => {
+      _key,
+      style,
+      children[] {
+        _key,
+        _type,
+        text,
+        marks
+      },
+      markDefs
+    },
+    _type == "image" => {
+      _key,
+      asset-> {
+        _id,
+        url
+      },
+      alt
+    }
+  },
+  publishedAt,
+  modifiedAt,
+  seoDescription,
+  excerpt,
+  mainImage {
+    asset-> {
+      _id,
+      url
+    },
+    alt
+  },
+  heroImage {
+    asset-> {
+      _id,
+      url
+    },
+    alt
+  },
+  thumbnailImage {
+    asset-> {
+      _id,
+      url
+    }
+  },
+  mediumImage {
+    asset-> {
+      _id,
+      url
+    }
+  },
+  tags,
+  relatedContent[0..2]-> {
+    _type,
+    title,
+    slug,
+    excerpt,
+    mainImage {
+      asset-> {
+        _id,
+        url
+      },
+      alt
+    }
+  }
+}`;
+    }
+
+    const docs = await sanityClient.fetch(query, params);
+
+    if (!docs) {
+      elizaLogger.warn(`[CLIENT-DIRECT] No doc${slug ? ` for slug: ${slug}` : "s"} found in Sanity`);
+      return res.status(404).json({ error: `[CLIENT-DIRECT] No doc${slug ? ` for slug: ${slug}` : "s"} found` });
+    }
+
+    const formattedDocs = Array.isArray(docs)
+      ? docs.map((doc) => ({
+          ...doc,
+          slug: doc.slug?.current || doc.slug,
+          mainImage: doc.mainImage?.asset?.url
+            ? urlFor(doc.mainImage.asset).width(1200).height(630).fit("crop").quality(80).format("webp").url()
+            : null,
+          mainImageAlt: doc.mainImage?.alt || doc.title,
+          heroImage: doc.heroImage?.asset?.url
+            ? urlFor(doc.heroImage.asset).width(1200).height(400).fit("crop").quality(80).format("webp").url()
+            : null,
+          heroImageAlt: doc.heroImage?.alt || doc.title,
+          galleryImages: doc.galleryImages?.map((img) => ({
+            url: img.asset?.url
+              ? urlFor(img.asset).width(600).height(400).fit("crop").quality(80).format("webp").url()
+              : null,
+            alt: img.alt || doc.title,
+          })).filter((img) => img.url),
+          thumbnailImage: doc.thumbnailImage?.asset?.url
+            ? urlFor(doc.thumbnailImage.asset).width(300).height(200).fit("crop").quality(80).format("webp").url()
+            : null,
+          mediumImage: doc.mediumImage?.asset?.url
+            ? urlFor(doc.mediumImage.asset).width(600).height(400).fit("crop").quality(80).format("webp").url()
+            : null,
+          relatedContent: doc.relatedContent?.map((item) => ({
+            _type: item._type,
+            title: item.title,
+            slug: item.slug?.current || item.slug,
+            excerpt: item.excerpt || "",
+            mainImage: item.mainImage?.asset?.url
+              ? urlFor(item.mainImage.asset).width(300).height(200).fit("crop").quality(80).format("webp").url()
+              : null,
+            mainImageAlt: item.mainImage?.alt || item.title,
+          })) || [],
+        }))
+      : {
+          ...docs,
+          slug: docs.slug?.current || docs.slug,
+          mainImage: docs.mainImage?.asset?.url
+            ? urlFor(docs.mainImage.asset).width(1200).height(630).fit("crop").quality(80).format("webp").url()
+            : null,
+          mainImageAlt: docs.mainImage?.alt || docs.title,
+          heroImage: docs.heroImage?.asset?.url
+            ? urlFor(docs.heroImage.asset).width(1200).height(400).fit("crop").quality(80).format("webp").url()
+            : null,
+          heroImageAlt: docs.heroImage?.alt || docs.title,
+          galleryImages: docs.galleryImages?.map((img) => ({
+            url: img.asset?.url
+              ? urlFor(img.asset).width(600).height(400).fit("crop").quality(80).format("webp").url()
+              : null,
+            alt: img.alt || docs.title,
+          })).filter((img) => img.url),
+          thumbnailImage: docs.thumbnailImage?.asset?.url
+            ? urlFor(doc.thumbnailImage.asset).width(300).height(200).fit("crop").quality(80).format("webp").url()
+            : null,
+          mediumImage: docs.mediumImage?.asset?.url
+            ? urlFor(doc.mediumImage.asset).width(600).height(400).fit("crop").quality(80).format("webp").url()
+            : null,
+          relatedContent: docs.relatedContent?.map((item) => ({
+            _type: item._type,
+            title: item.title,
+            slug: item.slug?.current || item.slug,
+            excerpt: item.excerpt || "",
+            mainImage: item.mainImage?.asset?.url
+              ? urlFor(item.mainImage.asset).width(300).height(200).fit("crop").quality(80).format("webp").url()
+              : null,
+            mainImageAlt: item.mainImage?.alt || item.title,
+          })) || [],
+        };
+
+    elizaLogger.debug(`[CLIENT-DIRECT] Fetched doc${slug ? ` for slug: ${slug}` : "s"} from Sanity`, {
+      count: Array.isArray(docs) ? docs.length : 1,
+    });
+
+    res.json({ docs: formattedDocs });
+  } catch (error: any) {
+    elizaLogger.error(`[CLIENT-DIRECT] Error fetching doc${slug ? ` for slug: ${slug}` : "s"}:`, error);
+    res.status(500).json({ error: `[CLIENT-DIRECT] Failed to fetch doc${slug ? ` for slug: ${slug}` : "s"}`, details: error.message });
+  }
+});
+
 router.get("/press-posts/:slug?", async (req, res) => {
   try {
     const { slug } = req.params;
@@ -5858,10 +6093,10 @@ router.get("/press-posts/:slug?", async (req, res) => {
             alt: img.alt || pressPosts.title,
           })).filter((img) => img.url) || [],
           thumbnailImage: pressPosts.thumbnailImage?.asset?.url
-            ? urlFor(post.thumbnailImage.asset).width(300).height(200).fit("crop").quality(80).format("webp").url()
+            ? urlFor(pressPosts.thumbnailImage.asset).width(300).height(200).fit("crop").quality(80).format("webp").url()
             : null,
           mediumImage: pressPosts.mediumImage?.asset?.url
-            ? urlFor(post.mediumImage.asset).width(600).height(400).fit("crop").quality(80).format("webp").url()
+            ? urlFor(pressPosts.mediumImage.asset).width(600).height(400).fit("crop").quality(80).format("webp").url()
             : null,
           relatedContent: pressPosts.relatedContent?.map((item) => ({
             _type: item._type,
@@ -6183,6 +6418,9 @@ const staticRoutes = [
   { path: "/demo", changefreq: "monthly", priority: 0.8 },
   { path: "/company/blog", changefreq: "weekly", priority: 0.8 },
   { path: "/company/press", changefreq: "weekly", priority: 0.8 },
+  { path: "/company/docs", changefreq: "weekly", priority: 0.8 },
+  { path: "/company/contact-us", changefreq: "weekly", priority: 0.8 },
+  { path: "/company/legal", changefreq: "weekly", priority: 0.8 },
 ];
 
 router.get("/sitemap.xml", async (req, res) => {
@@ -6212,6 +6450,11 @@ router.get("/sitemap.xml", async (req, res) => {
     // Fetch all product pages
     const productPages = await sanityClient.fetch(
       `*[_type == "productPage" && defined(slug.current) && published == true] { slug, publishedAt, modifiedAt }`
+    );
+
+    // Fetch all docs
+    const docs = await sanityClient.fetch(
+      `*[_type == "doc" && defined(slug.current) && published == true] { slug, publishedAt, modifiedAt }`
     );
 
     const currentDate = new Date().toISOString();
@@ -6286,6 +6529,17 @@ router.get("/sitemap.xml", async (req, res) => {
   <url>
     <loc>${baseUrl}/product/${page.slug.current}</loc>
     <lastmod>${formatLastmod(page.modifiedAt, page.publishedAt)}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>`
+    )
+    .join("")}
+  ${docs
+    .map(
+      (doc: any) => `
+  <url>
+    <loc>${baseUrl}/company/docs/${doc.slug.current}</loc>
+    <lastmod>${formatLastmod(doc.modifiedAt, doc.publishedAt)}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>`

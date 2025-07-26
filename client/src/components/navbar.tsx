@@ -15,10 +15,10 @@ export default function Navbar() {
       agentVooc <span className="text-agentvooc-accent">.</span>
     </div>
     <ul className="flex gap-3 sm:gap-5 ">
-      {["Home", "Blog", "About"].map((link) => (
+      {["Landing", "Blog", "Docs", "Home"].map((link) => (
         <li key={link} className="text-agentvooc-navbar-footer footer-link">
           <a
-            href={link === "Home" ? "/home" : `/company/${link.toLowerCase()}`}
+            href={link === "Home" ? "/home" : link === "Landing" ? "/" : `/company/${link.toLowerCase()}`}
             className=""
           >
             {link}

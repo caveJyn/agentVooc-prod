@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./components/app-sidebar";
 import NavSidebar from "./components/nav-sidebar";
+import DocsSidebar from "./components/docs-sidebar"; // Add import
 import { TooltipProvider } from "./components/ui/tooltip";
 import { Toaster } from "./components/ui/toaster";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
@@ -27,6 +28,8 @@ import LegalDocumentPage from "./routes/legal/[slug]";
 import CompanyPage from "./routes/company/[slug]";
 import BlogListPage from "./routes/blog/index";
 import BlogPostPage from "./routes/blog/[slug]";
+import DocsListPage from "./routes/docs/index";
+import DocPage from "./routes/docs/[slug]";
 import PressListPage from "./routes/press/index";
 import PressPostPage from "./routes/press/[slug]";
 import ProductListPage from "./routes/product";
@@ -49,7 +52,6 @@ const queryClient = new QueryClient({
   },
 });
 
-// Routes where the AppSidebar should be displayed
 const APP_SIDEBAR_ROUTES = [
   "/home",
   "/chat",
@@ -60,10 +62,15 @@ const APP_SIDEBAR_ROUTES = [
   "/knowledge",
 ];
 
+const DOCS_ROUTES = ["/company/docs"];
+
 function AppContent() {
   const location = useLocation();
   const isMobile = useIsMobile();
-  const showSidebar = APP_SIDEBAR_ROUTES.some((route) =>
+  const showAppSidebar = APP_SIDEBAR_ROUTES.some((route) =>
+    location.pathname.startsWith(route)
+  );
+  const showDocsSidebar = DOCS_ROUTES.some((route) =>
     location.pathname.startsWith(route)
   );
 
@@ -89,21 +96,22 @@ function AppContent() {
             type="text/javascript"
           ></script>
         </Helmet>
-        {showSidebar && <AppSidebar />}
-        {!showSidebar && isMobile && <NavSidebar />}
+        {showAppSidebar && <AppSidebar />}
+        {showDocsSidebar && <DocsSidebar />}
+        {!showAppSidebar && isMobile && <NavSidebar />}
         <div
           className={`flex flex-1 flex-col gap-4 size-full w-full ${
-            showSidebar ? "max-w-[90%] mx-auto px-4 md:px-6 " : "max-w-[100%]"
+            showAppSidebar || showDocsSidebar ? "max-w-[90%] mx-auto px-4 md:px-6" : "max-w-[100%]"
           } bg-transparent`}
         >
-          {!showSidebar && !isMobile && <Navbar />}
-          {showSidebar && (
-            <div className=" gap-2 mt-5 -mb-5 ">
+          {!showAppSidebar && !isMobile && <Navbar />}
+          {showAppSidebar && (
+            <div className="gap-2 mt-5 -mb-5">
               <SidebarTrigger className="text-agentvooc-primary hover:bg-agentvooc-secondary-accent hover:text-agentvooc-accent" />
               <ThemeToggle />
             </div>
           )}
-          {!showSidebar && isMobile && (
+          {!showAppSidebar && isMobile && (
             <div className="sticky top-0 z-50 flex items-center justify-between p-4 bg-agentvooc-secondary-bg shadow-agentvooc-glow">
               <div
                 className="text-2xl font-semibold cursor-pointer hover:text-agentvooc-accent transition-all whitespace-nowrap"
@@ -120,7 +128,7 @@ function AppContent() {
               </div>
             </div>
           )}
-          {showSidebar && <SidebarInset />}
+          {(showAppSidebar || showDocsSidebar) && <SidebarInset />}
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/auth" element={<Auth />} />
@@ -198,18 +206,20 @@ function AppContent() {
             <Route path="/company/:slug" element={<CompanyPage />} />
             <Route path="/company/blog" element={<BlogListPage />} />
             <Route path="/company/blog/:slug" element={<BlogPostPage />} />
+            <Route path="/company/docs" element={<DocsListPage />} />
+            <Route path="/company/docs/:slug" element={<DocPage />} />
             <Route path="/company/press" element={<PressListPage />} />
             <Route path="/company/press/:slug" element={<PressPostPage />} />
             <Route path="/product" element={<ProductListPage />} />
             <Route path="/product/:slug" element={<ProductPage />} />
-             <Route path="/invoices" element={<InvoicesPage />} />
+            <Route path="/invoices" element={<InvoicesPage />} />
             <Route path="/demo" element={<Demo />} />
             <Route
               path="*"
               element={<div>No route matched: {location.pathname}</div>}
             />
           </Routes>
-          {!showSidebar && <Footer />}
+          {!showAppSidebar && <Footer />}
         </div>
       </SidebarProvider>
       <Toaster />
