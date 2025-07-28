@@ -20,7 +20,7 @@ export default function ProductListPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [starPositions, setStarPositions] = useState<StarPosition[]>([]);
 
-  const baseUrl = import.meta.env.VITE_SERVER_BASE_URL || "https://your-default-domain.com";
+  const baseUrl = import.meta.env.VITE_SERVER_BASE_URL;
   const defaultImage = `${baseUrl}/images/logo.png`;
   const defaultImageAlt = "agentVooc Logo";
 

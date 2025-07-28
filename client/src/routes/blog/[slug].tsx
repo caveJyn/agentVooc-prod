@@ -50,7 +50,7 @@ export default function BlogPostPage() {
   const observerRef = useRef<IntersectionObserver | null>(null);
   const isInitialRender = useRef(true);
 
-  const baseUrl = import.meta.env.VITE_SERVER_BASE_URL || 'https://your-default-domain.com';
+  const baseUrl = import.meta.env.VITE_SERVER_BASE_URL;
   const defaultImage = `${baseUrl}/images/logo.png`;
   const defaultImageAlt = 'agentVooc Logo';
 
@@ -329,8 +329,8 @@ export default function BlogPostPage() {
       dateModified: post.modifiedAt || post.publishedAt,
       image: {
         '@type': 'ImageObject',
-        url: post.mainImage || defaultImage,
-        description: post.mainImageAlt || defaultImageAlt,
+        url: post.mainImage,
+        description: post.mainImageAlt,
       },
       author: {
         '@type': 'Organization',
@@ -439,8 +439,8 @@ export default function BlogPostPage() {
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={`${post.title} | agentVooc`} />
         <meta name="twitter:description" content={post.seoDescription} />
-        <meta name="twitter:image" content={post.mainImage || defaultImage} />
-        <meta name="twitter:image:alt" content={post.mainImageAlt || defaultImageAlt} />
+        <meta name="twitter:image" content={post.mainImage} />
+        <meta name="twitter:image:alt" content={post.mainImageAlt} />
         <meta name="twitter:site" content="@agentVooc" />
         {structuredData && (
           <script type="application/ld+json">{JSON.stringify(structuredData)}</script>

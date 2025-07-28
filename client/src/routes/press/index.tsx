@@ -19,8 +19,9 @@ export default function PressListPage() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [starPositions, setStarPositions] = useState<StarPosition[]>([]);
+  const [hoveredCard, setHoveredCard] = useState<string | null>(null); // Track hovered card
 
-  const baseUrl = import.meta.env.VITE_SERVER_BASE_URL || "https://your-default-domain.com";
+  const baseUrl = import.meta.env.VITE_SERVER_BASE_URL;
   const defaultImage = `${baseUrl}/images/logo.png`;
   const defaultImageAlt = "agentVooc Logo";
 
@@ -200,25 +201,30 @@ export default function PressListPage() {
         ))}
       </div>
       <div className="relative z-10 w-full max-w-6xl mx-auto py-12 px-4">
-        <h1 className="text-3xl font-bold mb-8 text-white">Press</h1>
+        <h1 className="text-3xl font-bold mb-8">Press</h1>
         {posts.length === 0 ? (
-          <div className="text-white">
+          <div>
             <p>No press releases available yet. Check back soon for updates on AI automation innovations!</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {posts.map((post) => (
-              <Card key={post.slug} className="bg-agentvooc-primary-bg border-agentvooc-border">
+              <Card
+                key={post.slug}
+                onMouseEnter={() => setHoveredCard(post.slug)}
+                onMouseLeave={() => setHoveredCard(null)}
+                className="transition-all duration-200 hover:shadow-lg"
+              >
                 <Link
                   to={`/company/press/${post.slug}`}
-                  className="group block p-4 bg-agentvooc-primary-bg rounded-lg border border-agentvooc-border text-white hover:bg-agentvooc-accent hover:text-black hover:shadow-lg transition-all duration-300"
+                  className="block p-4"
                   aria-label={`View press release: ${post.title}`}
                   onClick={() => window.scrollTo(0, 0)}
                 >
                   {post.thumbnailImage && (
-                    <div className="w-full h-32 bg-gray-200 animate-pulse rounded-t-lg mb-2">
+                    <div className="w-full h-32 rounded-t-lg mb-2">
                       <img
-                        src={post.thumbnailImage} // Use pre-formatted URL
+                        src={post.thumbnailImage}
                         alt={post.mainImageAlt || post.title}
                         loading="lazy"
                         className="w-full h-32 object-cover rounded-t-lg"
@@ -230,9 +236,17 @@ export default function PressListPage() {
                       />
                     </div>
                   )}
-                  <h2 className="text-lg font-semibold mb-2">{post.title}</h2>
-                  <p className="text-sm text-gray-300 mb-2 line-clamp-2">{post.excerpt}</p>
-                  <p className="text-xs text-gray-500">
+                  {hoveredCard === post.slug ? (
+                    <div
+                      className="text-lg font-semibold mb-2 footer-link inline-block"
+                    >
+                      {post.title}
+                    </div>
+                  ) : (
+                    <h2 className="text-lg font-semibold mb-2">{post.title}</h2>
+                  )}
+                  <p className="text-sm mb-2 line-clamp-2">{post.excerpt}</p>
+                  <p className="text-sm">
                     Published: {new Date(post.publishedAt).toLocaleDateString()}
                   </p>
                 </Link>

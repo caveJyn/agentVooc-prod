@@ -108,8 +108,8 @@
 
 
         /* AgentVooc Dark Theme */
-        --agentvooc-primary-bg: 180 20% 5%; /* #151E1F */
-        --agentvooc-secondary-bg: 180 20% 7%; /* Slightly lighter dark teal */
+        --agentvooc-primary-bg: 180 12% 4%; /* #151E1F */
+        --agentvooc-secondary-bg: 180 12% 5%; /* Slightly lighter dark teal */
         --agentvooc-primary: 0 0% 98%; /* Near-white text */
         --agentvooc-secondary: 180 10% 70%; /* Light gray for secondary text */
         --agentvooc-accent: 160 100% 85%; /* Neon teal accent */

@@ -113,7 +113,7 @@ export default function DocPage() {
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
   const isInitialRender = useRef(true);
 
-  const baseUrl = import.meta.env.VITE_SERVER_BASE_URL || "https://your-default-domain.com";
+  const baseUrl = import.meta.env.VITE_SERVER_BASE_URL;
   const defaultImage = `${baseUrl}/images/logo.png`;
   const defaultImageAlt = "agentVooc Logo";
 

@@ -6135,7 +6135,16 @@ router.get("/company-pages/:slug?", async (req, res) => {
       query = `*[_type == "companyPage" && slug.current == $slug && published == true][0] {
         title,
         slug,
-        content,
+        content[] {
+          ...,
+          _type == "image" => {
+            ...,
+            asset-> {
+              _id,
+              url
+            }
+          }
+        },
         lastUpdated,
         mainImage {
           asset-> {
@@ -6151,6 +6160,16 @@ router.get("/company-pages/:slug?", async (req, res) => {
       query = `*[_type == "companyPage" && published == true] | order(title asc) {
         title,
         slug,
+        content[] {
+          ...,
+          _type == "image" => {
+            ...,
+            asset-> {
+              _id,
+              url
+            }
+          }
+        },
         lastUpdated,
         mainImage {
           asset-> {
@@ -6416,12 +6435,12 @@ router.get("/product-pages/:slug?", async (req, res) => {
 
 // Static routes in the application
 const staticRoutes = [
-  { path: "/", changefreq: "weekly", priority: 1.0 },
-  { path: "/demo", changefreq: "monthly", priority: 0.8 },
-  { path: "/company/blog", changefreq: "weekly", priority: 0.8 },
-  { path: "/company/press", changefreq: "weekly", priority: 0.8 },
-  { path: "/company/docs", changefreq: "weekly", priority: 0.8 },
-  { path: "/company/contact-us", changefreq: "weekly", priority: 0.8 },
+  { path: "/", changefreq: "hourly", priority: 1.0 },
+  { path: "/demo", changefreq: "daily", priority: 0.8 },
+  { path: "/company/blog", changefreq: "daily", priority: 0.8 },
+  { path: "/company/press", changefreq: "daily", priority: 0.8 },
+  { path: "/company/docs", changefreq: "daily", priority: 0.8 },
+  { path: "/company/contact-us", changefreq: "daily", priority: 0.8 },
   { path: "/company/legal", changefreq: "weekly", priority: 0.8 },
 ];
 
@@ -6487,7 +6506,7 @@ router.get("/sitemap.xml", async (req, res) => {
   <url>
     <loc>${baseUrl}/company/blog/${post.slug.current}</loc>
     <lastmod>${formatLastmod(post.modifiedAt, post.publishedAt)}</lastmod>
-    <changefreq>monthly</changefreq>
+    <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>`
     )
@@ -6498,7 +6517,7 @@ router.get("/sitemap.xml", async (req, res) => {
   <url>
     <loc>${baseUrl}/company/press/${post.slug.current}</loc>
     <lastmod>${formatLastmod(post.modifiedAt, post.publishedAt)}</lastmod>
-    <changefreq>monthly</changefreq>
+    <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>`
     )
@@ -6509,7 +6528,7 @@ router.get("/sitemap.xml", async (req, res) => {
   <url>
     <loc>${baseUrl}/company/${page.slug.current}</loc>
     <lastmod>${formatLastmod(page.lastUpdated, undefined)}</lastmod>
-    <changefreq>monthly</changefreq>
+    <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>`
     )
@@ -6531,7 +6550,7 @@ router.get("/sitemap.xml", async (req, res) => {
   <url>
     <loc>${baseUrl}/product/${page.slug.current}</loc>
     <lastmod>${formatLastmod(page.modifiedAt, page.publishedAt)}</lastmod>
-    <changefreq>monthly</changefreq>
+    <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>`
     )
@@ -6542,7 +6561,7 @@ router.get("/sitemap.xml", async (req, res) => {
   <url>
     <loc>${baseUrl}/company/docs/${doc.slug.current}</loc>
     <lastmod>${formatLastmod(doc.modifiedAt, doc.publishedAt)}</lastmod>
-    <changefreq>monthly</changefreq>
+    <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>`
     )

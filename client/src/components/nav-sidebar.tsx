@@ -42,7 +42,7 @@ export default function NavSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarMenu>
-          {["Home", "Blog", "About"].map((link) => (
+          {["Home", "Blog", "Docs", "About"].map((link) => (
             <SidebarMenuItem key={link}>
               <SidebarMenuButton
                 asChild

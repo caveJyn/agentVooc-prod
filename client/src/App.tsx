@@ -43,6 +43,7 @@ import { Menu } from "lucide-react";
 import { useIsMobile } from "./hooks/use-mobile";
 import Navbar from "./components/navbar";
 import InvoicesPage from "./routes/invoices";
+import AboutPage from "./components/aboutPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -203,6 +204,7 @@ function AppContent() {
               }
             />
             <Route path="/legal/:slug" element={<LegalDocumentPage />} />
+            <Route path="/company/about" element={<AboutPage />} />
             <Route path="/company/:slug" element={<CompanyPage />} />
             <Route path="/company/blog" element={<BlogListPage />} />
             <Route path="/company/blog/:slug" element={<BlogPostPage />} />
