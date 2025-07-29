@@ -11,6 +11,7 @@ export function Footer() {
             agentVooc
           </h3>
           <p>{footerSection.tagline}</p>
+          <div>social logos</div>
         </section>
         <section aria-label="Company Links">
           <h3 className="text-lg font-semibold mb-4">

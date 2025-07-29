@@ -527,192 +527,254 @@ export default function DocPage() {
   const useMobileTOC = isMobile || isNarrowViewport;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-agentvooc-secondary-bg to-agentvooc-primary-bg ">
-      <Helmet>
-        <title>{doc.title} | agentVooc</title>
-        <meta name="description" content={doc.seoDescription} />
-        <meta
-          name="keywords"
-          content={
-            doc.tags?.join(", ") || "AI automation, agentVooc, documentation, technology"
-          }
-        />
-        <meta name="robots" content="index, follow" />
-        <link rel="canonical" href={`${baseUrl}/company/docs/${doc.slug}`} />
-        <link
-          rel="sitemap"
-          href={`${baseUrl}/sitemap.xml`}
-          type="application/xml"
-        />
-        <meta property="og:title" content={`${doc.title} | agentVooc`} />
-        <meta property="og:description" content={doc.seoDescription} />
-        <meta property="og:type" content="article" />
-        <meta property="og:url" content={`${baseUrl}/company/docs/${doc.slug}`} />
-        <meta property="og:image" content={doc.mainImage || defaultImage} />
-        <meta
-          property="og:image:alt"
-          content={doc.mainImageAlt || defaultImageAlt}
-        />
-        <meta property="og:site_name" content="agentVooc" />
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={`${doc.title} | agentVooc`} />
-        <meta name="twitter:description" content={doc.seoDescription} />
-        <meta name="twitter:image" content={doc.mainImage || defaultImage} />
-        <meta
-          name="twitter:image:alt"
-          content={doc.mainImageAlt || defaultImageAlt}
-        />
-        <meta name="twitter:site" content="@agentVooc" />
-        {structuredData && (
-          <script type="application/ld+json">
-            {JSON.stringify(structuredData)}
-          </script>
-        )}
-      </Helmet>
+  <div className="min-h-screen bg-gradient-to-b from-agentvooc-secondary-bg to-agentvooc-primary-bg">
+    <Helmet>
+      <title>{doc.title} | agentVooc</title>
+      <meta name="description" content={doc.seoDescription} />
+      <meta
+        name="keywords"
+        content={
+          doc.tags?.join(", ") || "AI automation, agentVooc, documentation, technology"
+        }
+      />
+      <meta name="robots" content="index, follow" />
+      <link rel="canonical" href={`${baseUrl}/company/docs/${doc.slug}`} />
+      <link
+        rel="sitemap"
+        href={`${baseUrl}/sitemap.xml`}
+        type="application/xml"
+      />
+      <meta property="og:title" content={`${doc.title} | agentVooc`} />
+      <meta property="og:description" content={doc.seoDescription} />
+      <meta property="og:type" content="article" />
+      <meta property="og:url" content={`${baseUrl}/company/docs/${doc.slug}`} />
+      <meta property="og:image" content={doc.mainImage || defaultImage} />
+      <meta
+        property="og:image:alt"
+        content={doc.mainImageAlt || defaultImageAlt}
+      />
+      <meta property="og:site_name" content="agentVooc" />
+      <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:title" content={`${doc.title} | agentVooc`} />
+      <meta name="twitter:description" content={doc.seoDescription} />
+      <meta name="twitter:image" content={doc.mainImage || defaultImage} />
+      <meta
+        name="twitter:image:alt"
+        content={doc.mainImageAlt || defaultImageAlt}
+      />
+      <meta name="twitter:site" content="@agentVooc" />
+      {structuredData && (
+        <script type="application/ld+json">
+          {JSON.stringify(structuredData)}
+        </script>
+      )}
+    </Helmet>
 
-      <Card className="justify-center py-12 px-6 flex flex-col md:flex-row gap-8">
-        <div className="flex gap-20">
-        <main className={`flex-1 ${isNarrowViewport && !isMobile ? "max-w-2xl" : "max-w-4xl"}`}>
-          {useMobileTOC && tocItems.length > 0 && (
-            <MobileTOC
-              tocItems={tocItemsWithActive}
-              isOpen={isTocOpen}
-              onToggle={() => setIsTocOpen(!isTocOpen)}
-              onItemClick={handleTocClick}
-            />
-          )}
-          {doc.heroImage && (
-            <div className="rounded-lg mb-8">
-              <DocImage
-                src={doc.heroImage}
-                alt={doc.heroImageAlt || doc.title}
-                onLoad={(e: React.SyntheticEvent<HTMLImageElement>) =>
-                  (e.currentTarget.parentElement!.style.background = "none")
-                }
-                onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
-                  if (doc.heroImage) {
-                    console.error(
-                      "[DocPage] Hero image failed to load:",
-                      doc.heroImage
-                    );
-                  }
-                  e.currentTarget.style.display = "none";
-                }}
+    <Card className="py-12 px-6">
+      {/* Flex container for main content and TOC */}
+      <div className="flex flex-col md:flex-row gap-8 max-w-7xl mx-auto">
+        <div className="flex gap-8">
+          <main className={`flex-1 ${isNarrowViewport && !isMobile ? "max-w-2xl" : "max-w-4xl"}`}>
+            {useMobileTOC && tocItems.length > 0 && (
+              <MobileTOC
+                tocItems={tocItemsWithActive}
+                isOpen={isTocOpen}
+                onToggle={() => setIsTocOpen(!isTocOpen)}
+                onItemClick={handleTocClick}
               />
-            </div>
-          )}
-          {doc.mainImage && (
-            <div className="rounded-lg mb-8">
-              <DocImage
-                src={doc.mainImage}
-                alt={doc.mainImageAlt || doc.title}
-                onLoad={(e: React.SyntheticEvent<HTMLImageElement>) =>
-                  (e.currentTarget.parentElement!.style.background = "none")
-                }
-                onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
-                  if (doc.mainImage) {
-                    console.error(
-                      "[DocPage] Main image failed to load:",
-                      doc.mainImage
-                    );
+            )}
+            {doc.heroImage && (
+              <div className="rounded-lg mb-8">
+                <DocImage
+                  src={doc.heroImage}
+                  alt={doc.heroImageAlt || doc.title}
+                  onLoad={(e: React.SyntheticEvent<HTMLImageElement>) =>
+                    (e.currentTarget.parentElement!.style.background = "none")
                   }
-                  e.currentTarget.style.display = "none";
-                }}
-              />
-            </div>
-          )}
-
-          <header className="mb-10">
-            <h1 className="text-4xl md:text-5xl font-bold mb-6 leading-tight">
-              {doc.title}
-            </h1>
-
-            <div className="flex flex-wrap items-center gap-6 text-sm opacity-75 mb-6">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
-                <span>
-                  Published{" "}
-                  {new Date(doc.publishedAt).toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </span>
+                  onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+                    if (doc.heroImage) {
+                      console.error(
+                        "[DocPage] Hero image failed to load:",
+                        doc.heroImage
+                      );
+                    }
+                    e.currentTarget.style.display = "none";
+                  }}
+                />
               </div>
-              {doc.modifiedAt && doc.modifiedAt !== doc.publishedAt && (
+            )}
+            {doc.mainImage && (
+              <div className="rounded-lg mb-8">
+                <DocImage
+                  src={doc.mainImage}
+                  alt={doc.mainImageAlt || doc.title}
+                  onLoad={(e: React.SyntheticEvent<HTMLImageElement>) =>
+                    (e.currentTarget.parentElement!.style.background = "none")
+                  }
+                  onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+                    if (doc.mainImage) {
+                      console.error(
+                        "[DocPage] Main image failed to load:",
+                        doc.mainImage
+                      );
+                    }
+                    e.currentTarget.style.display = "none";
+                  }}
+                />
+              </div>
+            )}
+
+            <header className="mb-10">
+              <h1 className="text-4xl md:text-5xl font-bold mb-6 leading-tight">
+                {doc.title}
+              </h1>
+
+              <div className="flex flex-wrap items-center gap-6 text-sm opacity-75 mb-6">
                 <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4" />
+                  <Calendar className="w-4 h-4" />
                   <span>
-                    Updated{" "}
-                    {new Date(doc.modifiedAt).toLocaleDateString("en-US", {
+                    Published{" "}
+                    {new Date(doc.publishedAt).toLocaleDateString("en-US", {
                       year: "numeric",
                       month: "long",
                       day: "numeric",
                     })}
                   </span>
                 </div>
+                {doc.modifiedAt && doc.modifiedAt !== doc.publishedAt && (
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    <span>
+                      Updated{" "}
+                      {new Date(doc.modifiedAt).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {doc.tags && doc.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-8">
+                  {doc.tags.slice(0, 5).map((tag) => (
+                    <span
+                      key={tag}
+                      className="px-3 py-1 text-xs font-medium rounded-full border border-agentvooc-border"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </header>
+
+            <div className="prose prose-lg prose-invert max-w-none">
+              {doc.content ? (
+                <PortableText
+                  value={doc.content}
+                  components={portableTextComponents}
+                />
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-lg opacity-75">
+                    No content available for this documentation.
+                  </p>
+                </div>
               )}
             </div>
+          </main>
 
-            {doc.tags && doc.tags.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-8">
-                {doc.tags.slice(0, 5).map((tag) => (
-                  <span
-                    key={tag}
-                    className="px-3 py-1 text-xs font-medium rounded-full border border-agentvooc-border"
-                  >
-                    {tag}
-                  </span>
-                ))}
+          {!useMobileTOC && tocItems.length > 0 && (
+            <aside className="w-64 sticky top-24 self-start hidden md:block">
+              <div className="rounded-lg p-4 border border-agentvooc-border shadow-agentvooc-glow">
+                <h2 className="text-lg font-semibold mb-4">
+                  Table of Contents
+                </h2>
+                <nav>
+                  <ul className="space-y-2">
+                    {tocItems.map((item) => (
+                      <li
+                        key={item.id}
+                        className={`${
+                          item.style === "h1"
+                            ? "ml-0"
+                            : item.style === "h2"
+                            ? "ml-2"
+                            : item.style === "h3"
+                            ? "ml-4"
+                            : item.style === "h4"
+                            ? "ml-6"
+                            : item.style === "h5"
+                            ? "ml-8"
+                            : "ml-10"
+                        }`}
+                      >
+                        <a
+                          href={`#${item.id}`}
+                          className={`block text-sm hover:text-agentvooc-accent transition-colors ${
+                            activeHeadingId === item.id
+                              ? "font-medium"
+                              : "text-agentvooc-secondary"
+                          }`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            const element = document.getElementById(item.id);
+                            if (element) {
+                              element.scrollIntoView({
+                                behavior: "smooth",
+                                block: "start",
+                              });
+                              window.history.pushState(null, "", `#${item.id}`);
+                              setActiveHeadingId(item.id);
+                            }
+                          }}
+                          aria-label={`Go to section: ${item.text}`}
+                        >
+                          {item.text}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </nav>
               </div>
-            )}
-          </header>
+            </aside>
+          )}
+        </div>
+      </div>
 
-          <div className="prose prose-lg prose-invert max-w-none">
-            {doc.content ? (
-              <PortableText
-                value={doc.content}
-                components={portableTextComponents}
-              />
-            ) : (
-              <div className="text-center py-12">
-                <p className="text-lg opacity-75">
-                  No content available for this documentation.
-                </p>
-              </div>
-            )}
-          </div>
-
-          {doc.relatedContent && doc.relatedContent.length > 0 && (
-  <section className="mt-16">
-    <h2 className="text-3xl font-bold mb-8">Related Content</h2>
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {doc.relatedContent.slice(0, 3).map((item) => (
-        <Card
-          key={`${item._type}-${item.slug}`}
-          onMouseEnter={() => setHoveredCard(item.slug)}
-          onMouseLeave={() => setHoveredCard(null)}
-          className="transition-all duration-200 hover:shadow-lg"
-        >
-          <Link
-            to={`/company/${
-              item._type === "doc"
-                ? "docs"
-                : item._type === "blogPost"
-                ? "blog"
-                : "product"
-            }/${item.slug}`}
-            className="block p-4"
-            aria-label={`View ${
-              item._type === "doc"
-                ? "documentation"
-                : item._type === "blogPost"
-                ? "blog post"
-                : "product"
-            }: ${item.title}`}
-            onClick={() => window.scrollTo(0, 0)}
-          >
-            {/* {item.mainImage && (
+      {/* Related content section moved outside the flex container */}
+      {doc.relatedContent && doc.relatedContent.length > 0 && (
+        <section className="mt-16 w-full max-w-7xl mx-auto">
+          <h2 className="text-3xl font-bold mb-8">Related Content</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {doc.relatedContent.slice(0, 3).map((item) => (
+              <Card
+                key={`${item._type}-${item.slug}`}
+                onMouseEnter={() => setHoveredCard(item.slug)}
+                onMouseLeave={() => setHoveredCard(null)}
+                className="transition-all duration-200 hover:shadow-lg"
+              >
+                <Link
+                  to={`/company/${
+                    item._type === "doc"
+                      ? "docs"
+                      : item._type === "blogPost"
+                      ? "blog"
+                      : "product"
+                  }/${item.slug}`}
+                  className="block p-4"
+                  aria-label={`View ${
+                    item._type === "doc"
+                      ? "documentation"
+                      : item._type === "blogPost"
+                      ? "blog post"
+                      : "product"
+                  }: ${item.title}`}
+                  onClick={() => window.scrollTo(0, 0)}
+                >
+                  {/* {item.mainImage && (
               <div className="w-full h-32 rounded-t-lg mb-2">
                 <DocImage
                   src={item.mainImage}
@@ -733,98 +795,40 @@ export default function DocPage() {
                 />
               </div>
             )} */}
-            <div className="mb-3">
-              <span className="inline-block px-2 py-1 text-xs font-medium bg-white bg-opacity-10 rounded-full">
-                {item._type === "doc"
-                  ? "Documentation"
-                  : item._type === "blogPost"
-                  ? "Blog Post"
-                  : "Product"}
-              </span>
-            </div>
-            {hoveredCard === item.slug ? (
-              <div className="text-lg font-semibold mb-2 footer-link inline-block">
-                {item.title}
-              </div>
-            ) : (
-              <h3 className="text-lg font-semibold mb-2">{item.title}</h3>
-            )}
-            {item.excerpt && (
-              <p className="text-sm mb-2 line-clamp-2">{item.excerpt}</p>
-            )}
-            <p className="text-sm">
-              Published:{" "}
-              {new Date(item.publishedAt).toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}
-            </p>
-          </Link>
-        </Card>
-      ))}
-    </div>
-  </section>
-)}
-        </main>
-
-        {!useMobileTOC && tocItems.length > 0 && (
-          <aside className="w-64 sticky top-24 self-start hidden md:block">
-            <div className="rounded-lg p-4 border border-agentvooc-border shadow-agentvooc-glow">
-              <h2 className="text-lg font-semibold mb-4 ">
-                Table of Contents
-              </h2>
-              <nav>
-                <ul className="space-y-2">
-                  {tocItems.map((item) => (
-                    <li
-                      key={item.id}
-                      className={`${
-                        item.style === "h1"
-                          ? "ml-0"
-                          : item.style === "h2"
-                          ? "ml-2"
-                          : item.style === "h3"
-                          ? "ml-4"
-                          : item.style === "h4"
-                          ? "ml-6"
-                          : item.style === "h5"
-                          ? "ml-8"
-                          : "ml-10"
-                      }`}
-                    >
-                      <a
-                        href={`#${item.id}`}
-                        className={`block text-sm hover:text-agentvooc-accent transition-colors ${
-                          activeHeadingId === item.id
-                            ? "font-medium"
-                            : "text-agentvooc-secondary"
-                        }`}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          const element = document.getElementById(item.id);
-                          if (element) {
-                            element.scrollIntoView({
-                              behavior: "smooth",
-                              block: "start",
-                            });
-                            window.history.pushState(null, "", `#${item.id}`);
-                            setActiveHeadingId(item.id);
-                          }
-                        }}
-                        aria-label={`Go to section: ${item.text}`}
-                      >
-                        {item.text}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </nav>
-            </div>
-          </aside>
-        )}
-        </div>
-      </Card>
-    </div>
-  );
+                  <div className="mb-3">
+                    <span className="inline-block px-2 py-1 text-xs font-medium bg-white bg-opacity-10 rounded-full">
+                      {item._type === "doc"
+                        ? "Documentation"
+                        : item._type === "blogPost"
+                        ? "Blog Post"
+                        : "Product"}
+                    </span>
+                  </div>
+                  {hoveredCard === item.slug ? (
+                    <div className="text-lg font-semibold mb-2 footer-link inline-block">
+                      {item.title}
+                    </div>
+                  ) : (
+                    <h3 className="text-lg font-semibold mb-2">{item.title}</h3>
+                  )}
+                  {item.excerpt && (
+                    <p className="text-sm mb-2 line-clamp-2">{item.excerpt}</p>
+                  )}
+                  <p className="text-sm">
+                    Published:{" "}
+                    {new Date(item.publishedAt).toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </p>
+                </Link>
+              </Card>
+            ))}
+          </div>
+        </section>
+      )}
+    </Card>
+  </div>
+);
 }

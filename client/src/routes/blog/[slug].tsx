@@ -286,8 +286,27 @@ export default function BlogPostPage() {
         <p className="mb-6 leading-relaxed text-lg">
           {children}
         </p>
-      ),
-    },
+      ),blockquote: ({ children, value }) => (
+      <blockquote
+        id={value._key}
+        className="border-l-4 ml-20 border-agentvooc-primary/50 pl-6 py-4 my-8 bg-white bg-opacity-5 rounded-r-lg text-lg leading-relaxed text-agentvooc-primary"
+      >
+        {children}
+      </blockquote>
+    ),
+  },
+  marks: {
+    strong: ({ children }) => (
+      <span className="font-bold text-agentvooc-primary">
+        {children}
+      </span>
+    ),
+    em: ({ children }) => (
+      <span className="italic text-agentvooc-primary">
+        {children}
+      </span>
+    ),
+  },
     types: {
       image: ({ value }) => {
         if (!value?.asset?.url) {

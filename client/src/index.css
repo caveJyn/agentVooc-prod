@@ -56,7 +56,7 @@
         --agentvooc-text-h4: 180 20% 10%;
         --agentvooc-text-h5: 180 20% 10%;
         --agentvooc-text-h6: 180 20% 10%;
-        --agentvooc-text-p: 180 10% 30%;
+        --agentvooc-text-p: 180 10% 20%;
         --agentvooc-text-li: 180 10% 30%;
         --agentvooc-text-label: 180 10% 20%;
         --agentvooc-text-navbar-footer: 160 80% 0%;
@@ -128,10 +128,10 @@
         --agentvooc-text-h4: 0 0% 98%;
         --agentvooc-text-h5: 0 0% 98%;
         --agentvooc-text-h6: 0 0% 98%;
-        --agentvooc-text-p: 180 10% 60%;
+        --agentvooc-text-p: 180 10% 73%;
         --agentvooc-text-li: 180 10% 70%;
         --agentvooc-text-label: 180 10% 70%;
-        --agentvooc-text-navbar-footer: 160 100% 85%;
+        --agentvooc-text-navbar-footer:  0 0% 98%;
         --agentvooc-text-hero-title: 0 0% 98%;
 
         --agentvooc-card-bg: 180 19% 11%; /* Dark teal card background */
