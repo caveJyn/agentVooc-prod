@@ -145,7 +145,7 @@ export const Hero = ({ heroSection }: HeroProps) => {
           >
             {subtitle}
           </h2>
-          <NavLink to="https://agentvooc.com/company/blog/how-it-works">
+          <NavLink to="https://agentvooc.com/demo">
             <Button
               variant="default"
               size="lg"
