@@ -96,6 +96,12 @@ function AppContent() {
             src="https://static.ads-twitter.com/uwt.js"
             type="text/javascript"
           ></script>
+          {/* Add AdSense Script */}
+          <script
+            async
+            src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9622114924468888"
+            crossOrigin="anonymous"
+          ></script>
         </Helmet>
         {showAppSidebar && <AppSidebar />}
         {showDocsSidebar && <DocsSidebar />}

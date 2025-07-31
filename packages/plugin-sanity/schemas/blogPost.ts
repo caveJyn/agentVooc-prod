@@ -151,6 +151,51 @@ export default {
       description: "Select up to 3 related blog posts, press posts, or product posts to display at the bottom of the blog post",
       validation: (Rule: any) => Rule.max(3), // Limit to 3 related posts
     },
+
+    {
+      name: 'adSlotHeader',
+      title: 'AdSense Slot ID (Header)',
+      type: 'string',
+      description: 'Google AdSense ad slot ID for the ad displayed after the hero/main image on the blog post page (e.g., 1234567890)',
+      validation: (Rule: any) =>
+        Rule.optional().regex(/^\d{10}$/, {
+          name: 'adSlot',
+          invert: false,
+        }),
+    },
+    {
+      name: 'adSlotContent',
+      title: 'AdSense Slot ID (Content)',
+      type: 'string',
+      description: 'Google AdSense ad slot ID for the ad displayed before related content on the blog post page (e.g., 9876543210)',
+      validation: (Rule: any) =>
+        Rule.optional().regex(/^\d{10}$/, {
+          name: 'adSlot',
+          invert: false,
+        }),
+    },
+    {
+      name: 'adSlotRightSide',
+      title: 'AdSense Slot ID (Sidebar)',
+      type: 'string',
+      description: 'Google AdSense ad slot ID for the ad displayed in the sidebar on the blog post page (e.g., 5555555555)',
+      validation: (Rule: any) =>
+        Rule.optional().regex(/^\d{10}$/, {
+          name: 'adSlot',
+          invert: false,
+        }),
+    },
+    {
+      name: 'adSlotIndex',
+      title: 'AdSense Slot ID (Blog Index)',
+      type: 'string',
+      description: 'Google AdSense ad slot ID for the ad displayed above the blog grid on the blog index page (e.g., 4444444444)',
+      validation: (Rule: any) =>
+        Rule.optional().regex(/^\d{10}$/, {
+          name: 'adSlot',
+          invert: false,
+        }),
+    },
     {
       name: "published",
       title: "Published",

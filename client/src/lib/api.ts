@@ -272,6 +272,10 @@ interface LandingPage {
     companyLinks: Array<{ label: string; url: string }>;
     productLinks: Array<{ label: string; url: string }>;
     legalLinks: Array<{ label: string; url: string }>;
+    socialLinks: Array<{
+      platform: string;
+      url: string;
+    }>;
   };
   subFooterSection: {
     ctaText: string;
@@ -361,6 +365,10 @@ export interface BlogPost {
   thumbnailImage?: string;
   mediumImage?: string;
   tags?: string[];
+  adSlotHeader?: string | null;
+  adSlotContent?: string | null;
+  adSlotRightSide?: string | null;
+  adSlotIndex?: string | null;
   relatedContent?: Array<{
     _type: "blogPost" | "pressPost" | "productPage";
     title: string;

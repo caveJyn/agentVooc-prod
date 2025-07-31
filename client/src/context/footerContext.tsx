@@ -6,6 +6,7 @@ interface FooterSection {
   companyLinks: Array<{ label: string; url: string }>;
   productLinks: Array<{ label: string; url: string }>;
   legalLinks: Array<{ label: string; url: string }>;
+  socialLinks: Array<{ platform: string; url: string }>;
 }
 
 interface SubFooterSection {
@@ -32,6 +33,12 @@ const fallbackFooterSection: FooterSection = {
     { label: "Content Moderation Policy", url: "/legal/content-moderation" },
     { label: "Payment Policies", url: "/legal/payment-policies" },
   ],
+  socialLinks: [
+    { platform: "twitter", url: "https://twitter.com/agentVooc" },
+    { platform: "facebook", url: "https://facebook.com/agentVooc" },
+    { platform: "whatsapp", url: "https://wa.me/1234567890" },
+    { platform: "github", url: "https://github.com/agentVooc" },
+  ],
 };
 
 const fallbackSubFooterSection: SubFooterSection = {
@@ -57,7 +64,15 @@ export function FooterProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const fetchFooterData = async () => {
       try {
-        const [landingResponse, legalResponse, companyResponse, productResponse, blogResponse, pressResponse, docsResponse] = await Promise.all([
+        const [
+          landingResponse,
+          legalResponse,
+          companyResponse,
+          productResponse,
+          blogResponse,
+          pressResponse,
+          docsResponse,
+        ] = await Promise.all([
           apiClient.getLandingPage(),
           apiClient.getLegalDocuments(),
           apiClient.getCompanyPages(),
@@ -67,7 +82,7 @@ export function FooterProvider({ children }: { children: React.ReactNode }) {
           apiClient.getDocs(),
         ]);
 
-        console.log("[FooterProvider] Company Pages:", companyResponse); // Debug log
+        console.log("[FooterProvider] Company Pages:", companyResponse);
 
         const landingFooter = landingResponse.landingPage.footerSection || fallbackFooterSection;
         const landingSubFooter = landingResponse.landingPage.subFooterSection || fallbackSubFooterSection;
@@ -90,23 +105,17 @@ export function FooterProvider({ children }: { children: React.ReactNode }) {
         const blogPosts = Array.isArray(blogResponse.blogPosts)
           ? blogResponse.blogPosts
           : [blogResponse.blogPosts];
-        const blogLinks = blogPosts.length > 0
-          ? [{ label: "Blog", url: "/company/blog" }]
-          : [];
+        const blogLinks = blogPosts.length > 0 ? [{ label: "Blog", url: "/company/blog" }] : [];
 
         const pressPosts = Array.isArray(pressResponse.pressPosts)
           ? pressResponse.pressPosts
           : [pressResponse.pressPosts];
-        const pressLinks = pressPosts.length > 0
-          ? [{ label: "Press", url: "/company/press" }]
-          : [];
+        const pressLinks = pressPosts.length > 0 ? [{ label: "Press", url: "/company/press" }] : [];
 
         const docs = Array.isArray(docsResponse.docs)
           ? docsResponse.docs
           : [docsResponse.docs];
-        const docsLinks = docs.length > 0
-          ? [{ label: "Documentation", url: "/company/docs" }]
-          : [];
+        const docsLinks = docs.length > 0 ? [{ label: "Documentation", url: "/company/docs" }] : [];
 
         const productPages = Array.isArray(productResponse.productPages)
           ? productResponse.productPages
@@ -118,14 +127,11 @@ export function FooterProvider({ children }: { children: React.ReactNode }) {
 
         const updatedFooterSection = {
           tagline: landingFooter.tagline || fallbackFooterSection.tagline,
-          companyLinks: [
-            ...companyLinks,
-            ...blogLinks,
-            ...pressLinks,
-            ...docsLinks,
-          ],
-          productLinks: productLinks.length > 0 ? productLinks : landingFooter.productLinks || fallbackFooterSection.productLinks,
+          companyLinks: [...companyLinks, ...blogLinks, ...pressLinks, ...docsLinks],
+          productLinks:
+            productLinks.length > 0 ? productLinks : landingFooter.productLinks || fallbackFooterSection.productLinks,
           legalLinks: legalLinks.length > 0 ? legalLinks : landingFooter.legalLinks || fallbackFooterSection.legalLinks,
+          socialLinks: landingFooter.socialLinks || fallbackFooterSection.socialLinks,
         };
 
         setFooterSection(updatedFooterSection);

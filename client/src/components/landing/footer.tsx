@@ -1,7 +1,24 @@
 import { useFooter } from "@/context/footerContext";
+import { X, Facebook, MessageCircle, Github } from "lucide-react";
 
 export function Footer() {
   const { footerSection, subFooterSection } = useFooter();
+
+  // Map platform to corresponding Lucide icon
+  const getSocialIcon = (platform: string) => {
+    switch (platform.toLowerCase()) {
+      case "twitter":
+        return <X className="w-6 h-6" aria-hidden="true" />;
+      case "facebook":
+        return <Facebook className="w-6 h-6" aria-hidden="true" />;
+      case "whatsapp":
+        return <MessageCircle className="w-6 h-6" aria-hidden="true" />;
+      case "github":
+        return <Github className="w-6 h-6" aria-hidden="true" />;
+      default:
+        return null;
+    }
+  };
 
   return (
     <footer className="py-12 px-4 bg-agentvooc-primary-bg border-t border-agentvooc-border  animate-fade-in">
@@ -11,7 +28,20 @@ export function Footer() {
             agentVooc
           </h3>
           <p>{footerSection.tagline}</p>
-          <div>social logos</div>
+          <div className="flex space-x-4 mt-4">
+            {footerSection.socialLinks.map((social, index) => (
+              <a
+                key={index}
+                href={social.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`Follow us on ${social.platform}`}
+                className="text-agentvooc-accent hover:text-agentvooc-accent-dark transition-colors"
+              >
+                {getSocialIcon(social.platform)}
+              </a>
+            ))}
+          </div>
         </section>
         <section aria-label="Company Links">
           <h3 className="text-lg font-semibold mb-4">

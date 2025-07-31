@@ -3411,21 +3411,31 @@ elizaLogger.debug("[CLIENT-DIRECT] validatedMessageExamples:", JSON.stringify(va
 
 
 router.get("/characters", async (req, res) => {
+  let userId; // Declare userId at the top to ensure it's in scope
   try {
     const session = await Session.getSession(req, res, { sessionRequired: true });
-    const userId = session.getUserId();
+    userId = session.getUserId();
     if (!userId) {
-      elizaLogger.warn("[CLIENT-DIRECT] No userId found in session");
+      elizaLogger.warn("[CLIENT-DIRECT] No userId found in session", { userId: null });
       return res.status(401).json({ error: "[CLIENT-DIRECT] Unauthorized: No user ID found in session" });
     }
+    
+    elizaLogger.info("[CLIENT-DIRECT] Fetching characters for user", { userId });
+
     const User = await sanityClient.fetch(
       `*[_type == "User" && userId == $userId][0]`,
       { userId }
     );
     if (!User) {
-      elizaLogger.warn(`[CLIENT-DIRECT] No User found for userId: ${userId}`);
+      elizaLogger.warn("[CLIENT-DIRECT] No User found for userId", { userId });
       return res.status(404).json({ error: "[CLIENT-DIRECT] User not found in Sanity" });
     }
+
+    elizaLogger.info("[CLIENT-DIRECT] User found", { 
+      userId, 
+      sanityUserId: User._id 
+    });
+
     const query = `
       *[_type == "character" && createdBy._ref == $userId] {
         _id,
@@ -3451,89 +3461,143 @@ router.get("/characters", async (req, res) => {
       }
     `;
     const agents = await sanityClient.fetch(query, { userId });
+
+    elizaLogger.info("[CLIENT-DIRECT] Characters fetched", { 
+      userId,
+      characterCount: agents.length,
+      characterIds: agents.map(agent => agent.id)
+    });
+
     const processedAgents = agents.map(agent => ({
       ...agent,
       profile: agent.profile?.image
         ? { image: urlFor(agent.profile.image).url() }
-        : undefined, // Updated: Process profile.image with urlFor
+        : undefined,
     }));
+
+    elizaLogger.info("[CLIENT-DIRECT] Characters processed", { 
+      userId,
+      characterCount: processedAgents.length
+    });
+
     res.json({ agents: processedAgents });
   } catch (error) {
-    elizaLogger.error("[CLIENT-DIRECT] Error fetching characters:", error);
+    elizaLogger.error("[CLIENT-DIRECT] Error fetching characters", { 
+      userId: userId || null, // Fallback to null if userId is undefined
+      error: error.message,
+      stack: error.stack
+    });
     res.status(500).json({ error: "[CLIENT-DIRECT] Failed to fetch characters", details: error.message });
   }
 });
 
-  // New endpoint: GET /characters/:characterId
-  router.get("/characters/:characterId", async (req, res) => {
-    try {
-      const session = await Session.getSession(req, res, { sessionRequired: true });
-      const userId = session.getUserId();
-      if (!userId) {
-        elizaLogger.warn("[CLIENT-DIRECT] No userId found in session");
-        return res.status(401).json({ error: "[CLIENT-DIRECT] Unauthorized: No user ID found in session" });
-      }
-
-      const User = await sanityClient.fetch(
-        `*[_type == "User" && userId == $userId][0]`,
-        { userId }
-      );
-      if (!User) {
-        elizaLogger.warn(`[CLIENT-DIRECT] No User found for userId: ${userId}`);
-        return res.status(404).json({ error: "[CLIENT-DIRECT] User not found in Sanity" });
-      }
-
-      const { characterId } = req.params;
-      if (!validateUuid(characterId)) {
-        return res.status(400).json({
-          error: "Invalid characterId format. Expected to be a UUID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-        });
-      }
-
-      const query = `
-        *[_type == "character" && id == $characterId && createdBy._ref == $userRef][0] {
-          _id,
-          id,
-          name,
-          username,
-          system,
-          bio,
-          lore,
-          topics,
-          adjectives,
-          postExamples,
-          messageExamples,
-          modelProvider,
-          plugins,
-          settings,
-          style,
-          knowledge,
-          enabled,
-          profile {
-            image
-          }
-        }
-      `;
-      const character = await sanityClient.fetch(query, { characterId, userRef: User._id });
-
-      if (!character) {
-        elizaLogger.warn(`[CLIENT-DIRECT] Character not found for characterId: ${characterId} and userRef: ${User._id}`);
-        return res.status(404).json({ error: "[CLIENT-DIRECT] Character not found or access denied" });
-      }
-
-      const processedCharacter = {
-        ...character,
-        profile: character.profile?.image
-          ? { image: urlFor(character.profile.image).url() }
-          : undefined,
-      };
-
-      res.json({ character: processedCharacter });
-    } catch (error) {
-      elizaLogger.error("[CLIENT-DIRECT] Error fetching character:", error);
-      res.status(500).json({ error: "[CLIENT-DIRECT] Failed to fetch character", details: error.message });
+// New endpoint: GET /characters/:characterId
+router.get("/characters/:characterId", async (req, res) => {
+  let userId; // Declare userId at the top to ensure it's in scope
+  try {
+    const session = await Session.getSession(req, res, { sessionRequired: true });
+    userId = session.getUserId();
+    if (!userId) {
+      elizaLogger.warn("[CLIENT-DIRECT] No userId found in session", { userId: null });
+      return res.status(401).json({ error: "[CLIENT-DIRECT] Unauthorized: No user ID found in session" });
     }
-  });
+
+    elizaLogger.info("[CLIENT-DIRECT] Fetching character", { 
+      userId, 
+      characterId: req.params.characterId 
+    });
+
+    const User = await sanityClient.fetch(
+      `*[_type == "User" && userId == $userId][0]`,
+      { userId }
+    );
+    if (!User) {
+      elizaLogger.warn("[CLIENT-DIRECT] No User found for userId", { userId });
+      return res.status(404).json({ error: "[CLIENT-DIRECT] User not found in Sanity" });
+    }
+
+    elizaLogger.info("[CLIENT-DIRECT] User found for character fetch", { 
+      userId, 
+      sanityUserId: User._id 
+    });
+
+    const { characterId } = req.params;
+    if (!validateUuid(characterId)) {
+      elizaLogger.warn("[CLIENT-DIRECT] Invalid characterId format", { 
+        userId, 
+        characterId 
+      });
+      return res.status(400).json({
+        error: "Invalid characterId format. Expected to be a UUID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+      });
+    }
+
+    const query = `
+      *[_type == "character" && id == $characterId && createdBy._ref == $userRef][0] {
+        _id,
+        id,
+        name,
+        username,
+        system,
+        bio,
+        lore,
+        topics,
+        adjectives,
+        postExamples,
+        messageExamples,
+        modelProvider,
+        plugins,
+        settings,
+        style,
+        knowledge,
+        enabled,
+        profile {
+          image
+        }
+      }
+    `;
+    const character = await sanityClient.fetch(query, { characterId, userRef: User._id });
+
+    if (!character) {
+      elizaLogger.warn("[CLIENT-DIRECT] Character not found", { 
+        userId, 
+        characterId, 
+        userRef: User._id 
+      });
+      return res.status(404).json({ error: "[CLIENT-DIRECT] Character not found or access denied" });
+    }
+
+    elizaLogger.info("[CLIENT-DIRECT] Character fetched", { 
+      userId, 
+      characterId, 
+      characterName: character.name,
+      characterUsername: character.username
+    });
+
+    const processedCharacter = {
+      ...character,
+      profile: character.profile?.image
+        ? { image: urlFor(character.profile.image).url() }
+        : undefined,
+    };
+
+    elizaLogger.info("[CLIENT-DIRECT] Character processed", { 
+      userId, 
+      characterId, 
+      hasProfileImage: !!processedCharacter.profile?.image 
+    });
+
+    res.json({ character: processedCharacter });
+  } catch (error) {
+    elizaLogger.error("[CLIENT-DIRECT] Error fetching character", { 
+      userId: userId || null, // Fallback to null if userId is undefined
+      characterId: req.params.characterId, 
+      error: error.message,
+      stack: error.stack
+    });
+    res.status(500).json({ error: "[CLIENT-DIRECT] Failed to fetch character", details: error.message });
+  }
+});
 
     
     async function mapSanityPlugins(plugins: any[]): Promise<Plugin[]> {
@@ -4966,7 +5030,8 @@ router.post("/agents/:agentId/set", async (req, res) => {
         tagline,
         companyLinks[] { label, url },
         productLinks[] { label, url },
-        legalLinks[] { label, url }
+        legalLinks[] { label, url },
+        socialLinks[] { platform, url }
       },
       subFooterSection {
         ctaText,
@@ -5545,6 +5610,9 @@ router.get("/blog-posts/:slug?", async (req, res) => {
           }
         },
         tags,
+        adSlotHeader,
+        adSlotContent,
+        adSlotRightSide,
         relatedContent[0..2]-> {
           _type,
           title,
@@ -5594,7 +5662,8 @@ router.get("/blog-posts/:slug?", async (req, res) => {
             url
           }
         },
-        tags
+        tags,
+        adSlotIndex
       }`;
     }
 
@@ -5629,6 +5698,7 @@ router.get("/blog-posts/:slug?", async (req, res) => {
           mediumImage: post.mediumImage?.asset?.url
             ? urlFor(post.mediumImage.asset).width(600).height(400).fit("crop").quality(80).format("webp").url()
             : null,
+          adSlotIndex: post.adSlotIndex || null,
           relatedContent: post.relatedContent?.map((item) => ({
             _type: item._type,
             title: item.title,
@@ -5663,6 +5733,9 @@ router.get("/blog-posts/:slug?", async (req, res) => {
           mediumImage: blogPosts.mediumImage?.asset?.url
             ? urlFor(blogPosts.mediumImage.asset).width(600).height(400).fit("crop").quality(80).format("webp").url()
             : null,
+          adSlotHeader: blogPosts.adSlotHeader || null,
+          adSlotContent: blogPosts.adSlotContent || null,
+          adSlotRightSide: blogPosts.adSlotRightSide || null,
           relatedContent: blogPosts.relatedContent?.map((item) => ({
             _type: item._type,
             title: item.title,

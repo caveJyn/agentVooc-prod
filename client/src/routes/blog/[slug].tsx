@@ -5,6 +5,8 @@ import { Loader2, Menu, X, Clock, Calendar } from 'lucide-react';
 import { apiClient, type BlogPost } from '@/lib/api';
 import { PortableText, PortableTextComponents } from '@portabletext/react';
 import { Button } from '@/components/ui/button';
+import AdSenseUnit from '@/components/adSenseUnit';
+import { Card } from '@/components/ui/card';
 
 // Define types for content blocks to fix TypeScript errors
 interface BlockChild {
@@ -24,12 +26,12 @@ interface TocItem {
 const BlogImage = memo(
   ({ src, alt, className, onError, onLoad }: { src: string; alt: string; className?: string; onError?: (e: React.SyntheticEvent<HTMLImageElement>) => void; onLoad?: (e: React.SyntheticEvent<HTMLImageElement>) => void }) => {
     return (
-      <div className="rounded-xl overflow-hidden shadow-lg mb-6">
+      <div className="rounded-xl overflow-hidden shadow-lg mb-6 w-full">
         <img
           src={src}
           alt={alt}
           loading="lazy"
-          className={className || 'w-full h-auto'}
+          className={className || 'w-full h-auto object-contain'}
           onLoad={onLoad}
           onError={onError}
         />
@@ -214,39 +216,33 @@ export default function BlogPostPage() {
     tocItems: (TocItem & { isActive: boolean })[];
     onItemClick: (id: string) => void;
   }) => (
-    <aside
-      className="hidden lg:block w-72 ml-12 sticky top-24 max-h-[calc(100vh-6rem)] overflow-y-auto"
-      role="navigation"
-      aria-label="Table of Contents"
-    >
-      <div className="bg-agentvooc-primary-bg rounded-xl border border-agentvooc-border p-6 shadow-lg">
-        <h2 className="text-xl font-bold mb-6 text-agentvooc-primary">Contents</h2>
-        <ul className="space-y-1">
-          {tocItems.map((item) => (
-            <li
-              key={item.id}
-              className={`cursor-pointer transition-all duration-200 hover:bg-white hover:bg-opacity-5 rounded-lg border-l-4 ${
-                item.isActive ? 'border-l bg-white bg-opacity-10' : 'border-l-transparent'
-              }`}
-              onClick={() => onItemClick(item.id)}
-              aria-current={item.isActive ? 'true' : undefined}
-            >
-              <div className={`px-3 py-2 ${
-                item.style === 'h1'
-                  ? 'ml-0 text-base font-semibold'
-                  : item.style === 'h2'
-                    ? 'ml-4 text-base'
-                    : item.style === 'h3'
-                      ? 'ml-8 text-sm'
-                      : 'ml-12 text-sm opacity-90'
-              }`}>
-                {item.text}
-              </div>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </aside>
+    <div className="bg-agentvooc-primary-bg rounded-xl border border-agentvooc-border p-6 shadow-lg">
+      <h2 className="text-xl font-bold mb-6">Contents</h2>
+      <ul className="space-y-1">
+        {tocItems.map((item) => (
+          <li
+            key={item.id}
+            className={`cursor-pointer transition-all duration-200 hover:bg-white hover:bg-opacity-5 rounded-lg border-l-4 ${
+              item.isActive ? '' : 'border-l-transparent'
+            }`}
+            onClick={() => onItemClick(item.id)}
+            aria-current={item.isActive ? 'true' : undefined}
+          >
+            <div className={`px-3 py-2 ${
+              item.style === 'h1'
+                ? 'ml-0 text-base font-semibold'
+                : item.style === 'h2'
+                  ? 'ml-4 text-base'
+                  : item.style === 'h3'
+                    ? 'ml-8 text-sm'
+                    : 'ml-12 text-sm opacity-90'
+            }`}>
+              {item.text}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
   ));
 
   // Custom PortableText components for SEO and TOC - memoized to prevent recreation
@@ -286,27 +282,28 @@ export default function BlogPostPage() {
         <p className="mb-6 leading-relaxed text-lg">
           {children}
         </p>
-      ),blockquote: ({ children, value }) => (
-      <blockquote
-        id={value._key}
-        className="border-l-4 ml-20 border-agentvooc-primary/50 pl-6 py-4 my-8 bg-white bg-opacity-5 rounded-r-lg text-lg leading-relaxed text-agentvooc-primary"
-      >
-        {children}
-      </blockquote>
-    ),
-  },
-  marks: {
-    strong: ({ children }) => (
-      <span className="font-bold text-agentvooc-primary">
-        {children}
-      </span>
-    ),
-    em: ({ children }) => (
-      <span className="italic text-agentvooc-primary">
-        {children}
-      </span>
-    ),
-  },
+      ),
+      blockquote: ({ children, value }) => (
+  <blockquote
+    id={value._key}
+    className="border-l-4 border-agentvooc-primary/50 pl-4 sm:pl-6 py-4 my-8 bg-white bg-opacity-5 rounded-r-lg text-lg leading-relaxed text-agentvooc-primary ml-0 sm:ml-2 lg:ml-8 mr-0 max-w-full overflow-x-auto"
+  >
+    {children}
+  </blockquote>
+),
+    },
+    marks: {
+      strong: ({ children }) => (
+        <span className="font-bold text-agentvooc-primary">
+          {children}
+        </span>
+      ),
+      em: ({ children }) => (
+        <span className="italic text-agentvooc-primary">
+          {children}
+        </span>
+      ),
+    },
     types: {
       image: ({ value }) => {
         if (!value?.asset?.url) {
@@ -467,9 +464,9 @@ export default function BlogPostPage() {
       </Helmet>
       
       <article className="max-w-7xl mx-auto py-12 px-6">
-        <div className="flex gap-8">
+        <div className="flex flex-col lg:flex-row gap-8">
           {/* Main Content */}
-          <main className="flex-1 max-w-4xl">
+          <main className="flex-1 max-w-none lg:max-w-4xl">
             {/* Mobile TOC */}
             {toc.length > 0 && (
               <MobileTocComponent
@@ -482,31 +479,38 @@ export default function BlogPostPage() {
 
             {/* Hero/Main Image */}
             {post.heroImage && (
-            <div className="rounded-lg mb-8">
-              <BlogImage
-                src={post.heroImage}
-                alt={post.heroImageAlt || post.title}
-                onLoad={(e) => (e.currentTarget.parentElement!.style.background = 'none')}
-                onError={(e) => {
-                  console.error('[BlogPostPage] Hero image failed to load:', post.heroImage);
-                  e.currentTarget.style.display = 'none';
-                }}
-              />
-            </div>
-          )}
-          {post.mainImage && (
-            <div className="rounded-lg mb-8">
-              <BlogImage
-                src={post.mainImage}
-                alt={post.mainImageAlt || post.title}
-                onLoad={(e) => (e.currentTarget.parentElement!.style.background = 'none')}
-                onError={(e) => {
-                  console.error('[BlogPostPage] Main image failed to load:', post.mainImage);
-                  e.currentTarget.style.display = 'none';
-                }}
-              />
-            </div>
-          )}
+              <div className="rounded-lg mb-8">
+                <BlogImage
+                  src={post.heroImage}
+                  alt={post.heroImageAlt || post.title}
+                  onLoad={(e) => (e.currentTarget.parentElement!.style.background = 'none')}
+                  onError={(e) => {
+                    console.error('[BlogPostPage] Hero image failed to load:', post.heroImage);
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+              </div>
+            )}
+            {post.mainImage && (
+              <div className="rounded-lg mb-8">
+                <BlogImage
+                  src={post.mainImage}
+                  alt={post.mainImageAlt || post.title}
+                  onLoad={(e) => (e.currentTarget.parentElement!.style.background = 'none')}
+                  onError={(e) => {
+                    console.error('[BlogPostPage] Main image failed to load:', post.mainImage);
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+              </div>
+            )}
+
+            {/* AdSense Header Ad */}
+            {post.adSlotHeader && (
+              <div className="mb-8">
+                <AdSenseUnit adSlot={post.adSlotHeader} format="auto" className="mx-auto" />
+              </div>
+            )}
 
             {/* Article Header */}
             <header className="mb-10">
@@ -562,6 +566,13 @@ export default function BlogPostPage() {
               )}
             </div>
 
+            {/* AdSense Content Ad */}
+            {post.adSlotContent && (
+              <div className="my-8">
+                <AdSenseUnit adSlot={post.adSlotContent} format="auto" className="mx-auto" />
+              </div>
+            )}
+
             {/* Gallery */}
             {post.galleryImages && post.galleryImages.length > 0 && (
               <section className="mt-16">
@@ -592,10 +603,10 @@ export default function BlogPostPage() {
                 <h2 className="text-3xl font-bold mb-8">You might also like</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {post.relatedContent.slice(0, 3).map((item) => (
+                    <Card>
                     <Link
                       key={`${item._type}-${item.slug}`}
                       to={`/company/${item._type === 'blogPost' ? 'blog' : item._type === 'pressPost' ? 'press' : 'products'}/${item.slug}`}
-                      className="group block bg-agentvooc-primary-bg rounded-xl border border-agentvooc-border hover:border-white hover:bg-white hover:bg-opacity-5 transition-all duration-300 overflow-hidden"
                       aria-label={`View ${item._type === 'blogPost' ? 'blog post' : item._type === 'pressPost' ? 'press release' : 'product'}: ${item.title}`}
                       onClick={() => window.scrollTo(0, 0)}
                     >
@@ -615,11 +626,11 @@ export default function BlogPostPage() {
                       )}
                       <div className="p-6">
                         <div className="mb-3">
-                          <span className="inline-block px-2 py-1 text-xs font-medium bg-white bg-opacity-10 rounded-full">
+                          <span className="inline-block px-2 py-1 text-xs font-medium rounded-full">
                             {item._type === 'blogPost' ? 'Blog Post' : item._type === 'pressPost' ? 'Press Release' : 'Product'}
                           </span>
                         </div>
-                        <h3 className="text-lg font-semibold mb-2 group-hover:text-white transition-colors">
+                        <h3 className="text-lg font-semibold mb-2 group-hover:text-agentvooc-accent transition-colors">
                           {item.title}
                         </h3>
                         {item.excerpt && (
@@ -629,18 +640,27 @@ export default function BlogPostPage() {
                         )}
                       </div>
                     </Link>
+                    </Card>
                   ))}
+                  
                 </div>
               </section>
             )}
           </main>
 
-          {/* Desktop TOC */}
+          {/* Sidebar: TOC and Ad */}
           {toc.length > 0 && (
-            <DesktopTocComponent
-              tocItems={tocItemsWithActive}
-              onItemClick={handleTocClick}
-            />
+            <aside className="hidden lg:block w-72 flex-shrink-0 sticky top-24 max-h-[calc(100vh-6rem)] overflow-y-auto">
+              <DesktopTocComponent
+                tocItems={tocItemsWithActive}
+                onItemClick={handleTocClick}
+              />
+              {post.adSlotRightSide && (
+                <div className="mt-6">
+                  <AdSenseUnit adSlot={post.adSlotRightSide} format="vertical" className="mx-auto" />
+                </div>
+              )}
+            </aside>
           )}
         </div>
       </article>

@@ -362,6 +362,42 @@ export default {
             ],
             validation: (Rule) => Rule.unique(),
           },
+          {
+      name: "socialLinks",
+      title: "Social Links",
+      type: "array",
+      of: [
+        {
+          type: "object",
+          fields: [
+            {
+              name: "platform",
+              title: "Platform",
+              type: "string",
+              options: {
+                list: [
+                  { title: "Twitter", value: "twitter" },
+                  { title: "Facebook", value: "facebook" },
+                  { title: "WhatsApp", value: "whatsapp" },
+                  { title: "GitHub", value: "github" },
+                ],
+              },
+              validation: (Rule) => Rule.required(),
+            },
+            {
+              name: "url",
+              title: "URL",
+              type: "url",
+              validation: (Rule) =>
+                Rule.required().uri({
+                  scheme: ["http", "https"],
+                }),
+            },
+          ],
+        },
+      ],
+      validation: (Rule) => Rule.unique(),
+    },
         ],
       },
       // Sub-Footer Section

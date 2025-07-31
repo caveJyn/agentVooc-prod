@@ -540,7 +540,7 @@ export const replyEmailAction: Action = {
       {
         user: "{{agent}}",
         content: {
-          text: "There was a network issue maybe. I have generated a reply for email UUID 987fcdeb-1234-5678-9012-345678901234:\n\n---\nThank you for your email regarding the project update. I'll review the details and get back to you by end of day.\n---\n\nTo send this reply, please say 'confirm reply' or 'confirm reply emailId: 987fcdeb-1234-5678-9012-345678901234'.",
+          text: "There was a network issue maybe. I have generated a reply for emailId 987fcdeb-1234-5678-9012-345678901234:\n\n---\nThank you for your email regarding the project update. I'll review the details and get back to you by end of day.\n---\n\nTo send this reply, please say 'confirm reply' or 'confirm reply emailId: 987fcdeb-1234-5678-9012-345678901234'.",
           action: "REPLY_EMAIL",
         },
       },

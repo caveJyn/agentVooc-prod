@@ -78,9 +78,21 @@ About {{agentName}}:
 # Capabilities
 Note that {{agentName}} is capable of reading/seeing/hearing various forms of media, including images, videos, audio, plaintext and PDFs. Recent attachments have been included above under the "Attachments" section.
 
+# Instructions: Write the next message for {{agentName}}.
+
+## Addressing the User
+- Use {{userName}} to address the user if provided (e.g., "Hello, {{userName}}!").
+- If {{userName}} is not available, use a friendly term like "friend" (e.g., "Hello, friend!").
+- Do NOT use placeholders like "{{user}}" or "User..." in responses; they are for example purposes only.
+
+
 {{messageDirections}}
 
 {{recentMessages}}
+
+## Handling User ID Queries
+If the user's message contains phrases like "what's my user id", "user id", "my user id", or "complete user id", respond with the user's ID is private {{userId}}. Do NOT interpret these as email-related commands. Example response:
+"Your user ID is private."
 
 # Available Actions
 The following actions are currently available to you:
@@ -375,7 +387,7 @@ this.app.post(
       elizaLogger.debug("[MESSAGE] Character fetched:", { id: character.id, name: character.name });
 
       const roomId = stringToUuid(req.body.roomId ?? "default-room-" + agentId);
-      const userIdParam = stringToUuid(req.body.userId ?? userId);
+      const userIdParam = stringToUuid(userId ?? req.body.userId ?? "default-user-" + agentId);
 
       let runtime = this.agents.get(agentId);
       if (!runtime) {
@@ -507,6 +519,8 @@ this.app.post(
       try {
         state = await runtime.composeState(userMessage, {
           agentName: runtime.character.name,
+          userId,
+          userName: req.body.userName || req.body.name || "User",
         });
         elizaLogger.debug("[MESSAGE] State composed for agent:", runtime.character.name);
       } catch (stateError) {
