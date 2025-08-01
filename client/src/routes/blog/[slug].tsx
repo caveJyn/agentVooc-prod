@@ -128,25 +128,29 @@ export default function BlogPostPage() {
   }, [toc.length]);
 
   const generateToc = useCallback((content: BlogPost['content']): TocItem[] => {
-    if (!content) return [];
+  if (!content) return [];
 
-    const toc: TocItem[] = content
-      .filter((block) => block._type === 'block' && ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(block.style))
-      .map((block) => {
-        const text = block.children
-          .filter((child: BlockChild) => child._type === 'span')
-          .map((child: BlockChild) => child.text || '')
-          .join('');
-        return {
-          id: block._key,
-          text: text || 'Untitled Heading',
-          style: block.style,
-        };
-      });
+  const toc: TocItem[] = content
+    .filter((block: any) => 
+      block._type === 'block' && 
+      typeof block.style === 'string' && 
+      ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(block.style)
+    )
+    .map((block: { _key: string; style: string; children: BlockChild[] }) => {
+      const text = block.children
+        .filter((child: BlockChild) => child._type === 'span')
+        .map((child: BlockChild) => child.text || '')
+        .join('');
+      return {
+        id: block._key,
+        text: text || 'Untitled Heading',
+        style: block.style,
+      };
+    });
 
-    console.log('[generateToc] Generated TOC:', toc);
-    return toc;
-  }, []);
+  console.log('[generateToc] Generated TOC:', toc);
+  return toc;
+}, []);
 
   const handleTocClick = useCallback((id: string) => {
     const element = document.getElementById(id);
@@ -247,90 +251,269 @@ export default function BlogPostPage() {
 
   // Custom PortableText components for SEO and TOC - memoized to prevent recreation
   const portableTextComponents: PortableTextComponents = useMemo(() => ({
-    block: {
-      h1: ({ children, value }) => (
-        <h1 id={value._key} className="text-4xl font-bold mb-8 mt-12 first:mt-0 text-agentvooc-primary leading-tight">
+  block: {
+    h1: ({ children, value }) => (
+      <h1 id={value._key} className="text-4xl font-bold mb-8 mt-12 first:mt-0 text-agentvooc-primary leading-tight">
+        {children}
+      </h1>
+    ),
+    h2: ({ children, value }) => (
+      <h2 id={value._key} className="text-3xl font-bold mb-6 mt-10 text-agentvooc-primary leading-snug">
+        {children}
+      </h2>
+    ),
+    h3: ({ children, value }) => (
+      <h3 id={value._key} className="text-2xl font-semibold mb-4 mt-8 text-agentvooc-primary leading-snug">
+        {children}
+      </h3>
+    ),
+    h4: ({ children, value }) => (
+      <h4 id={value._key} className="text-xl font-semibold mb-3 mt-6 text-agentvooc-primary">
+        {children}
+      </h4>
+    ),
+    h5: ({ children, value }) => (
+      <h5 id={value._key} className="text-lg font-semibold mb-3 mt-5 text-agentvooc-primary">
+        {children}
+      </h5>
+    ),
+    h6: ({ children, value }) => (
+      <h6 id={value._key} className="text-base font-semibold mb-2 mt-4 text-agentvooc-primary">
+        {children}
+      </h6>
+    ),
+    normal: ({ children }) => (
+      <p className="mb-6 leading-relaxed text-lg">{children}</p>
+    ),
+    blockquote: ({ children, value }) => (
+      <blockquote
+        id={value._key}
+        className="border-l-4 border-agentvooc-primary/50 pl-4 sm:pl-6 py-4 my-8 bg-white bg-opacity-5 rounded-r-lg text-lg leading-relaxed text-agentvooc-primary ml-0 sm:ml-2 lg:ml-8 mr-0 max-w-full overflow-x-auto"
+      >
+        {children}
+      </blockquote>
+    ),
+  },
+  marks: {
+    strong: ({ children }) => (
+      <span className="font-bold text-agentvooc-primary">{children}</span>
+    ),
+    em: ({ children }) => (
+      <span className="italic text-agentvooc-primary">{children}</span>
+    ),
+    underline: ({ children }) => (
+      <span className="underline text-agentvooc-primary">{children}</span>
+    ),
+    code: ({ children }) => (
+      <code className="font-mono bg-agentvooc-primary-bg/50 px-1 rounded text-agentvooc-accent">{children}</code>
+    ),
+    link: ({ children, value }) => {
+      const { href, openInNewTab } = value;
+      const isInternal = href.startsWith('/') || href.startsWith(baseUrl);
+      const rel = openInNewTab ? 'noopener noreferrer' : undefined;
+      return isInternal ? (
+        <Link
+          to={href.replace(baseUrl, '')}
+          className="text-agentvooc-accent hover:underline"
+          onClick={() => window.scrollTo(0, 0)}
+        >
           {children}
-        </h1>
-      ),
-      h2: ({ children, value }) => (
-        <h2 id={value._key} className="text-3xl font-bold mb-6 mt-10 text-agentvooc-primary leading-snug">
+        </Link>
+      ) : (
+        <a
+          href={href}
+          className="text-agentvooc-accent hover:underline"
+          target={openInNewTab ? '_blank' : '_self'}
+          rel={rel}
+        >
           {children}
-        </h2>
-      ),
-      h3: ({ children, value }) => (
-        <h3 id={value._key} className="text-2xl font-semibold mb-4 mt-8 text-agentvooc-primary leading-snug">
-          {children}
-        </h3>
-      ),
-      h4: ({ children, value }) => (
-        <h4 id={value._key} className="text-xl font-semibold mb-3 mt-6 text-agentvooc-primary">
-          {children}
-        </h4>
-      ),
-      h5: ({ children, value }) => (
-        <h5 id={value._key} className="text-lg font-semibold mb-3 mt-5 text-agentvooc-primary">
-          {children}
-        </h5>
-      ),
-      h6: ({ children, value }) => (
-        <h6 id={value._key} className="text-base font-semibold mb-2 mt-4 text-agentvooc-primary">
-          {children}
-        </h6>
-      ),
-      normal: ({ children }) => (
-        <p className="mb-6 leading-relaxed text-lg">
-          {children}
-        </p>
-      ),
-      blockquote: ({ children, value }) => (
-  <blockquote
-    id={value._key}
-    className="border-l-4 border-agentvooc-primary/50 pl-4 sm:pl-6 py-4 my-8 bg-white bg-opacity-5 rounded-r-lg text-lg leading-relaxed text-agentvooc-primary ml-0 sm:ml-2 lg:ml-8 mr-0 max-w-full overflow-x-auto"
-  >
-    {children}
-  </blockquote>
-),
+        </a>
+      );
     },
-    marks: {
-      strong: ({ children }) => (
-        <span className="font-bold text-agentvooc-primary">
-          {children}
-        </span>
-      ),
-      em: ({ children }) => (
-        <span className="italic text-agentvooc-primary">
-          {children}
-        </span>
-      ),
+  },
+  types: {
+    image: ({ value }) => {
+      if (!value?.asset?.url) {
+        console.error('[PortableText] Image asset URL is missing:', JSON.stringify(value, null, 2));
+        return null;
+      }
+      return (
+        <div className="my-8">
+          <BlogImage
+            src={value.asset.url}
+            alt={value.alt || 'Blog post image'}
+            onLoad={(e) => (e.currentTarget.parentElement!.style.background = 'none')}
+            onError={(e) => {
+              console.error('[PortableText] Image failed to load:', value.asset.url);
+              e.currentTarget.style.display = 'none';
+            }}
+          />
+          {value.alt && (
+            <p className="text-center text-sm opacity-75 mt-2 italic">{value.alt}</p>
+          )}
+        </div>
+      );
     },
-    types: {
-      image: ({ value }) => {
-        if (!value?.asset?.url) {
-          console.error('[PortableText] Image asset URL is missing:', JSON.stringify(value, null, 2));
-          return null;
-        }
-        return (
-          <div className="my-8">
-            <BlogImage
-              src={value.asset.url}
-              alt={value.alt || 'Blog post image'}
-              onLoad={(e) => (e.currentTarget.parentElement!.style.background = 'none')}
-              onError={(e) => {
-                console.error('[PortableText] Image failed to load:', value.asset.url);
-                e.currentTarget.style.display = 'none';
-              }}
-            />
-            {value.alt && (
-              <p className="text-center text-sm opacity-75 mt-2 italic">
-                {value.alt}
-              </p>
-            )}
+    table: ({ value }) => {
+      if (!value?.rows?.length || !value?.columns?.length) {
+        console.warn('[PortableText] Table is missing rows or columns:', value);
+        return null;
+      }
+      return (
+        <figure className="my-8">
+          <div className="overflow-x-auto">
+            <table
+              role="table"
+              className="w-full border-collapse border border-agentvooc-border text-left text-sm md:text-base"
+            >
+              <thead>
+                <tr className="border-b border-agentvooc-border bg-agentvooc-primary-bg/50">
+                  {value.columns.map((column: any, colIndex: number) => (
+                    <th
+                      key={`col-${colIndex}`}
+                      className={`p-3 border-r border-agentvooc-border last:border-r-0 font-semibold text-${column.align || 'left'}`}
+                      style={column.width ? { width: column.width } : {}}
+                      role="columnheader"
+                      scope="col"
+                    >
+                      <PortableText
+                        value={column.content}
+                        components={{
+                          block: {
+                            normal: ({ children }) => <span className="text-sm md:text-base">{children}</span>,
+                            h1: ({ children }) => <h1 className="text-xl font-bold">{children}</h1>,
+                            h2: ({ children }) => <h2 className="text-lg font-bold">{children}</h2>,
+                            h3: ({ children }) => <h3 className="text-base font-semibold">{children}</h3>,
+                            h4: ({ children }) => <h4 className="text-sm font-semibold">{children}</h4>,
+                            h5: ({ children }) => <h5 className="text-sm font-medium">{children}</h5>,
+                            h6: ({ children }) => <h6 className="text-xs font-medium">{children}</h6>,
+                            blockquote: ({ children }) => (
+                              <blockquote className="border-l-4 border-agentvooc-primary/50 pl-2 text-sm md:text-base italic">
+                                {children}
+                              </blockquote>
+                            ),
+                          },
+                          marks: {
+                            strong: ({ children }) => <strong className="font-bold">{children}</strong>,
+                            em: ({ children }) => <em className="italic">{children}</em>,
+                            underline: ({ children }) => <span className="underline">{children}</span>,
+                            code: ({ children }) => (
+                              <code className="font-mono bg-agentvooc-primary-bg/50 px-1 rounded">{children}</code>
+                            ),
+                            link: ({ children, value }) => {
+                              const { href, openInNewTab } = value;
+                              const isInternal = href.startsWith('/') || href.startsWith(baseUrl);
+                              const rel = openInNewTab ? 'noopener noreferrer' : undefined;
+                              return isInternal ? (
+                                <Link
+                                  to={href.replace(baseUrl, '')}
+                                  className="text-agentvooc-accent hover:underline"
+                                  onClick={() => window.scrollTo(0, 0)}
+                                >
+                                  {children}
+                                </Link>
+                              ) : (
+                                <a
+                                  href={href}
+                                  className="text-agentvooc-accent hover:underline"
+                                  target={openInNewTab ? '_blank' : '_self'}
+                                  rel={rel}
+                                >
+                                  {children}
+                                </a>
+                              );
+                            },
+                          },
+                        }}
+                      />
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {value.rows.map((row: { _key: string; cells: any[] }) => (
+                  <tr
+                    key={row._key}
+                    className="border-b border-agentvooc-border"
+                    role="row"
+                  >
+                    {row.cells.map((cell: any, cellIndex: number) => (
+                      <td
+  key={`${row._key}-${cellIndex}`}
+  className={`p-3 border-r border-agentvooc-border last:border-r-0 text-${cell.align || 'left'} align-top`}
+  colSpan={cell.colspan || 1}
+  rowSpan={cell.rowspan || 1}
+  role="cell"
+>
+                        <PortableText
+                          value={cell.content}
+                          components={{
+                            block: {
+                              normal: ({ children }) => <span className="text-sm md:text-base">{children}</span>,
+                              h1: ({ children }) => <h1 className="text-xl font-bold">{children}</h1>,
+                              h2: ({ children }) => <h2 className="text-lg font-bold">{children}</h2>,
+                              h3: ({ children }) => <h3 className="text-base font-semibold">{children}</h3>,
+                              h4: ({ children }) => <h4 className="text-sm font-semibold">{children}</h4>,
+                              h5: ({ children }) => <h5 className="text-sm font-medium">{children}</h5>,
+                              h6: ({ children }) => <h6 className="text-xs font-medium">{children}</h6>,
+                              blockquote: ({ children }) => (
+                                <blockquote className="border-l-4 border-agentvooc-primary/50 pl-2 text-sm md:text-base italic">
+                                  {children}
+                                </blockquote>
+                              ),
+                            },
+                            marks: {
+                              strong: ({ children }) => <strong className="font-bold">{children}</strong>,
+                              em: ({ children }) => <em className="italic">{children}</em>,
+                              underline: ({ children }) => <span className="underline">{children}</span>,
+                              code: ({ children }) => (
+                                <code className="font-mono bg-agentvooc-primary-bg/50 px-1 rounded">{children}</code>
+                              ),
+                              link: ({ children, value }) => {
+                                const { href, openInNewTab } = value;
+                                const isInternal = href.startsWith('/') || href.startsWith(baseUrl);
+                                const rel = openInNewTab ? 'noopener noreferrer' : undefined;
+                                return isInternal ? (
+                                  <Link
+                                    to={href.replace(baseUrl, '')}
+                                    className="text-agentvooc-accent hover:underline"
+                                    onClick={() => window.scrollTo(0, 0)}
+                                  >
+                                    {children}
+                                  </Link>
+                                ) : (
+                                  <a
+                                    href={href}
+                                    className="text-agentvooc-accent hover:underline"
+                                    target={openInNewTab ? '_blank' : '_self'}
+                                    rel={rel}
+                                  >
+                                    {children}
+                                  </a>
+                                );
+                              },
+                            },
+                          }}
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        );
-      },
+          {value.caption && (
+            <figcaption className="text-sm text-center opacity-75 mt-2 italic">
+              {value.caption}
+            </figcaption>
+          )}
+        </figure>
+      );
     },
-  }), []);
+  },
+}), [baseUrl]);
+
+  
 
   // Memoize structured data to prevent recreation on every render
   const structuredData = useMemo(() => {

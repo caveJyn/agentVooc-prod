@@ -13,6 +13,7 @@ import pressPost from "./pressPost";
 import productPages from "./productPages";
 import invoice from "./invoice";
 import docs from "./docs";
+import table from "./table";
 
 export const schemaTypes = [
   character,
@@ -29,7 +30,8 @@ export const schemaTypes = [
   docs,
   pressPost,
   productPages,
-  invoice
+  invoice,
+  table
 ];
 
 export default schemaTypes;

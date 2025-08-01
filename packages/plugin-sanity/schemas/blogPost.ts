@@ -21,26 +21,31 @@ export default {
       validation: (Rule: any) => Rule.required(),
     },
     {
-      name: "content",
-      title: "Content",
-      type: "array",
-      of: [
-        { type: "block" },
+  name: 'content',
+  title: 'Content',
+  type: 'array',
+  of: [
+    { type: 'block' },
+    {
+      type: 'image',
+      fields: [
         {
-          type: "image",
-          fields: [
-            {
-              name: "alt",
-              title: "Alt Text",
-              type: "string",
-              description: "Describe the image for accessibility and SEO",
-              validation: (Rule: any) => Rule.required(),
-            },
-          ],
+          name: 'alt',
+          title: 'Alt Text',
+          type: 'string',
+          description: 'Describe the image for accessibility and SEO',
+          validation: (Rule: any) => Rule.required(),
         },
       ],
-      validation: (Rule: any) => Rule.required(),
     },
+    { type: 'table' },
+  ],
+  validation: (Rule: any) =>
+    Rule.required().custom((content: any[]) => {
+      const tableCount = content.filter((item: any) => item._type === 'table').length;
+      return tableCount <= 5 ? true : 'A blog post can have a maximum of 5 tables for performance reasons.';
+    }),
+},
     {
       name: "publishedAt",
       title: "Published At",

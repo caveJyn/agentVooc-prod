@@ -5570,6 +5570,41 @@ router.get("/blog-posts/:slug?", async (req, res) => {
               _id,
               url
             }
+          },
+          _type == 'table' => {
+          ...,
+          caption,
+          columns[] {
+            content[] {
+              ...,
+              children[] {
+                ...,
+                _type == 'span' => {
+                  ...,
+                  marks[]
+                }
+              }
+            },
+            align,
+            width
+            },
+            rows[] {
+              cells[] {
+                content[] {
+                  ...,
+                  children[] {
+                    ...,
+                    _type == 'span' => {
+                      ...,
+                      marks[]
+                    }
+                  }
+                },
+                colspan,
+                rowspan,
+                align
+              }
+            }
           }
         },
         publishedAt,
