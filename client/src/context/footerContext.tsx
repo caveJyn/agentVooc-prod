@@ -82,7 +82,7 @@ export function FooterProvider({ children }: { children: React.ReactNode }) {
           apiClient.getDocs(),
         ]);
 
-        console.log("[FooterProvider] Company Pages:", companyResponse);
+        // console.log("[FooterProvider] Company Pages:", companyResponse);
 
         const landingFooter = landingResponse.landingPage.footerSection || fallbackFooterSection;
         const landingSubFooter = landingResponse.landingPage.subFooterSection || fallbackSubFooterSection;
@@ -141,12 +141,12 @@ export function FooterProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem("footerData", JSON.stringify(cacheData));
         localStorage.setItem("footerDataUpdatedAt", landingResponse.landingPage._updatedAt || Date.now().toString());
         localStorage.setItem("footerDataCacheTime", Date.now().toString());
-        console.log("[FooterProvider] Fetched and cached footer data");
+        // console.log("[FooterProvider] Fetched and cached footer data");
       } catch (err) {
         console.error("[FooterProvider] Error fetching footer data:", err);
         setFooterSection(fallbackFooterSection);
         setSubFooterSection(fallbackSubFooterSection);
-        console.log("[FooterProvider] Fallback to default footer data due to error");
+        // console.log("[FooterProvider] Fallback to default footer data due to error");
       }
     };
     fetchFooterData();

@@ -522,7 +522,7 @@ interface Invoice {
   }>;
 }
 
-
+getUserStats: () => Promise<{ totalUsers: number; onlineUsers: number }>;
 
 export const apiClient = {
   sendMessage: (
@@ -706,6 +706,15 @@ getCharacterPresets: (): Promise<{ characterPresets: any[] }> => {
       method: "GET",
     });
   },
+
+  getUserStats: () => {
+  // console.log("[API_CLIENT] Calling getUserStats");
+  return fetcher({
+    url: "/api/user-stats",
+    method: "GET",
+  });
+},
+  
   getItems: ({ itemType }: { itemType?: string } = {}) => {
   // console.log("[API_CLIENT] Calling getItems", { itemType });
   let url = "/api/items";

@@ -20,7 +20,7 @@ export default function BlogList() {
       try {
         setIsLoading(true);
         const response = await apiClient.getBlogPosts();
-        console.log("[BlogList] Fetched posts:", JSON.stringify(response.blogPosts, null, 2));
+        // console.log("[BlogList] Fetched posts:", JSON.stringify(response.blogPosts, null, 2));
         setPosts(response.blogPosts as BlogPost[]);
       } catch (err: any) {
         console.error("[BlogList] Error fetching blog posts:", err);
@@ -112,7 +112,7 @@ export default function BlogList() {
                         className="w-full h-32 object-cover rounded-t-lg"
                         onLoad={(e) => (e.currentTarget.parentElement!.style.background = "none")}
                         onError={(e) => {
-                          console.error("[BlogList] Thumbnail image failed to load:", post.mainImage);
+                          // console.error("[BlogList] Thumbnail image failed to load:", post.mainImage);
                           e.currentTarget.style.display = "none";
                         }}
                       />

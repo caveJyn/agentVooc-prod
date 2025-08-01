@@ -200,11 +200,11 @@ export function AppSidebar() {
                     <SidebarMenuAction
                        onClick={() => handleEditAgent(agent.id)}
                        showOnHover
-                       className="p-1"
+                       className="p-1 text-agentvooc-accent"
                         >   
                        <Edit className="h-4 w-4" />
                     </SidebarMenuAction>
-                    <SidebarMenuBadge className="text-agentvooc-accent">.</SidebarMenuBadge>
+                    <SidebarMenuBadge>.</SidebarMenuBadge>
                     <KnowledgeVaultLink
                       agentId={agent.id}
                       agentName={agent.name}

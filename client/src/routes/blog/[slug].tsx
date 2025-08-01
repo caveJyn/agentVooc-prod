@@ -68,7 +68,7 @@ export default function BlogPostPage() {
         setIsLoading(true);
         const response = await apiClient.getBlogPosts(slug);
         if (isInitialRender.current) {
-          console.log('[BlogPostPage] Fetched post:', JSON.stringify(response.blogPosts, null, 2));
+          // console.log('[BlogPostPage] Fetched post:', JSON.stringify(response.blogPosts, null, 2));
           isInitialRender.current = false;
         }
         if (Array.isArray(response.blogPosts)) {
@@ -148,7 +148,7 @@ export default function BlogPostPage() {
       };
     });
 
-  console.log('[generateToc] Generated TOC:', toc);
+  // console.log('[generateToc] Generated TOC:', toc);
   return toc;
 }, []);
 
@@ -221,7 +221,7 @@ export default function BlogPostPage() {
     onItemClick: (id: string) => void;
   }) => (
     <div className="bg-agentvooc-primary-bg rounded-xl border border-agentvooc-border p-6 shadow-lg">
-      <h2 className="text-xl font-bold mb-6">Contents</h2>
+      <h2 className="text-xl font-bold mb-6 underline">Contents</h2>
       <ul className="space-y-1">
         {tocItems.map((item) => (
           <li
@@ -232,14 +232,14 @@ export default function BlogPostPage() {
             onClick={() => onItemClick(item.id)}
             aria-current={item.isActive ? 'true' : undefined}
           >
-            <div className={`px-3 py-2 ${
+            <div className={`px-3 text-sm py-1 ${
               item.style === 'h1'
-                ? 'ml-0 text-base font-semibold'
+                ? 'text-base font-semibold'
                 : item.style === 'h2'
-                  ? 'ml-4 text-base'
+                  ? 'ml-2 text-base'
                   : item.style === 'h3'
-                    ? 'ml-8 text-sm'
-                    : 'ml-12 text-sm opacity-90'
+                    ? 'ml-4 '
+                    : 'ml-6 opacity-90'
             }`}>
               {item.text}
             </div>
@@ -363,19 +363,19 @@ export default function BlogPostPage() {
         <figure className="my-8">
           <div className="overflow-x-auto">
             <table
-              role="table"
-              className="w-full border-collapse border border-agentvooc-border text-left text-sm md:text-base"
-            >
-              <thead>
-                <tr className="border-b border-agentvooc-border bg-agentvooc-primary-bg/50">
-                  {value.columns.map((column: any, colIndex: number) => (
-                    <th
-                      key={`col-${colIndex}`}
-                      className={`p-3 border-r border-agentvooc-border last:border-r-0 font-semibold text-${column.align || 'left'}`}
-                      style={column.width ? { width: column.width } : {}}
-                      role="columnheader"
-                      scope="col"
-                    >
+  role="table"
+  className="w-full border-collapse border border-agentvooc-border text-left text-sm md:text-base table-fixed"
+>
+  <thead>
+    <tr className="border-b border-agentvooc-border bg-agentvooc-primary-bg/50">
+      {value.columns.map((column: any, colIndex: number) => (
+        <th
+          key={`col-${colIndex}`}
+          className={`p-3 border-r border-agentvooc-border last:border-r-0 font-semibold text-${column.align || 'left'}`}
+          style={{ width: `${100 / value.columns.length}%` }}
+          role="columnheader"
+          scope="col"
+        >
                       <PortableText
                         value={column.content}
                         components={{
@@ -565,12 +565,12 @@ export default function BlogPostPage() {
   // Log image data only once when post changes
   useEffect(() => {
     if (post && !isInitialRender.current) {
-      console.log('[BlogPostPage] Rendering post with images:', {
-        mainImage: post.mainImage,
-        heroImage: post.heroImage,
-        galleryImages: post.galleryImages,
-        contentImages: post.content?.filter((block) => block._type === 'image').map((block) => block.asset?.url),
-      });
+      // console.log('[BlogPostPage] Rendering post with images:', {
+      //   mainImage: post.mainImage,
+      //   heroImage: post.heroImage,
+      //   galleryImages: post.galleryImages,
+      //   contentImages: post.content?.filter((block) => block._type === 'image').map((block) => block.asset?.url),
+      // });
     }
   }, [post]);
 

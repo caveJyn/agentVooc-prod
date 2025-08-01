@@ -29,7 +29,7 @@ export default function ProductListPage() {
         try {
           setIsLoading(true);
           const response = await apiClient.getProductPages();
-          console.log("[BlogList] Fetched posts:", JSON.stringify(response.productPages, null, 2));
+          // console.log("[BlogList] Fetched posts:", JSON.stringify(response.productPages, null, 2));
           setPages(response.productPages as ProductPage[]);
         } catch (err: any) {
           console.error("[BlogList] Error fetching blog posts:", err);
@@ -215,7 +215,7 @@ export default function ProductListPage() {
                       loading="lazy"
                       className="w-full h-48 object-cover rounded-t-lg mb-4 hidden md:block"
                       onError={(e) => {
-                        console.error("[ProductList] Thumbnail image failed to load:", page.thumbnailImage);
+                        // console.error("[ProductList] Thumbnail image failed to load:", page.thumbnailImage);
                         e.currentTarget.style.display = "none";
                       }}
                     />

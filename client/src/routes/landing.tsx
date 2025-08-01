@@ -7,6 +7,7 @@ import { TestimonialsSection } from "@/components/landing/testimonials-section";
 import { CTASection } from "@/components/landing/cta-section";
 import { apiClient } from "@/lib/api";
 import { Hero } from "@/components/landing/hero";
+import UserStats from "@/components/userStats";
 
 interface ImageVariants {
   main: string;
@@ -229,6 +230,7 @@ export default function Landing() {
     <main className="min-h-screen animate-fade-in">
       <section ref={heroRef} aria-label="Hero Section">
         <Hero heroSection={pageData.heroSection} />
+        <UserStats/>
       </section>
       <section ref={featuresRef} aria-label="Features Section">
         <FeaturesSection featuresSection={pageData.featuresSection} />

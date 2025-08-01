@@ -140,8 +140,15 @@ export const Hero = ({ heroSection }: HeroProps) => {
             {title}<span>.</span>
           </h1>
           <h2
-            className="text-base sm:text-lg md:text-xl lg:text-2xl max-w-xl mx-auto lg:mx-0 mb-6 animate-fade-in"
-            style={{ animationDelay: "0.2s" }}
+            className="sm:text-sm md:text-lg lg:text-2xl max-w-xl mx-auto lg:mx-0 mb-6 animate-fade-in"
+            style={{
+              background: "linear-gradient(to right, hsl(var(--agentvooc-text-hero-title)), hsl(var(--agentvooc-accent)))",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              animationDelay: "0.0s",
+              lineHeight: "1.1",
+              paddingBottom: "0.2em",
+            }}
           >
             {subtitle}
           </h2>

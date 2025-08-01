@@ -2602,6 +2602,46 @@ router.get("/user", async (req: express.Request, res: express.Response) => {
   }
 });
 
+let cachedStats: { totalUsers: number; onlineUsers: number; timestamp: number } | null = null;
+const cacheDuration = 60 * 1000; // Cache for 1 minute
+
+router.get("/user-stats", async (req, res) => {
+  try {
+    if (cachedStats && Date.now() - cachedStats.timestamp < cacheDuration) {
+      elizaLogger.debug("[CLIENT-DIRECT] Using cached user stats", cachedStats);
+      return res.json({
+        totalUsers: cachedStats.totalUsers,
+        onlineUsers: cachedStats.onlineUsers
+      });
+    }
+
+    const totalUsers = await sanityClient.fetch(
+      `count(*[_type == "User"])`
+    );
+
+    const onlineUsers = await sanityClient.fetch(
+      `count(*[_type == "User" && isConnected == true])`
+    );
+
+    cachedStats = { totalUsers, onlineUsers, timestamp: Date.now() };
+
+    elizaLogger.debug("[CLIENT-DIRECT] Fetched user stats", {
+      totalUsers,
+      onlineUsers
+    });
+
+    return res.json({
+      totalUsers,
+      onlineUsers
+    });
+  } catch (error: any) {
+    elizaLogger.error("[CLIENT-DIRECT] Error fetching user stats", {
+      error: error.message,
+      stack: error.stack
+    });
+    res.status(500).json({ error: "Failed to fetch user stats", details: error.message });
+  }
+});
 
 router.get("/items", async (req, res) => {
   try {
