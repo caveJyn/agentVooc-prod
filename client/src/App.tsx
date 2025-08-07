@@ -108,7 +108,7 @@ function AppContent() {
         {!showAppSidebar && isMobile && <NavSidebar />}
         <div
           className={`flex flex-1 flex-col gap-4 size-full w-full ${
-            showAppSidebar || showDocsSidebar ? "max-w-[90%] mx-auto px-4 md:px-6" : "max-w-[100%]"
+            showAppSidebar || showDocsSidebar ? "mx-auto" : "max-w-[100%]"
           } bg-transparent`}
         >
           {!showAppSidebar && !isMobile && <Navbar />}

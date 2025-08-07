@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 interface ImageVariants {
   main: string;
@@ -135,10 +136,11 @@ export const TestimonialsSection = ({
         <div className="w-full lg:w-1/2">
           <div className="flex justify-center gap-4 mb-10">
             {testimonials.map((testimonial, index) => (
-              <button
+              <Button
+              variant="outline"
                 key={index}
                 onClick={() => handleProfileClick(index)}
-                className="transition-all duration-300"
+                className="transition-all duration-300 h-full "
                 aria-label={`View testimonial from ${testimonial.author}`}
               >
                 <Avatar
@@ -153,7 +155,7 @@ export const TestimonialsSection = ({
                     {testimonial.author.charAt(0)}
                   </AvatarFallback>
                 </Avatar>
-              </button>
+              </Button>
             ))}
           </div>
           <div className="relative overflow-hidden">

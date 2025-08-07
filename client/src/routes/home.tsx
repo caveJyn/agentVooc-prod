@@ -207,12 +207,12 @@ if (!user) {
           {/* Voltara-Email Showcase */}
           <Card className="border-agentvooc-accent/30 hover:border-agentvooc-accent transition-all shadow-agentvooc-glow overflow-hidden">
             <CardHeader className="bg-gradient-to-r from-agentvooc-accent/10 to-agentvooc-accent/5 p-6">
-              <CardTitle className="text-xl text-agentvooc-primary">Voltara, Lumie</CardTitle>
+              <CardTitle className="text-xl text-agentvooc-primary">Voltara</CardTitle>
               <p className="text-agentvooc-secondary">Your Gmail automation specialist</p>
             </CardHeader>
             <CardContent className="p-6">
               <div className="flex items-center justify-center bg-agentvooc-secondary-bg rounded-lg h-32 mb-4">
-                <div className="text-5xl font-bold text-agentvooc-accent">VE</div>
+                <div className="text-5xl font-bold text-agentvooc-accent">V</div>
               </div>
               <div className="space-y-3">
                 <div className="flex items-center text-sm text-agentvooc-secondary">

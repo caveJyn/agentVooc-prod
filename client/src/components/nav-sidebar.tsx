@@ -42,17 +42,21 @@ export default function NavSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarMenu>
-          {["Home", "Blog", "Docs", "About"].map((link) => (
+          {["Landing", "Blog", "Docs", "Home"].map((link) => (
             <SidebarMenuItem key={link}>
               <SidebarMenuButton
                 asChild
                 className=""
               >
                 <a
-                  href={link === "Home" ? "/home" : `/company/${link.toLowerCase()}`}
-                >
-                  {link}
-                </a>
+          href={
+            link === "Landing" ? "/" :
+            link === "Home" ? "/home" :
+            `/company/${link.toLowerCase()}`
+          }
+        >
+          {link}
+        </a>
               </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
@@ -63,7 +67,7 @@ export default function NavSidebar() {
             <SidebarMenuButton asChild>
               <Button
                 variant="default"
-        size="lg"
+                size="lg"
                 onClick={() => navigate("/auth")}
                 aria-label="Sign Up for agentVooc"
               >

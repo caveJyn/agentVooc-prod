@@ -17,6 +17,7 @@ import {
   SidebarInput,
   SidebarMenuAction,
   SidebarMenuBadge,
+  useSidebar
 } from "@/components/ui/sidebar";
 import { apiClient } from "@/lib/api";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
@@ -34,7 +35,7 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState<string>("");
-
+  const { setOpen, setOpenMobile, isMobile } = useSidebar();
   // Fetch user data
   const userQuery = useQuery({
     queryKey: ["user"],
@@ -125,6 +126,15 @@ export function AppSidebar() {
     navigate(`/edit-character/${agentId}`);
   };
 
+  const handleCreateCharacter = () => {
+    if (isMobile) {
+      setOpenMobile(false); // Close sidebar on mobile
+    } else {
+      setOpen(false); // Close sidebar on desktop
+    }
+    navigate("/create-character"); // Navigate to create-character
+  };
+
   return (
     <Sidebar className="bg-agentvooc-secondary-bg text-agentvooc-primary border-r border-agentvooc-border shadow-agentvooc-glow">
       <SidebarHeader>
@@ -147,20 +157,16 @@ export function AppSidebar() {
             </SidebarTrigger>
           </SidebarMenuItem>
          
-              <NavLink
-                to="/create-character"  
-                className="px-1"              
-              >
-                <Button 
-                variant="default"
-                className="flex justify-start"
-                > 
-                <Plus className="mr-2 h-4 w-4" />
-                Create Character
-                </Button>
-
-               
-              </NavLink>
+              <SidebarMenuItem>
+            <Button
+              variant="default"
+              className="flex justify-start w-full"
+              onClick={handleCreateCharacter} // Use handleCreateCharacter
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Create Character
+            </Button>
+          </SidebarMenuItem>
            
         </SidebarMenu>
       </SidebarHeader>
