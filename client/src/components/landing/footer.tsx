@@ -1,5 +1,8 @@
 import { useFooter } from "@/context/footerContext";
-import { X, Facebook, MessageCircle, Github } from "lucide-react";
+import { X, Github} from "lucide-react";
+import { FaFacebookF, FaLinkedin } from 'react-icons/fa';
+import { FiMessageCircle } from 'react-icons/fi';
+
 
 export function Footer() {
   const { footerSection, subFooterSection } = useFooter();
@@ -10,11 +13,14 @@ export function Footer() {
       case "twitter":
         return <X className="w-6 h-6" aria-hidden="true" />;
       case "facebook":
-        return <Facebook className="w-6 h-6" aria-hidden="true" />;
+        return <FaFacebookF className="w-6 h-6" aria-hidden="true" />;
       case "whatsapp":
-        return <MessageCircle className="w-6 h-6" aria-hidden="true" />;
+        return <FiMessageCircle className="w-6 h-6" aria-hidden="true" />;
       case "github":
         return <Github className="w-6 h-6" aria-hidden="true" />;
+      case "linkedin":
+        return <FaLinkedin className="w-6 h-6" aria-hidden="true" />;
+      // Add more cases for other platforms as needed
       default:
         return null;
     }
@@ -27,6 +33,7 @@ export function Footer() {
           <h3 className="text-lg font-semibold mb-4">
             agentVooc
           </h3>
+          <div></div>
           <p>{footerSection.tagline}</p>
           <div className="flex space-x-4 mt-4">
             {footerSection.socialLinks.map((social, index) => (
