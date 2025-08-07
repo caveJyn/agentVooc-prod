@@ -126,14 +126,223 @@ export default function Home() {
   };
 
  try {
-    if (!user) {
-      return (
-        <div className="p-4 flex items-center justify-center min-h-screen">
-          <Loader2 className="h-6 w-6 animate-spin text-agentvooc-accent" />
-          <p className="ml-2 text-agentvooc-secondary">Loading user data...</p>
+    // Replace the existing (!user) section in home.tsx with this enhanced version
+if (!user) {
+  return (
+    <div className="flex flex-col gap-8 min-h-screen p-4 sm:p-6 md:p-8 bg-agentvooc-secondary-bg">
+      {/* Hero Section */}
+      <div className="text-center max-w-4xl mx-auto">
+        <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-agentvooc-primary mb-4">
+          Your AI Workforce is Here
+        </h1>
+        <p className="text-lg sm:text-xl md:text-2xl text-agentvooc-secondary mb-6 leading-relaxed">
+          Deploy intelligent AI agents that handle your Gmail, answer customer queries with your knowledge, and automate repetitive tasks—while you focus on what matters most.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+          <NavLink to="/auth">
+            <Button
+              size="lg"
+              className="bg-agentvooc-accent text-agentvooc-secondary-bg hover:bg-agentvooc-accent/80 transition-colors px-8 py-4 text-lg font-semibold"
+            >
+              Start 7-Day Free Trial
+            </Button>
+          </NavLink>
+          <div className="text-sm text-agentvooc-secondary">
+            Cancel with 1 click • Setup in 5 minutes
+          </div>
         </div>
-      );
-    }
+      </div>
+
+      {/* Value Proposition Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+        <Card className="border-agentvooc-accent/30 hover:border-agentvooc-accent transition-all shadow-agentvooc-glow p-6">
+          <div className="text-center">
+            <div className="bg-agentvooc-accent/10 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+              <span className="text-2xl">📧</span>
+            </div>
+            <h3 className="text-xl font-semibold text-agentvooc-primary mb-2">Gmail Automation</h3>
+            <p className="text-agentvooc-secondary">
+              Let Voltara check, categorize, and reply to emails intelligently. Wake up to an organized inbox and start drafting and sending in seconds.
+            </p>
+          </div>
+        </Card>
+
+        <Card className="border-agentvooc-accent/30 hover:border-agentvooc-accent transition-all shadow-agentvooc-glow p-6">
+          <div className="text-center">
+            <div className="bg-agentvooc-accent/10 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+              <span className="text-2xl">🧠</span>
+            </div>
+            <h3 className="text-xl font-semibold text-agentvooc-primary mb-2">Smart Knowledge Base</h3>
+            <p className="text-agentvooc-secondary">
+              Upload your text-based knowledge to create AI agents that answer questions with your specific knowledge—perfect for customer support and internal queries.
+            </p>
+          </div>
+        </Card>
+
+        <Card className="border-agentvooc-accent/30 hover:border-agentvooc-accent transition-all shadow-agentvooc-glow p-6">
+          <div className="text-center">
+            <div className="bg-agentvooc-accent/10 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+              <span className="text-2xl">⚡</span>
+            </div>
+            <h3 className="text-xl font-semibold text-agentvooc-primary mb-2">Custom AI Agents</h3>
+            <p className="text-agentvooc-secondary">
+              Build personalized AI characters with unique personalities and expertise tailored to your specific business needs and workflows.
+            </p>
+          </div>
+        </Card>
+      </div>
+
+      {/* Demo Agent Showcase */}
+      <div className="max-w-6xl mx-auto">
+        <div className="text-center mb-8">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-agentvooc-primary mb-4">
+            See What's Possible
+          </h2>
+          <p className="text-lg text-agentvooc-secondary">
+            Real examples of AI agents you can deploy today
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Voltara-Email Showcase */}
+          <Card className="border-agentvooc-accent/30 hover:border-agentvooc-accent transition-all shadow-agentvooc-glow overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-agentvooc-accent/10 to-agentvooc-accent/5 p-6">
+              <CardTitle className="text-xl text-agentvooc-primary">Voltara, Lumie</CardTitle>
+              <p className="text-agentvooc-secondary">Your Gmail automation specialist</p>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-center bg-agentvooc-secondary-bg rounded-lg h-32 mb-4">
+                <div className="text-5xl font-bold text-agentvooc-accent">VE</div>
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-center text-sm text-agentvooc-secondary">
+                  <span className="text-green-500 mr-2">✓</span>
+                  Automatically checks and organizes your inbox
+                </div>
+                <div className="flex items-center text-sm text-agentvooc-secondary">
+                  <span className="text-green-500 mr-2">✓</span>
+                  Drafts intelligent replies in your writing style
+                </div>
+                <div className="flex items-center text-sm text-agentvooc-secondary">
+                  <span className="text-green-500 mr-2">✓</span>
+                  Generates Replies 
+                </div>
+                <div className="flex items-center text-sm text-agentvooc-secondary">
+                  <span className="text-green-500 mr-2">✓</span>
+                  Works 24/7 to keep your inbox under control
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Custom Knowledge Agent */}
+          <Card className="border-agentvooc-accent/30 hover:border-agentvooc-accent transition-all shadow-agentvooc-glow overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-agentvooc-accent/10 to-agentvooc-accent/5 p-6">
+              <CardTitle className="text-xl text-agentvooc-primary">Knowledge Assistant</CardTitle>
+              <p className="text-agentvooc-secondary">Your company's smart knowledge base</p>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-center bg-agentvooc-secondary-bg rounded-lg h-32 mb-4">
+                <div className="text-5xl font-bold text-agentvooc-accent">KA</div>
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-center text-sm text-agentvooc-secondary">
+                  <span className="text-green-500 mr-2">✓</span>
+                  Upload text based knowledge bases
+                </div>
+                <div className="flex items-center text-sm text-agentvooc-secondary">
+                  <span className="text-green-500 mr-2">✓</span>
+                  Answer customer questions with your data
+                </div>
+                <div className="flex items-center text-sm text-agentvooc-secondary">
+                  <span className="text-green-500 mr-2">✓</span>
+                  Provide accurate, contextual responses
+                </div>
+                <div className="flex items-center text-sm text-agentvooc-secondary">
+                  <span className="text-green-500 mr-2">✓</span>
+                  Scale your expertise across teams
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Social Proof & Use Cases */}
+      <div className="bg-agentvooc-accent/5 rounded-xl p-6 sm:p-8 max-w-6xl mx-auto">
+        <h3 className="text-2xl font-bold text-agentvooc-primary text-center mb-6">
+          Perfect for Growing Teams
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="text-center">
+            <div className="text-3xl mb-2">👩‍💼</div>
+            <h4 className="font-semibold text-agentvooc-primary mb-1">Entrepreneurs</h4>
+            <p className="text-sm text-agentvooc-secondary">Automate customer support while you focus on growth</p>
+          </div>
+          <div className="text-center">
+            <div className="text-3xl mb-2">🏢</div>
+            <h4 className="font-semibold text-agentvooc-primary mb-1">Small Businesses</h4>
+            <p className="text-sm text-agentvooc-secondary">Handle more customers without hiring more staff</p>
+          </div>
+          <div className="text-center">
+            <div className="text-3xl mb-2">🛠️</div>
+            <h4 className="font-semibold text-agentvooc-primary mb-1">Service Providers</h4>
+            <p className="text-sm text-agentvooc-secondary">Respond to inquiries faster and more consistently</p>
+          </div>
+          <div className="text-center">
+            <div className="text-3xl mb-2">📚</div>
+            <h4 className="font-semibold text-agentvooc-primary mb-1">Consultants</h4>
+            <p className="text-sm text-agentvooc-secondary">Share expertise through AI-powered interactions</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Pricing Highlight */}
+      <div className="text-center max-w-4xl mx-auto">
+        <h3 className="text-2xl font-bold text-agentvooc-primary mb-4">
+          Start Free, Scale When Ready
+        </h3>
+        <div className="bg-white/10 backdrop-blur rounded-xl p-6 border border-agentvooc-accent/30">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-left">
+              <div className="text-3xl font-bold text-agentvooc-accent mb-1">7 Days Free</div>
+              <div className="text-sm text-agentvooc-secondary mt-1">Cancel anytime • No setup fees</div>
+            </div>
+            <div className="flex flex-col gap-2">
+              <NavLink to="/auth" className="w-full">
+                <Button
+                  size="lg"
+                  className="bg-agentvooc-accent text-agentvooc-secondary-bg hover:bg-agentvooc-accent/80 transition-colors px-8 py-3 font-semibold w-full"
+                >
+                  Get Started Free
+                </Button>
+              </NavLink>
+              <div className="text-xs text-agentvooc-secondary text-center">
+                Join the revolution of automating with AI
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Final CTA */}
+      <div className="text-center">
+        <p className="text-agentvooc-secondary mb-4">
+          Ready to transform how you handle emails and customer interactions?
+        </p>
+        <NavLink to="/auth">
+          <Button
+            size="lg"
+            variant="outline"
+            className="border-agentvooc-accent text-agentvooc-primary hover:bg-agentvooc-accent hover:text-agentvooc-secondary-bg transition-colors px-8 py-3"
+          >
+            Start Your Free Trial →
+          </Button>
+        </NavLink>
+      </div>
+    </div>
+  );
+}
 
     return (
       <div className="flex flex-col gap-4 min-h-screen  p-4 md:p-8 bg-agentvooc-secondary-bg">

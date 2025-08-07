@@ -684,196 +684,220 @@ export default function CreateCharacter({ setError }: CreateCharacterProps) {
   });
 
   const createCharacterMutation = useMutation({
-    mutationFn: async () => {
-      setIsCreating(true); // Start loader
-      // Validate email settings if email plugin is enabled
-      if (characterData.plugins.includes("email")) {
-        if (
-          !emailOutgoingUser ||
-          !emailOutgoingPass ||
-          !emailIncomingUser ||
-          !emailIncomingPass
-        ) {
-          throw new Error("All email fields (username and password for both outgoing and incoming) are required when email plugin is enabled.");
-        }
-        if (characterData.settings.email.outgoing.service === "smtp" && (!characterData.settings.email.outgoing.host || !characterData.settings.email.outgoing.port)) {
-          throw new Error("SMTP host and port are required when using SMTP service.");
-        }
-      }
+  mutationFn: async () => {
+    setIsCreating(true); // Start loader
+    // Check if user is logged in
+    if (!userQuery.data) {
+      throw new Error("Log in to create Character");
+    }
 
-      // Validate messageExamples JSON
-      let parsedMessageExamples;
-      try {
-        parsedMessageExamples = messageExamplesInput ? JSON.parse(messageExamplesInput) : [];
-        if (!Array.isArray(parsedMessageExamples) || !parsedMessageExamples.every(Array.isArray)) {
-          throw new Error("Message Examples must be an array of arrays");
-        }
-        const isValid = parsedMessageExamples.every((example) =>
-          example.every(
-            (msg) =>
-              msg &&
-              typeof msg === "object" &&
-              "user" in msg &&
-              "content" in msg &&
-              msg.content &&
-              typeof msg.content === "object" &&
-              "text" in msg.content
-          )
-        );
-        if (!isValid) {
-          throw new Error("Each message example must contain objects with 'user' and 'content' properties, where 'content' has a 'text' property");
-        }
-      } catch (error) {
+    // Validate email settings if email plugin is enabled
+    if (characterData.plugins.includes("email")) {
+      if (
+        !emailOutgoingUser ||
+        !emailOutgoingPass ||
+        !emailIncomingUser ||
+        !emailIncomingPass
+      ) {
         throw new Error(
-          "Invalid JSON format in Message Examples: " +
-            (error instanceof Error ? error.message : String(error))
+          "All email fields (username and password for both outgoing and incoming) are required when email plugin is enabled."
         );
       }
-
-      const updatedCharacterData = {
-        id: characterData.id,
-        name: characterData.name,
-        username: characterData.username || undefined,
-        system: characterData.system || undefined,
-        bio: bioInput ? bioInput.split(/,\s*\n/).map((s) => s.trim()).filter((s) => s) : [],
-        lore: loreInput ? loreInput.split(/,\s*\n/).map((s) => s.trim()).filter((s) => s) : [],
-        messageExamples: parsedMessageExamples,
-        postExamples: postExamplesInput ? postExamplesInput.split(/,\s*\n/).map((s) => s.trim()).filter((s) => s) : [],
-        topics: topicsInput ? topicsInput.split(/,\s*\n/).map((s) => s.trim()).filter((s) => s) : [],
-        adjectives: adjectivesInput ? adjectivesInput.split(/,\s*\n/).map((s) => s.trim()).filter((s) => s) : [],
-        modelProvider: characterData.modelProvider || "OPENAI",
-        plugins: characterData.plugins || [],
-        knowledge: characterData.knowledge || [],
-        settings: {
-          secrets: {
-            dynamic: [
-              ...(telegramBotToken ? [{ key: "TELEGRAM_BOT_TOKEN", value: telegramBotToken }] : []),
-              ...(twitterUsername ? [{ key: "TWITTER_USERNAME", value: twitterUsername }] : []),
-              ...(twitterPassword ? [{ key: "TWITTER_PASSWORD", value: twitterPassword }] : []),
-              ...(twitterEmail ? [{ key: "TWITTER_EMAIL", value: twitterEmail }] : []),
-              ...(emailOutgoingUser ? [{ key: "EMAIL_OUTGOING_USER", value: emailOutgoingUser }] : []),
-              ...(emailOutgoingPass ? [{ key: "EMAIL_OUTGOING_PASS", value: emailOutgoingPass }] : []),
-              ...(emailIncomingUser ? [{ key: "EMAIL_INCOMING_USER", value: emailIncomingUser }] : []),
-              ...(emailIncomingPass ? [{ key: "EMAIL_INCOMING_PASS", value: emailIncomingPass }] : []),
-            ],
-          },
-          voice: characterData.settings.voice.model ? characterData.settings.voice : undefined,
-          ragKnowledge: characterData.settings.ragKnowledge,
-          email: characterData.plugins.some((p) => ["email"].includes(p))
-            ? {
-                outgoing: {
-                  ...characterData.settings.email.outgoing,
-                  user: emailOutgoingUser,
-                  pass: emailOutgoingPass,
-                },
-                incoming: {
-                  ...characterData.settings.email.incoming,
-                  user: emailIncomingUser,
-                  pass: emailIncomingPass,
-                },
-              }
-            : undefined,
-        },
-        style: {
-          all: styleAllInput ? styleAllInput.split(/,\s*\n/).map((s) => s.trim()).filter((s) => s) : [],
-          chat: styleChatInput ? styleChatInput.split(/,\s*\n/).map((s) => s.trim()).filter((s) => s) : [],
-          post: stylePostInput ? stylePostInput.split(/,\s*\n/).map((s) => s.trim()).filter((s) => s) : [],
-        },
-        createdBy: {
-          _type: "reference",
-          _ref: userQuery.data._id,
-        },
-      };
-
-      // console.log("[CREATE_CHARACTER] Creating character with payload:", JSON.stringify(updatedCharacterData, null, 2));
-      // const createResponse = 
-      await apiClient.createCharacter(updatedCharacterData);
-      // console.log("[CREATE_CHARACTER] Create character response:", createResponse);
-
-      if (profileImage) {
-        await uploadImageMutation.mutateAsync({ characterId: characterData.id, file: profileImage });
-        // console.log("[CREATE_CHARACTER] Profile image upload initiated");
+      if (
+        characterData.settings.email.outgoing.service === "smtp" &&
+        (!characterData.settings.email.outgoing.host ||
+          !characterData.settings.email.outgoing.port)
+      ) {
+        throw new Error(
+          "SMTP host and port are required when using SMTP service."
+        );
       }
+    }
 
-      return characterData.id;
-    },
-    onSuccess: (_characterId) => {
-      setIsCreating(false); // Stop loader
-      // console.log("[CREATE_CHARACTER] Character created successfully, ID:", characterId);
-      queryClient.invalidateQueries({ queryKey: ["characters"] });
-      toast({
-        title: "Success",
-        description: `Character "${characterData.name}" created successfully.`,
-      });
-      // Reset form to empty fields
-      setCharacterData({
-        id: uuidv4() as UUID,
-        name: "",
-        username: "",
-        system: "",
-        bio: [],
-        lore: [],
-        messageExamples: [],
-        postExamples: [],
-        topics: [],
-        adjectives: [],
-        modelProvider: "OPENAI",
-        plugins: [],
-        settings: {
-          secrets: { dynamic: [] },
-          voice: { model: "" },
-          ragKnowledge: false,
-          email: {
-            outgoing: { service: "gmail", host: "", port: 0, secure: false, user: "", pass: "" },
-            incoming: { service: "imap", host: "", port: 993, user: "", pass: "" },
-          },
-        },
-        style: {
-          all: [],
-          chat: [],
-          post: [],
-        },
-        knowledge: [],
-      });
-      setBioInput("");
-      setLoreInput("");
-      setMessageExamplesInput("[]");
-      setPostExamplesInput("");
-      setTopicsInput("");
-      setAdjectivesInput("");
-      setStyleAllInput("");
-      setStyleChatInput("");
-      setStylePostInput("");
-      setProfileImage(null);
-      setImagePreview(null);
-      setError(null);
-      setTelegramBotToken("");
-      setTwitterUsername("");
-      setTwitterPassword("");
-      setTwitterEmail("");
-      setEmailOutgoingUser("");
-      setEmailOutgoingPass("");
-      setEmailIncomingUser("");
-      setEmailIncomingPass("");
-      setSelectedPreset(null);
-      navigate("/home");
-    },
-    onError: (error: any) => {
-      setIsCreating(false); // Stop loader
-      console.error("[CREATE_CHARACTER] Character creation error:", error);
-      const errorMessage = error.message || "Failed to create character";
-      setError(errorMessage);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: errorMessage,
-      });
-      if (error.status === 401 && window.location.pathname !== "/auth") {
-        // console.log("[CREATE_CHARACTER] 401 error, redirecting to /auth");
-        navigate("/auth");
+    // Validate messageExamples JSON
+    let parsedMessageExamples;
+    try {
+      parsedMessageExamples = messageExamplesInput
+        ? JSON.parse(messageExamplesInput)
+        : [];
+      if (!Array.isArray(parsedMessageExamples) || !parsedMessageExamples.every(Array.isArray)) {
+        throw new Error("Message Examples must be an array of arrays");
       }
-    },
-  });
+      const isValid = parsedMessageExamples.every((example) =>
+        example.every(
+          (msg) =>
+            msg &&
+            typeof msg === "object" &&
+            "user" in msg &&
+            "content" in msg &&
+            msg.content &&
+            typeof msg.content === "object" &&
+            "text" in msg.content
+        )
+      );
+      if (!isValid) {
+        throw new Error(
+          "Each message example must contain objects with 'user' and 'content' properties, where 'content' has a 'text' property"
+        );
+      }
+    } catch (error) {
+      throw new Error(
+        "Invalid JSON format in Message Examples: " +
+          (error instanceof Error ? error.message : String(error))
+      );
+    }
+
+    const updatedCharacterData = {
+      id: characterData.id,
+      name: characterData.name,
+      username: characterData.username || undefined,
+      system: characterData.system || undefined,
+      bio: bioInput ? bioInput.split(/,\s*\n/).map((s) => s.trim()).filter((s) => s) : [],
+      lore: loreInput ? loreInput.split(/,\s*\n/).map((s) => s.trim()).filter((s) => s) : [],
+      messageExamples: parsedMessageExamples,
+      postExamples: postExamplesInput
+        ? postExamplesInput.split(/,\s*\n/).map((s) => s.trim()).filter((s) => s)
+        : [],
+      topics: topicsInput
+        ? topicsInput.split(/,\s*\n/).map((s) => s.trim()).filter((s) => s)
+        : [],
+      adjectives: adjectivesInput
+        ? adjectivesInput.split(/,\s*\n/).map((s) => s.trim()).filter((s) => s)
+        : [],
+      modelProvider: characterData.modelProvider || "OPENAI",
+      plugins: characterData.plugins || [],
+      knowledge: characterData.knowledge || [],
+      settings: {
+        secrets: {
+          dynamic: [
+            ...(telegramBotToken ? [{ key: "TELEGRAM_BOT_TOKEN", value: telegramBotToken }] : []),
+            ...(twitterUsername ? [{ key: "TWITTER_USERNAME", value: twitterUsername }] : []),
+            ...(twitterPassword ? [{ key: "TWITTER_PASSWORD", value: twitterPassword }] : []),
+            ...(twitterEmail ? [{ key: "TWITTER_EMAIL", value: twitterEmail }] : []),
+            ...(emailOutgoingUser ? [{ key: "EMAIL_OUTGOING_USER", value: emailOutgoingUser }] : []),
+            ...(emailOutgoingPass ? [{ key: "EMAIL_OUTGOING_PASS", value: emailOutgoingPass }] : []),
+            ...(emailIncomingUser ? [{ key: "EMAIL_INCOMING_USER", value: emailIncomingUser }] : []),
+            ...(emailIncomingPass ? [{ key: "EMAIL_INCOMING_PASS", value: emailIncomingPass }] : []),
+          ],
+        },
+        voice: characterData.settings.voice.model ? characterData.settings.voice : undefined,
+        ragKnowledge: characterData.settings.ragKnowledge,
+        email: characterData.plugins.some((p) => ["email"].includes(p))
+          ? {
+              outgoing: {
+                ...characterData.settings.email.outgoing,
+                user: emailOutgoingUser,
+                pass: emailOutgoingPass,
+              },
+              incoming: {
+                ...characterData.settings.email.incoming,
+                user: emailIncomingUser,
+                pass: emailIncomingPass,
+              },
+            }
+          : undefined,
+      },
+      style: {
+        all: styleAllInput
+          ? styleAllInput.split(/,\s*\n/).map((s) => s.trim()).filter((s) => s)
+          : [],
+        chat: styleChatInput
+          ? styleChatInput.split(/,\s*\n/).map((s) => s.trim()).filter((s) => s)
+          : [],
+        post: stylePostInput
+          ? stylePostInput.split(/,\s*\n/).map((s) => s.trim()).filter((s) => s)
+          : [],
+      },
+      createdBy: {
+        _type: "reference",
+        _ref: userQuery.data._id, // Safe to access since we checked userQuery.data
+      },
+    };
+
+    await apiClient.createCharacter(updatedCharacterData);
+
+    if (profileImage) {
+      await uploadImageMutation.mutateAsync({ characterId: characterData.id, file: profileImage });
+    }
+
+    return characterData.id;
+  },
+  onSuccess: (_characterId) => {
+    setIsCreating(false); // Stop loader
+    queryClient.invalidateQueries({ queryKey: ["characters"] });
+    toast({
+      title: "Success",
+      description: `Character "${characterData.name}" created successfully.`,
+    });
+    // Reset form to empty fields
+    setCharacterData({
+      id: uuidv4() as UUID,
+      name: "",
+      username: "",
+      system: "",
+      bio: [],
+      lore: [],
+      messageExamples: [],
+      postExamples: [],
+      topics: [],
+      adjectives: [],
+      modelProvider: "OPENAI",
+      plugins: [],
+      settings: {
+        secrets: { dynamic: [] },
+        voice: { model: "" },
+        ragKnowledge: false,
+        email: {
+          outgoing: { service: "gmail", host: "", port: 0, secure: false, user: "", pass: "" },
+          incoming: { service: "imap", host: "", port: 993, user: "", pass: "" },
+        },
+      },
+      style: {
+        all: [],
+        chat: [],
+        post: [],
+      },
+      knowledge: [],
+    });
+    setBioInput("");
+    setLoreInput("");
+    setMessageExamplesInput("[]");
+    setPostExamplesInput("");
+    setTopicsInput("");
+    setAdjectivesInput("");
+    setStyleAllInput("");
+    setStyleChatInput("");
+    setStylePostInput("");
+    setProfileImage(null);
+    setImagePreview(null);
+    setError(null);
+    setTelegramBotToken("");
+    setTwitterUsername("");
+    setTwitterPassword("");
+    setTwitterEmail("");
+    setEmailOutgoingUser("");
+    setEmailOutgoingPass("");
+    setEmailIncomingUser("");
+    setEmailIncomingPass("");
+    setSelectedPreset(null);
+    navigate("/home");
+  },
+  onError: (error: any) => {
+    setIsCreating(false); // Stop loader
+    console.error("[CREATE_CHARACTER] Character creation error:", error);
+    const errorMessage = error.message || "Failed to create character";
+    setError(errorMessage);
+    toast({
+      variant: "destructive",
+      title: "Error",
+      description: errorMessage,
+    });
+    // Only redirect for 401 errors from the API, not for the "Log in to create Character" error
+    if (error.status === 401 && errorMessage !== "Log in to create Character" && window.location.pathname !== "/auth") {
+      navigate("/auth");
+    }
+  },
+});
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

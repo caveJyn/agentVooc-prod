@@ -27,6 +27,7 @@ import { signOut } from "supertokens-web-js/recipe/session";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { MouseEvent, useState } from "react";
+import { Avatar, AvatarImage } from "./ui/avatar";
 
 export function AppSidebar() {
   const location = useLocation();
@@ -116,6 +117,10 @@ export function AppSidebar() {
     }
   };
 
+  const handleLogin = () => {
+  navigate("/auth");
+};
+
   const handleEditAgent = (agentId: UUID) => {
     navigate(`/edit-character/${agentId}`);
   };
@@ -127,7 +132,10 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
               <NavLink to="/home" className="hover:bg-agentvooc-secondary-accent hover:text-agentvooc-accent transition-all">
-                <div className="flex gap-0.5 leading-none">
+                <div className="flex items-center gap-0.5 leading-none">
+                  <Avatar className="size-8 p-1 border rounded-full select-none">
+                      <AvatarImage src="/aV-logo.png" />
+                    </Avatar>
                   <span className="font-semibold text-agentvooc-primary">agentVooc</span><span className="text-agentvooc-accent">.</span>
                   {/* <span className="text-agentvooc-secondary mt-1">v{info?.version}</span> */}
                 </div>
@@ -264,18 +272,28 @@ export function AppSidebar() {
             <p className="text-sm text-agentvooc-secondary px-2">
               {userQuery.isLoading
                 ? "Loading..."
-                : userQuery.data?.user?.email || "No email available"}
+                : userQuery.data?.user?.email || "No User Logged In"}
             </p>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <Button
-              onClick={handleLogout}
-              variant="default"
-              className=""
-            >
-              Logout
-            </Button>
-          </SidebarMenuItem>
+  {userQuery.data?.user ? (
+    <Button
+      onClick={handleLogout}
+      variant="default"
+      className=""
+    >
+      Logout
+    </Button>
+  ) : (
+    <Button
+      onClick={handleLogin}
+      variant="default"
+      className=""
+    >
+      Log In
+    </Button>
+  )}
+</SidebarMenuItem>
           <SidebarMenuItem>
             <ConnectionStatus />
           </SidebarMenuItem>

@@ -47,10 +47,10 @@ export default function ProductPage() {
   // Custom PortableText components for SEO
   const portableTextComponents: PortableTextComponents = {
     block: {
-      h1: ({ children }) => <h1 className="text-3xl font-bold mb-4 text-white">{children}</h1>,
-      h2: ({ children }) => <h2 className="text-2xl font-semibold mb-3 text-white">{children}</h2>,
-      h3: ({ children }) => <h3 className="text-xl font-semibold mb-2 text-white">{children}</h3>,
-      normal: ({ children }) => <p className="mb-4 text-gray-300">{children}</p>,
+      h1: ({ children }) => <h1 className="text-3xl font-bold mb-4">{children}</h1>,
+      h2: ({ children }) => <h2 className="text-2xl font-semibold mb-3">{children}</h2>,
+      h3: ({ children }) => <h3 className="text-xl font-semibold mb-2">{children}</h3>,
+      normal: ({ children }) => <p className="mb-4 ">{children}</p>,
     },
     types: {
       image: ({ value }) => {
@@ -100,9 +100,9 @@ export default function ProductPage() {
           <link rel="canonical" href={`${baseUrl}/product`} />
         </Helmet>
         <div className="max-w-6xl mx-auto py-12 px-4">
-          <h1 className="text-3xl font-bold mb-4 text-white">Error</h1>
+          <h1 className="text-3xl font-bold mb-4">Error</h1>
           <p>{error}</p>
-          <Link to="/product" className="text-agentvooc-accent hover:underline">
+          <Link to="/product" className=" hover:underline">
             Back to Products
           </Link>
         </div>
@@ -221,8 +221,8 @@ export default function ProductPage() {
             />
           </div>
         )}
-        <h1 className="text-3xl font-bold mb-4 text-white">{page.title}</h1>
-        <p className="text-sm text-gray-500 mb-8">
+        <h1 className="text-3xl font-bold mb-4">{page.title}</h1>
+        <p className="text-sm  mb-8">
           Published: {new Date(page.publishedAt).toLocaleDateString()}
           {page.modifiedAt && page.modifiedAt !== page.publishedAt && (
             <> | Updated: {new Date(page.modifiedAt).toLocaleDateString()}</>
@@ -232,12 +232,12 @@ export default function ProductPage() {
           {page.content ? (
             <PortableText value={page.content} components={portableTextComponents} />
           ) : (
-            <p className="text-gray-300">No content available</p>
+            <p className="">No content available</p>
           )}
         </div>
         {page.galleryImages && page.galleryImages.length > 0 && (
           <div className="mt-12">
-            <h2 className="text-2xl font-semibold mb-4 text-white">Gallery</h2>
+            <h2 className="text-2xl font-semibold mb-4">Gallery</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {page.galleryImages.map((image, index) => (
                 <div key={index} className="w-full h-64 bg-gray-200 animate-pulse rounded-lg">
@@ -259,13 +259,13 @@ export default function ProductPage() {
         )}
         {page.relatedContent && page.relatedContent.length > 0 && (
           <div className="mt-12">
-            <h2 className="text-2xl font-semibold mb-4 text-white">Related Content</h2>
+            <h2 className="text-2xl font-semibold mb-4">Related Content</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {page.relatedContent.slice(0, 3).map((item) => (
                 <Link
                   key={`${item._type}-${item.slug}`}
                   to={`/company/${item._type === "blogPost" ? "blog" : item._type === "pressPost" ? "press" : "product"}/${item.slug}`}
-                  className="block p-4 bg-agentvooc-primary-bg rounded-lg border border-agentvooc-border text-white hover:bg-agentvooc-accent hover:text-black hover:shadow-lg transition-all duration-300"
+                  className="block p-4 bg-agentvooc-primary-bg rounded-lg border border-agentvooc-border hover:bg-agentvooc-accent hover:text-black hover:shadow-lg transition-all duration-300"
                   aria-label={`View ${item._type === "blogPost" ? "blog post" : item._type === "pressPost" ? "press release" : "product"}: ${item.title}`}
                   onClick={() => window.scrollTo(0, 0)}
                 >
@@ -286,9 +286,9 @@ export default function ProductPage() {
                   )}
                   <h3 className="text-lg font-semibold mb-2">{item.title}</h3>
                   {item.excerpt && (
-                    <p className="text-sm text-gray-300 mb-2 line-clamp-2">{item.excerpt}</p>
+                    <p className="text-sm  mb-2 line-clamp-2">{item.excerpt}</p>
                   )}
-                  <span className="inline-block px-2 py-1 text-xs font-medium text-white bg-agentvooc-accent rounded-full">
+                  <span className="inline-block px-2 py-1 text-xs font-medium bg-agentvooc-accent rounded-full">
                     {item._type === "blogPost" ? "Blog Post" : item._type === "pressPost" ? "Press Release" : "Product"}
                   </span>
                 </Link>

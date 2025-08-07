@@ -2897,7 +2897,7 @@ router.get("/agents", async (req, res) => {
     });
     res.json({ agents: agentsList });
   } catch (error) {
-    elizaLogger.error("[CLIENT-DIRECT] Error fetching agents:", { message: error.message, stack: error.stack });
+    // elizaLogger.warn("[CLIENT-DIRECT] Anon User Browsing Home || Error fetching agents", { message: error.message, stack: error.stack });
     res.status(500).json({ error: "[CLIENT-DIRECT] Failed to fetch agents", details: error.message });
   }
 });
@@ -3106,7 +3106,7 @@ router.post("/characters", async (req, res) => {
       limits = await getUserSubscriptionLimits(userId);
     } catch (error) {
       elizaLogger.warn(`[CLIENT-DIRECT] Subscription check failed for userId: ${userId}`, error);
-      return res.status(403).json({ error: "Unable to verify subscription limits" });
+      return res.status(403).json({ error: "Unable to verify subscription limits, go to Settings to confirm" });
     }
     const existingAgentsCount = await sanityClient.fetch(
       `count(*[_type == "character" && createdBy._ref == $userRef])`,
@@ -5094,24 +5094,22 @@ router.post("/agents/:agentId/set", async (req, res) => {
         ...landingPage.heroSection,
         backgroundImage: landingPage.heroSection.backgroundImage
           ? {
+              raw: landingPage.heroSection.backgroundImage.asset.url,
               main: urlFor(landingPage.heroSection.backgroundImage)
-                  .width(998)
-                  .height(1200)
-                  .fit("crop")
+                  
+                  .fit("fill")
                   .quality(98)
                   .format("webp")
                   .url(),
               thumbnail: urlFor(landingPage.heroSection.backgroundImage)
-                  .width(300)
-                  .height(200)
+            
                   .fit("crop")
                   .quality(80)
                   .format("webp")
                   .url(),
               medium: urlFor(landingPage.heroSection.backgroundImage)
-                  .width(600)
-                  .height(400)
-                  .fit("crop")
+                 
+                  .fit("fill")
                   .quality(80)
                   .format("webp")
                   .url(),
@@ -5154,11 +5152,9 @@ router.post("/agents/:agentId/set", async (req, res) => {
         image: landingPage.benefitsSection.image
           ? {
               main: urlFor(landingPage.benefitsSection.image)
-                  .width(1200)
-                  .height(850)
-                  .fit("crop")
+              .width(300)
+                  .height(600)
                   .quality(80)
-                  .format("webp")
                   .url(),
               thumbnail: urlFor(landingPage.benefitsSection.image)
                   .width(300)

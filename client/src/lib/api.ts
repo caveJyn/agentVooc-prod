@@ -221,6 +221,7 @@ interface ImageVariants {
   main: string;
   thumbnail: string;
   medium: string;
+  raw?: string; // Optional raw URL for the image
 }
 
 interface LandingPage {

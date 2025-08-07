@@ -115,12 +115,12 @@ export const TestimonialsSection = ({
     <div className="max-w-6xl mx-auto">
       <h2 className="text-4xl font-bold mb-12 text-center">{heading}</h2>
       <div className="flex flex-col lg:flex-row gap-8">
-        <div className="w-full lg:w-1/2 min-h-[400px] rounded-lg flex items-center justify-center">
+        <div className="w-full lg:w-1/2 min-h-[450px] rounded-lg flex items-center justify-center">
           {sectionImage && sectionImage.main ? (
             <img
               src={sectionImage.main}
               alt="Testimonials Section"
-              className="w-full max-w-md h-auto object-cover rounded-lg shadow-agentvooc-glow"
+              className=""
               onError={(e) => {
                 console.error("Failed to load testimonials section image:", sectionImage.main);
                 e.currentTarget.style.display = "none";

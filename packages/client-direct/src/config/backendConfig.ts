@@ -175,9 +175,9 @@ export function backendConfig(): InputType {
           if (error.type === "TRY_REFRESH_TOKEN") {
             elizaLogger.debug("Session refresh token required");
           } else if (error.type === "UNAUTHORISED") {
-            elizaLogger.warn("Unauthorized session access attempt");
+            // elizaLogger.warn("Unauthorized session access attempt");
           } else {
-            elizaLogger.error("Session error:", error);
+            // elizaLogger.error("Session error:", error);
           }
           throw error;
         }
