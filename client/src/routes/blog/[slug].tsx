@@ -690,10 +690,10 @@ export default function BlogPostPage() {
 
             {/* AdSense Header Ad */}
             {post.adSlotHeader && (
-              <div className="mb-8">
-                <AdSenseUnit adSlot={post.adSlotHeader} format="auto" className="mx-auto" />
-              </div>
-            )}
+  <div className="mb-8 ad-container" style={{ minWidth: '300px', minHeight: '100px', display: 'block' }}>
+    <AdSenseUnit adSlot={post.adSlotHeader} format="auto" className="mx-auto" />
+  </div>
+)}
 
             {/* Article Header */}
             <header className="mb-10">
@@ -751,10 +751,10 @@ export default function BlogPostPage() {
 
             {/* AdSense Content Ad */}
             {post.adSlotContent && (
-              <div className="my-8">
-                <AdSenseUnit adSlot={post.adSlotContent} format="auto" className="mx-auto" />
-              </div>
-            )}
+  <div className="my-8 ad-container" style={{ minWidth: '300px', minHeight: '100px', display: 'block' }}>
+    <AdSenseUnit adSlot={post.adSlotContent} format="auto" className="mx-auto" />
+  </div>
+)}
 
             {/* Gallery */}
             {post.galleryImages && post.galleryImages.length > 0 && (
@@ -839,10 +839,10 @@ export default function BlogPostPage() {
                 onItemClick={handleTocClick}
               />
               {post.adSlotRightSide && (
-                <div className="mt-6">
-                  <AdSenseUnit adSlot={post.adSlotRightSide} format="vertical" className="mx-auto" />
-                </div>
-              )}
+  <div className="mt-6 ad-container" style={{ minWidth: '160px', minHeight: '600px', display: 'block' }}>
+    <AdSenseUnit adSlot={post.adSlotRightSide} format="vertical" className="mx-auto" />
+  </div>
+)}
             </aside>
           )}
         </div>

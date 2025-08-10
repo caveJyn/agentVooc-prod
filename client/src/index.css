@@ -433,3 +433,15 @@
   }
 }
 }
+
+.ad-container {
+  display: block !important;
+  min-width: 300px;
+  min-height: 100px;
+  visibility: visible;
+}
+.ad-container .adsbygoogle {
+  display: block !important;
+  width: 100%;
+  height: auto;
+}
