@@ -8,7 +8,6 @@ interface AdSenseUnitProps {
 
 const AdSenseUnit = ({ adSlot, format = 'auto', className = '' }: AdSenseUnitProps) => {
   useEffect(() => {
-    // Only attempt to push ads if the AdSense script is loaded
     if (typeof window !== 'undefined' && window.adsbygoogle) {
       try {
         (window.adsbygoogle = window.adsbygoogle || []).push({});
@@ -25,7 +24,7 @@ const AdSenseUnit = ({ adSlot, format = 'auto', className = '' }: AdSenseUnitPro
       <ins
         className="adsbygoogle"
         style={{ display: 'block' }}
-        data-ad-client="ca-pub-XXXXXXXXXXXXXXXX" // Replace with your actual publisher ID
+        data-ad-client="ca-pub-9622114924468888"
         data-ad-slot={adSlot}
         data-ad-format={format}
         data-full-width-responsive="true"
