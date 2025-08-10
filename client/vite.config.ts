@@ -34,16 +34,6 @@ export default defineConfig(({ mode }) => {
             cssMinify: true,
             sourcemap: false,
             cssCodeSplit: true,
-            rollupOptions: {
-                output: {
-                    manualChunks: undefined,
-                    entryFileNames: `assets/[name].js`,
-                    chunkFileNames: `assets/[name].js`,
-                    assetFileNames: `assets/[name].[ext]`,
-                    // Disable preload for JS files
-                    preload: false
-                }
-            }
         },
         resolve: {
             alias: {

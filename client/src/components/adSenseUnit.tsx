@@ -24,6 +24,7 @@ const AdSenseUnit = ({ adSlot, format = 'auto', className = '' }: AdSenseUnitPro
       try {
         console.log(`[AdSenseUnit] Pushing ad for slot: ${adSlot}`);
         (window.adsbygoogle = window.adsbygoogle || []).push({});
+        console.log(`[AdSenseUnit] Ad pushed successfully for slot: ${adSlot}`);
       } catch (error) {
         console.error('[AdSenseUnit] Error pushing ad:', error);
       }
