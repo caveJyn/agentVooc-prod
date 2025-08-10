@@ -12,7 +12,22 @@ if (savedTheme === "dark") {
   document.documentElement.classList.add("dark");
 } else {
   document.documentElement.classList.remove("dark");
-  localStorage.setItem("theme", "light"); // Ensure localStorage reflects light theme
+  localStorage.setItem("theme", "light");
+}
+
+// Debug AdSense script loading
+if (typeof window !== 'undefined') {
+  const script = document.querySelector('script[src*="adsbygoogle.js"]');
+  if (script) {
+    script.addEventListener('load', () => {
+      console.log('[main.tsx] AdSense script loaded successfully');
+    });
+    script.addEventListener('error', () => {
+      console.error('[main.tsx] AdSense script failed to load');
+    });
+  } else {
+    console.error('[main.tsx] AdSense script not found in DOM');
+  }
 }
 
 const rootElement = document.getElementById("root");

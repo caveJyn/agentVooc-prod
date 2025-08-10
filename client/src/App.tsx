@@ -98,11 +98,11 @@ function AppContent() {
             type="text/javascript"
           ></script>
           {/* Add AdSense Script */}
-          {/* <script
+          <script
             async
             src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9622114924468888"
             crossOrigin="anonymous"
-          ></script> */}
+          ></script>
         </Helmet>
         <CookieConsent
           location="bottom"
