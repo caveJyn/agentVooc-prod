@@ -97,36 +97,52 @@ export function AppSidebar() {
     document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${window.location.hostname}`;
     document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=.${window.location.hostname}`;
   }
+  console.log("[APP_SIDEBAR] Cookies cleared:", document.cookie);
 };
 
-
-
-const handleLogout = async (e: React.MouseEvent<HTMLButtonElement>) => {
+const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
   e.preventDefault();
   try {
-    // Step 1: Update connection status in Sanity
-    await apiClient.updateConnectionStatus({ isConnected: false });
+    // Retry updateConnectionStatus up to 3 times
+    let updateSuccess = false;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        console.log(`[APP_SIDEBAR] Attempt ${attempt} to update connection status`);
+        await apiClient.updateConnectionStatus({ isConnected: false, clientId: "logout" });
+        updateSuccess = true;
+        break;
+      } catch (error) {
+        console.warn(`[APP_SIDEBAR] Attempt ${attempt} failed:`, error);
+        if (attempt === 3) throw error;
+        await new Promise((resolve) => setTimeout(resolve, 500)); // Wait before retry
+      }
+    }
 
-    // Step 2: Revoke SuperTokens session
+    if (!updateSuccess) {
+      throw new Error("Failed to update connection status after retries");
+    }
+
+    // Revoke SuperTokens session
     await signOut();
+    console.log("[APP_SIDEBAR] Session revoked via signOut");
 
-    // Step 3: Clear cookies
+    // Clear cookies
     clearCookies();
 
-    // Step 4: Clear local and session storage
+    // Clear local and session storage
     localStorage.clear();
     sessionStorage.clear();
 
-    // Step 5: Clear React Query cache
+    // Clear React Query cache
     queryClient.clear();
 
-    // Step 6: Notify user
+    // Notify user
     toast({
       title: "Success!",
       description: "Logged out successfully.",
     });
 
-    // Step 7: Force full page reload to clear any stale state
+    // Force full page reload
     window.location.assign("/");
   } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : "Failed to log out. Please try again.";
@@ -137,7 +153,7 @@ const handleLogout = async (e: React.MouseEvent<HTMLButtonElement>) => {
     });
     console.error("[APP_SIDEBAR] Logout error:", err);
 
-    // Attempt to clear cookies and redirect even if logout fails
+    // Fallback: Clear cookies and redirect
     clearCookies();
     localStorage.clear();
     sessionStorage.clear();
@@ -145,8 +161,6 @@ const handleLogout = async (e: React.MouseEvent<HTMLButtonElement>) => {
     window.location.assign("/");
   }
 };
-
-export default handleLogout;
 
 
   const handleLogin = () => {

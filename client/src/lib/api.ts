@@ -807,25 +807,34 @@ updateEmailTemplate: (agentId: string, template: Partial<EmailTemplate>) =>
 
     updateConnectionStatus: async ({ isConnected, clientId }: { isConnected: boolean; clientId?: string }) => {
     try {
-      const session = await Session.getSession();
-      const userId = session?.getUserId();
+      let userId: string | undefined;
+      try {
+        const session = await Session.getSession({ sessionRequired: false });
+        userId = session?.getUserId();
+      } catch (error) {
+        console.warn("[API_CLIENT] Failed to get session for userId:", error);
+      }
+
       const cookies = document.cookie;
-      console.log("[API_CLIENT] Sending cookies with updateConnectionStatus:", cookies);
+      console.log("[API_CLIENT] Cookies sent with updateConnectionStatus:", cookies);
+
       const response = await fetch("/api/connection-status", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        credentials: "include",
+        credentials: "include", // Ensure session cookies are sent
         body: JSON.stringify({ isConnected, clientId, userId }),
       });
 
       if (!response.ok) {
+        const errorText = await response.text();
         console.error("[API_CLIENT] updateConnectionStatus failed:", {
           status: response.status,
           statusText: response.statusText,
+          response: errorText,
         });
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`HTTP error! status: ${response.status}, response: ${errorText}`);
       }
 
       return await response.json();
