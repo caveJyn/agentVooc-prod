@@ -156,71 +156,69 @@ export function backendConfig(): InputType {
         },
       }),
       Session.init({
-    cookieSecure: true,
-    cookieSameSite: "strict",
-    sessionExpiredStatusCode: 401,
-    antiCsrf: "VIA_TOKEN",
-    override: {
-      functions: (originalImplementation) => ({
-        ...originalImplementation,
-        createNewSession: async function (input) {
-          const clientId = uuidv4();
-          elizaLogger.debug(`Creating new session for user: ${input.userId}, clientId: ${clientId}`);
-          return originalImplementation.createNewSession({
-            ...input,
-            accessTokenPayload: {
-              ...input.accessTokenPayload,
-              clientId,
+        cookieSecure: true,
+        cookieSameSite: "strict",
+        sessionExpiredStatusCode: 401,
+        antiCsrf: "VIA_TOKEN",
+        override: {
+          functions: (originalImplementation) => ({
+            ...originalImplementation,
+            createNewSession: async function (input) {
+              const clientId = uuidv4();
+              elizaLogger.info(`Creating new session for user: ${input.userId}, clientId: ${clientId}`);
+              return originalImplementation.createNewSession({
+                ...input,
+                accessTokenPayload: {
+                  ...input.accessTokenPayload,
+                  clientId,
+                },
+              });
             },
-          });
-        },
-        getSession: async function (input) {
-          try {
-            const cookies = input.req.getHeader("cookie") || "no cookies";
-            elizaLogger.debug(`[BACKEND] Attempting to retrieve session, cookies: ${cookies}`);
-            const session = await originalImplementation.getSession(input);
-            elizaLogger.debug(`Session retrieved for userId: ${session.getUserId()}, clientId: ${session.getAccessTokenPayload().clientId}`);
-            return session;
-          } catch (error: any) {
-            elizaLogger.error(`[BACKEND] Failed to retrieve session`, {
-              error: error.message,
-              cookies: input.req.getHeader("cookie") || "no cookies",
-              path: input.req.getOriginalUrl(),
-            });
-            throw error;
-          }
-        },
-        revokeSession: async function (input) {
-          try {
-            const sessionInfo = await originalImplementation.getSessionInformation(input);
-            const userId = sessionInfo ? sessionInfo.userId : "unknown";
-            elizaLogger.debug(`Revoking session for user: ${userId}, sessionHandle: ${input.sessionHandle}`);
+            getSession: async function (input) {
+              try {
+                elizaLogger.info(`[BACKEND] Attempting to retrieve session with accessToken`);
+                const session = await originalImplementation.getSession(input);
+                elizaLogger.info(`Session retrieved for userId: ${session.getUserId()}, clientId: ${session.getAccessTokenPayload().clientId}`);
+                return session;
+              } catch (error: any) {
+                elizaLogger.error(`[BACKEND] Failed to retrieve session`, {
+                  error: error.message,
+                  accessToken: input.accessToken ? 'present' : 'missing',
+                });
+                throw error;
+              }
+            },
+            revokeSession: async function (input) {
+              try {
+                const sessionInfo = await originalImplementation.getSessionInformation(input);
+                const userId = sessionInfo ? sessionInfo.userId : "unknown";
+                elizaLogger.debug(`Revoking session for user: ${userId}, sessionHandle: ${input.sessionHandle}`);
 
-            const result = await originalImplementation.revokeSession(input);
+                const result = await originalImplementation.revokeSession(input);
 
-            const user = await sanityClient.fetch(
-              `*[_type == "User" && userId == $userId][0]{_id}`,
-              { userId }
-            );
-            if (user) {
-              await sanityClient
-                .patch(user._id)
-                .set({ isConnected: false, clientId: null })
-                .commit();
-              clearConnectionCache();
-              elizaLogger.debug(`[BACKEND] Updated isConnected to false for userId: ${userId}`);
-            }
+                const user = await sanityClient.fetch(
+                  `*[_type == "User" && userId == $userId][0]{_id}`,
+                  { userId }
+                );
+                if (user) {
+                  await sanityClient
+                    .patch(user._id)
+                    .set({ isConnected: false, clientId: null })
+                    .commit();
+                  clearConnectionCache();
+                  elizaLogger.info(`[BACKEND] Updated isConnected to false for userId: ${userId}`);
+                }
 
-            elizaLogger.debug("Session revoked successfully");
-            return result;
-          } catch (error: any) {
-            elizaLogger.error("Session revocation error:", error);
-            throw error;
-          }
+                elizaLogger.info("Session revoked successfully");
+                return result;
+              } catch (error: any) {
+                elizaLogger.error("Session revocation error:", error);
+                throw error;
+              }
+            },
+          }),
         },
       }),
-    },
-  }),
       Dashboard.init({
         admins: ["agentvooc@gmail.com"],
         override: {
