@@ -1,8 +1,15 @@
+// packages/plugin-shared-email-sanity/src/isuserConnected.ts
 import { elizaLogger } from "@elizaos/core";
 import { sanityClient } from "./emailTemplate";
 
 let cachedIsConnected: { value: boolean; timestamp: number } | null = null;
-const cacheDuration = 60 * 1000; // Cache for 30 seconds
+const cacheDuration = 60 * 1000; // Cache for 60 seconds
+
+// Function to clear cache on logout
+export function clearConnectionCache() {
+  cachedIsConnected = null;
+  elizaLogger.debug("[SHARED-EMAIL-SANITY] Cleared connection status cache");
+}
 
 export async function isUserConnected(userId: string): Promise<boolean> {
   if (cachedIsConnected && Date.now() - cachedIsConnected.timestamp < cacheDuration) {
@@ -33,6 +40,7 @@ export async function isUserConnected(userId: string): Promise<boolean> {
     return false;
   }
 }
+
 async function retryOperation<T>(operation: () => Promise<T>, retries = 3, delay = 500): Promise<T> {
   let lastError: any;
   for (let attempt = 0; attempt < retries; attempt++) {

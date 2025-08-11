@@ -130,20 +130,22 @@ const fetcher = async ({
         const refreshed = await Session.attemptRefreshingSession();
         
         if (refreshed) {
-          // console.log(`[FETCHER] Session refreshed successfully, retrying ${url}`);
+          console.log(`[FETCHER] Session refreshed successfully, retrying ${url}`);
           // Retry the original request with the new session
           return await makeRequest();
         } else {
-          // console.log(`[FETCHER] Session refresh failed, redirecting to auth for ${url}`);
+          console.log(`[FETCHER] Session refresh failed, redirecting to auth for ${url}`);
           // Session refresh failed, redirect to auth
           await signOut(); // Explicitly sign out if refresh fails
           window.location.href = "/auth";
           throw new Error("Session expired, please login again");
         }
       } catch (refreshError) {
-        // console.error(`[FETCHER] Session refresh error for ${url}:`, refreshError);
+        console.error(`[FETCHER] Session refresh error for ${url}:`, refreshError);
+        console.log("[FETCHER] Attempting sign out due to refresh error");
         // Session refresh failed, redirect to auth
         await signOut(); // Explicitly sign out on refresh error
+        console.log("[FETCHER] Sign out completed successfully");
         window.location.href = "/auth";
         throw new Error("Session expired, please login again");
       }

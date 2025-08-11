@@ -37,6 +37,7 @@ import { v4 as uuidv4 } from "uuid";
 import type { EmailClient } from "@elizaos-plugins/plugin-email";
 import { computeHash,encryptValue } from './utils/cryptoUtils';
 import { randomUUID } from 'crypto';
+import { clearConnectionCache } from "@elizaos-plugins/plugin-shared-email-sanity";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "your-secret-key", {
   apiVersion: "2025-06-30.basil",
@@ -5437,35 +5438,48 @@ router.post('/characters/:characterId/email/reconnect', async (req, res) => {
 
 
   router.post("/connection-status", async (req, res) => {
-        try {
-            const session = await Session.getSession(req, res, { sessionRequired: true });
-            const userId = session.getUserId();
-            const { isConnected } = req.body;
+  try {
+    const session = await Session.getSession(req, res, { sessionRequired: true });
+    const userId = session.getUserId();
+    const { isConnected } = req.body;
 
-            elizaLogger.debug(`[CLIENT-DIRECT] Processing POST /connection-status for userId: ${userId}, isConnected: ${isConnected}`);
+    elizaLogger.debug(`[CLIENT-DIRECT] Processing POST /connection-status for userId: ${userId}, isConnected: ${isConnected}`);
 
-            if (typeof isConnected !== "boolean") {
-                elizaLogger.warn("[CLIENT-DIRECT] Invalid isConnected value in /connection-status", { isConnected });
-                return res.status(400).json({ error: "isConnected must be a boolean" });
-            }
+    if (typeof isConnected !== "boolean") {
+      elizaLogger.warn("[CLIENT-DIRECT] Invalid isConnected value in /connection-status", { isConnected });
+      return res.status(400).json({ error: "isConnected must be a boolean" });
+    }
 
-            // Update user status in Sanity
-            await sanityClient
-                .patch({ query: `*[_type == "User" && userId == $userId][0]`, params: { userId } })
-                .set({ isConnected })
-                .commit();
+    const user = await sanityClient.fetch(
+      `*[_type == "User" && userId == $userId][0]{_id}`,
+      { userId }
+    );
 
-            elizaLogger.debug(`[CLIENT-DIRECT] User connection status updated for userId: ${userId}`, { isConnected });
+    if (!user) {
+      elizaLogger.warn(`[CLIENT-DIRECT] User not found for userId: ${userId}`);
+      return res.status(404).json({ error: "User not found" });
+    }
 
-            res.json({ status: "updated", isConnected });
-        } catch (error: any) {
-            // elizaLogger.error("[CLIENT-DIRECT] Error updating connection status:", {
-            //     error: error.message,
-            //     stack: error.stack,
-            // });
-            res.status(500).json({ error: "Failed to update connection status" });
-        }
+    await sanityClient
+      .patch(user._id)
+      .set({ isConnected })
+      .commit();
+
+    // Clear connection cache
+    clearConnectionCache();
+
+    elizaLogger.debug(`[CLIENT-DIRECT] User connection status updated for userId: ${userId}`, { isConnected });
+
+    res.json({ status: "updated", isConnected });
+  } catch (error: any) {
+    elizaLogger.error("[CLIENT-DIRECT] Error updating connection status:", {
+      userId: req.body.userId || "unknown",
+      error: error.message,
+      stack: error.stack,
     });
+    res.status(500).json({ error: "Failed to update connection status", details: error.message });
+  }
+});
 
 router.get("/connection-status", async (req, res) => {
   try {
