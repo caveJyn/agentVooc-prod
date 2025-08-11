@@ -192,7 +192,7 @@ export function backendConfig(): InputType {
               try {
                 const sessionInfo = await originalImplementation.getSessionInformation(input);
                 const userId = sessionInfo ? sessionInfo.userId : "unknown";
-                elizaLogger.debug(`Revoking session for user: ${userId}, sessionHandle: ${input.sessionHandle}`);
+                elizaLogger.info(`Revoking session for user: ${userId}, sessionHandle: ${input.sessionHandle}`);
 
                 const result = await originalImplementation.revokeSession(input);
 
