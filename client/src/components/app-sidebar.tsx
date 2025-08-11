@@ -29,6 +29,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { MouseEvent, useState } from "react";
 import { Avatar, AvatarImage } from "./ui/avatar";
+import { doesSessionExist } from "supertokens-web-js/recipe/session"; // Add this import
 
 export function AppSidebar() {
   const location = useLocation();
@@ -90,26 +91,43 @@ export function AppSidebar() {
   });
 
   const clearCookies = () => {
-  document.cookie.split(";").forEach((cookie) => {
-    const [name] = cookie.split("=");
-    document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
-  });
+  const cookies = document.cookie.split(";");
+  for (const cookie of cookies) {
+    const [name] = cookie.split("=").map((c) => c.trim());
+    document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${window.location.hostname}`;
+    document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=.${window.location.hostname}`;
+  }
 };
 
-const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
+
+
+const handleLogout = async (e: React.MouseEvent<HTMLButtonElement>) => {
   e.preventDefault();
   try {
+    // Step 1: Update connection status in Sanity
     await apiClient.updateConnectionStatus({ isConnected: false });
+
+    // Step 2: Revoke SuperTokens session
     await signOut();
-    clearCookies(); // Clear all cookies
+
+    // Step 3: Clear cookies
+    clearCookies();
+
+    // Step 4: Clear local and session storage
     localStorage.clear();
     sessionStorage.clear();
+
+    // Step 5: Clear React Query cache
     queryClient.clear();
+
+    // Step 6: Notify user
     toast({
       title: "Success!",
       description: "Logged out successfully.",
     });
-    window.location.href = "/";
+
+    // Step 7: Force full page reload to clear any stale state
+    window.location.assign("/");
   } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : "Failed to log out. Please try again.";
     toast({
@@ -117,8 +135,20 @@ const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
       title: "Error",
       description: errorMessage,
     });
+    console.error("[APP_SIDEBAR] Logout error:", err);
+
+    // Attempt to clear cookies and redirect even if logout fails
+    clearCookies();
+    localStorage.clear();
+    sessionStorage.clear();
+    queryClient.clear();
+    window.location.assign("/");
   }
 };
+
+export default handleLogout;
+
+
   const handleLogin = () => {
   navigate("/auth");
 };

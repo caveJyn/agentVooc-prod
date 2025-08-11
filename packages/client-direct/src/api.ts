@@ -5439,15 +5439,28 @@ router.post('/characters/:characterId/email/reconnect', async (req, res) => {
 
   router.post("/connection-status", async (req, res) => {
   try {
-    const session = await Session.getSession(req, res, { sessionRequired: true });
-    const userId = session.getUserId();
-    const { isConnected } = req.body;
+    let userId: string;
+    try {
+      const session = await Session.getSession(req, res, { sessionRequired: true });
+      userId = session.getUserId();
+    } catch (sessionError: any) {
+      // If session is invalid, try to get userId from request body
+      userId = req.body.userId;
+      if (!userId) {
+        elizaLogger.warn("[CLIENT-DIRECT] No session or userId provided in POST /connection-status", {
+          body: req.body,
+        });
+        return res.status(401).json({ error: "Unauthorized: No valid session or userId" });
+      }
+    }
 
-    elizaLogger.debug(`[CLIENT-DIRECT] Processing POST /connection-status for userId: ${userId}, isConnected: ${isConnected}`);
+    const { isConnected, clientId } = req.body;
 
-    if (typeof isConnected !== "boolean") {
-      elizaLogger.warn("[CLIENT-DIRECT] Invalid isConnected value in /connection-status", { isConnected });
-      return res.status(400).json({ error: "isConnected must be a boolean" });
+    elizaLogger.debug(`[CLIENT-DIRECT] Processing POST /connection-status for userId: ${userId}, clientId: ${clientId}, isConnected: ${isConnected}`);
+
+    if (typeof isConnected !== "boolean" || !clientId) {
+      elizaLogger.warn("[CLIENT-DIRECT] Invalid input in /connection-status", { isConnected, clientId });
+      return res.status(400).json({ error: "isConnected must be a boolean and clientId is required" });
     }
 
     const user = await sanityClient.fetch(
@@ -5462,20 +5475,15 @@ router.post('/characters/:characterId/email/reconnect', async (req, res) => {
 
     await sanityClient
       .patch(user._id)
-      .set({ isConnected })
+      .set({ isConnected, clientId })
       .commit();
 
-    // Clear connection cache
     clearConnectionCache();
 
-    elizaLogger.debug(`[CLIENT-DIRECT] User connection status updated for userId: ${userId}`, { isConnected });
+    elizaLogger.debug(`[CLIENT-DIRECT] User connection status updated for userId: ${userId}, clientId: ${clientId}`, { isConnected });
 
-    res.json({ status: "updated", isConnected });
+    res.json({ status: "updated", isConnected, clientId });
   } catch (error: any) {
-    if (error.type === "UNAUTHORISED") {
-      elizaLogger.warn(`[CLIENT-DIRECT] Unauthorized access to POST /connection-status`, { userId: req.body.userId || "unknown" });
-      return res.status(401).json({ error: "Unauthorized", type: "UNAUTHORISED" });
-    }
     elizaLogger.error("[CLIENT-DIRECT] Error updating connection status:", {
       userId: req.body.userId || "unknown",
       error: error.message,

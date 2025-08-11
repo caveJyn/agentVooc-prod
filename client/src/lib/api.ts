@@ -805,12 +805,35 @@ updateEmailTemplate: (agentId: string, template: Partial<EmailTemplate>) =>
         method: "POST",
     }),
 
-    updateConnectionStatus: (data: { isConnected: boolean }) =>
-    fetcher({
-      url: "/api/connection-status",
-      method: "POST",
-      body: data,
-    }),
+    updateConnectionStatus: async ({ isConnected, clientId }: { isConnected: boolean; clientId?: string }) => {
+    try {
+      const session = await Session.getSession();
+      const userId = session?.getUserId();
+      const cookies = document.cookie;
+      console.log("[API_CLIENT] Sending cookies with updateConnectionStatus:", cookies);
+      const response = await fetch("/api/connection-status", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ isConnected, clientId, userId }),
+      });
+
+      if (!response.ok) {
+        console.error("[API_CLIENT] updateConnectionStatus failed:", {
+          status: response.status,
+          statusText: response.statusText,
+        });
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error: any) {
+      console.error("[API_CLIENT] Failed to update connection status:", error);
+      throw error;
+    }
+  },
 
   getConnectionStatus: () =>
     fetcher({
