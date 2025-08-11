@@ -47,18 +47,18 @@ export default function ConnectionStatus() {
 
   // Query to fetch agents - this determines actual connection status
   const query = useQuery({
-    queryKey: ["status"],
-    queryFn: async () => {
-      const start = performance.now();
-      const data = await apiClient.getUser();
-      const end = performance.now();
-      setQueryTime(end - start);
-      return data;
-    },
-    refetchInterval: 30_000,
-    retry: 5,
-    refetchOnWindowFocus: "always",
-  });
+  queryKey: ["status"],
+  queryFn: async () => {
+    const start = performance.now();
+    const data = await apiClient.getConnectionStatus();
+    const end = performance.now();
+    setQueryTime(end - start);
+    return data;
+  },
+  refetchInterval: 30_000,
+  retry: 5,
+  refetchOnWindowFocus: "always",
+});
 
   // Update connection state based on query status (original logic)
   useEffect(() => {

@@ -2589,11 +2589,11 @@ router.get("/user", async (req: express.Request, res: express.Response) => {
     }
 
     if (error.type === "UNAUTHORISED") {
-      // elizaLogger.warn(`[USER_ENDPOINT] Unauthorized access to user endpoint`);
-      // return res.status(401).json({ 
-      //   message: "Unauthorized",
-      //   type: "UNAUTHORISED" 
-      // });
+      elizaLogger.warn(`[USER_ENDPOINT] Unauthorized access to user endpoint`);
+      return res.status(401).json({ 
+        message: "Unauthorized",
+        type: "UNAUTHORISED" 
+      });
     }
 
     // Generic error handling
@@ -5472,6 +5472,10 @@ router.post('/characters/:characterId/email/reconnect', async (req, res) => {
 
     res.json({ status: "updated", isConnected });
   } catch (error: any) {
+    if (error.type === "UNAUTHORISED") {
+      elizaLogger.warn(`[CLIENT-DIRECT] Unauthorized access to POST /connection-status`, { userId: req.body.userId || "unknown" });
+      return res.status(401).json({ error: "Unauthorized", type: "UNAUTHORISED" });
+    }
     elizaLogger.error("[CLIENT-DIRECT] Error updating connection status:", {
       userId: req.body.userId || "unknown",
       error: error.message,
@@ -5483,10 +5487,19 @@ router.post('/characters/:characterId/email/reconnect', async (req, res) => {
 
 router.get("/connection-status", async (req, res) => {
   try {
-    const session = await Session.getSession(req, res, { sessionRequired: true });
-    const userId = session.getUserId();
+    const session = await Session.getSession(req, res, { sessionRequired: false });
+    const userId = session?.getUserId();
 
-    elizaLogger.debug(`[CLIENT-DIRECT] Processing GET /connection-status for userId: ${userId}`);
+    elizaLogger.debug(`[CLIENT-DIRECT] Processing GET /connection-status`, { userId: userId || "no-session" });
+
+    if (!session || !userId) {
+      elizaLogger.debug(`[CLIENT-DIRECT] No session found for GET /connection-status`);
+      return res.json({
+        isConnected: false,
+        userId: null,
+        timestamp: new Date().toISOString(),
+      });
+    }
 
     // Query Sanity to get user connection status
     const user = await sanityClient.fetch(
@@ -5500,24 +5513,27 @@ router.get("/connection-status", async (req, res) => {
     }
 
     const isConnected = user.isConnected === true;
-    
-    elizaLogger.debug(`[CLIENT-DIRECT] Connection status retrieved for userId: ${userId}`, { 
-      isConnected,
-      userId: user.userId 
-    });
 
-    res.json({ 
+    elizaLogger.debug(`[CLIENT-DIRECT] Connection status retrieved for userId: ${userId}`, {
       isConnected,
       userId: user.userId,
-      timestamp: new Date().toISOString()
     });
 
+    res.json({
+      isConnected,
+      userId: user.userId,
+      timestamp: new Date().toISOString(),
+    });
   } catch (error: any) {
+    if (error.type === "UNAUTHORISED") {
+      elizaLogger.warn(`[CLIENT-DIRECT] Unauthorized access to GET /connection-status`, { userId: userId || "unknown" });
+      return res.status(401).json({ error: "Unauthorized", type: "UNAUTHORISED" });
+    }
     elizaLogger.error("[CLIENT-DIRECT] Error checking connection status:", {
       error: error.message,
       stack: error.stack,
     });
-    res.status(500).json({ error: "Failed to check connection status" });
+    res.status(500).json({ error: "Failed to check connection status", details: error.message });
   }
 });
 

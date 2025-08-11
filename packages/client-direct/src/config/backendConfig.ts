@@ -155,10 +155,10 @@ export function backendConfig(): InputType {
         },
       }),
       Session.init({
-        cookieSecure: process.env.NODE_ENV === "production",
+        cookieSecure: true,
         cookieSameSite: "strict",
         sessionExpiredStatusCode: 401,
-        antiCsrf: "VIA_TOKEN",
+        antiCsrf: "NONE",
         override: {
           functions: (originalImplementation) => ({
             ...originalImplementation,
