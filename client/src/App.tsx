@@ -44,7 +44,7 @@ import { useIsMobile } from "./hooks/use-mobile";
 import Navbar from "./components/navbar";
 import InvoicesPage from "./routes/invoices";
 import AboutPage from "./components/aboutPage";
-// import CookieConsent from 'react-cookie-consent';
+import CookieConsent from 'react-cookie-consent';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -104,16 +104,17 @@ function AppContent() {
             crossOrigin="anonymous"
           ></script>
         </Helmet>
-        {/* <CookieConsent
+        <CookieConsent
           location="bottom"
           buttonText="Accept"
           cookieName="agentVoocConsent"
           style={{ background: '#2B373B' }}
           buttonStyle={{ color: '#fff', background: '#4CAF50' }}
           expires={150}
+          sameSite="Lax"
         >
           This website uses cookies to enhance your experience and serve ads. By continuing, you agree to our use of cookies.
-        </CookieConsent> */}
+        </CookieConsent>
         {showAppSidebar && <AppSidebar />}
         {showDocsSidebar && <DocsSidebar />}
         {!showAppSidebar && isMobile && <NavSidebar />}
