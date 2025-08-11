@@ -1,5 +1,5 @@
 // client/src/components/app-sidebar.tsx
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 // import info from "@/lib/info.json";
 import {
   Sidebar,
@@ -36,6 +36,7 @@ export function AppSidebar() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState<string>("");
   const { setOpen, setOpenMobile, isMobile } = useSidebar();
+   const queryClient = useQueryClient();
   // Fetch user data
   const userQuery = useQuery({
     queryKey: ["user"],
@@ -88,36 +89,36 @@ export function AppSidebar() {
     enabled: filteredAgents.length > 0,
   });
 
-  const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    try {
-      // Update connection status to disconnected before logging out
-      try {
-        await apiClient.updateConnectionStatus({ isConnected: false });
-      } catch (statusError) {
-        console.warn(
-          "Failed to update connection status during logout:",
-          statusError
-        );
-      }
+  const clearCookies = () => {
+  document.cookie.split(";").forEach((cookie) => {
+    const [name] = cookie.split("=");
+    document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+  });
+};
 
-      // Proceed with logout
-      await signOut();
-      toast({
-        title: "Success!",
-        description: "Logged out successfully.",
-      });
-      navigate("/");
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to log out. Please try again.";
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: errorMessage,
-      });
-    }
-  };
-
+const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
+  e.preventDefault();
+  try {
+    await apiClient.updateConnectionStatus({ isConnected: false });
+    await signOut();
+    clearCookies(); // Clear all cookies
+    localStorage.clear();
+    sessionStorage.clear();
+    queryClient.clear();
+    toast({
+      title: "Success!",
+      description: "Logged out successfully.",
+    });
+    window.location.href = "/";
+  } catch (err: unknown) {
+    const errorMessage = err instanceof Error ? err.message : "Failed to log out. Please try again.";
+    toast({
+      variant: "destructive",
+      title: "Error",
+      description: errorMessage,
+    });
+  }
+};
   const handleLogin = () => {
   navigate("/auth");
 };

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import {  useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { signInAndUp } from "supertokens-web-js/recipe/thirdparty";
 import { doesSessionExist } from "supertokens-web-js/recipe/session";
@@ -19,7 +19,6 @@ interface StarPosition {
 }
 
 export default function Auth() {
-  const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(true);
@@ -28,141 +27,116 @@ export default function Auth() {
   const defaultImage = "/images/auth-bg.jpg"; // Placeholder image URL
 
   useEffect(() => {
-    const positions = [...Array(20)].map(() => ({
-      top: `${Math.random() * 100}%`,
-      left: `${Math.random() * 100}%`,
-      width: `${Math.random() * 4 + 2}px`,
-      height: `${Math.random() * 4 + 2}px`,
-      animationDelay: `${Math.random() * 5}s`,
-      animationDuration: `${Math.random() * 3 + 2}s`,
-    }));
-    setStarPositions(positions);
+  const positions = [...Array(20)].map(() => ({
+    top: `${Math.random() * 100}%`,
+    left: `${Math.random() * 100}%`,
+    width: `${Math.random() * 4 + 2}px`,
+    height: `${Math.random() * 4 + 2}px`,
+    animationDelay: `${Math.random() * 5}s`,
+    animationDuration: `${Math.random() * 3 + 2}s`,
+  }));
+  setStarPositions(positions);
 
-    async function handleAuth() {
-      try {
-        if (location.pathname === "/auth/callback/google") {
-          const response = await signInAndUp();
-
+  async function handleAuth() {
+    try {
+      const sessionExists = await doesSessionExist();
+      if (sessionExists && location.pathname !== "/auth/callback/google" && location.pathname !== "/auth/verify") {
+        const redirectTo = location.state?.selectedItem ? "/payment" : "/home";
+        window.location.href = redirectTo; // Use full reload
+      } else if (location.pathname === "/auth/callback/google") {
+        const response = await signInAndUp();
+        if (response.status === "OK") {
+          toast({
+            title: "Success",
+            description: response.createdNewRecipeUser ? "Signed up with Google!" : "Signed in with Google!",
+          });
+          let redirectTo = "/home";
+          if (response.createdNewRecipeUser) {
+            const userData = await apiClient.getUser();
+            const subscriptionStatus = userData?.user?.subscriptionStatus;
+            const isTrialActive = userData?.user?.trialEndDate && new Date(userData.user.trialEndDate) > new Date();
+            const hasActiveSubscription = ["active", "trialing"].includes(subscriptionStatus) || isTrialActive;
+            if (!hasActiveSubscription) {
+              redirectTo = "/settings";
+            }
+          } else if (location.state?.selectedItem) {
+            redirectTo = "/payment";
+          }
+          window.location.href = redirectTo;
+        } else {
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description:
+              response.status === "SIGN_IN_UP_NOT_ALLOWED"
+                ? response.reason
+                : response.status === "NO_EMAIL_GIVEN_BY_PROVIDER"
+                ? "No email provided by Google. Please use another login method."
+                : "Failed to process Google signup.",
+          });
+          window.location.href = "/auth";
+        }
+      } else if (location.pathname === "/auth/verify") {
+        try {
+          const response = await consumeCode();
           if (response.status === "OK") {
+            await clearLoginAttemptInfo();
             toast({
               title: "Success",
-              description: response.createdNewRecipeUser ? "Signed up with Google!" : "Signed in with Google!",
+              description: response.createdNewRecipeUser ? "Signed up successfully!" : "Signed in successfully!",
             });
-
             let redirectTo = "/home";
             if (response.createdNewRecipeUser) {
               const userData = await apiClient.getUser();
               const subscriptionStatus = userData?.user?.subscriptionStatus;
               const isTrialActive = userData?.user?.trialEndDate && new Date(userData.user.trialEndDate) > new Date();
               const hasActiveSubscription = ["active", "trialing"].includes(subscriptionStatus) || isTrialActive;
-
               if (!hasActiveSubscription) {
                 redirectTo = "/settings";
               }
             } else if (location.state?.selectedItem) {
               redirectTo = "/payment";
             }
-
-            navigate(redirectTo, {
-              state: { selectedItem: location.state?.selectedItem },
-              replace: true,
-            });
+            window.location.href = redirectTo;
           } else {
-            console.error("[AUTH] Google sign-in/up failed:", response);
             toast({
               variant: "destructive",
               title: "Error",
               description:
-                response.status === "SIGN_IN_UP_NOT_ALLOWED"
-                  ? response.reason
-                  : response.status === "NO_EMAIL_GIVEN_BY_PROVIDER"
-                  ? "No email provided by Google. Please use another login method."
-                  : "Failed to process Google signup.",
-            });
-            navigate("/auth", { replace: true });
-          }
-          return;
-        }
-
-        if (location.pathname === "/auth/verify") {
-          try {
-            const response = await consumeCode();
-            if (response.status === "OK") {
-              await clearLoginAttemptInfo();
-              toast({
-                title: "Success",
-                description: response.createdNewRecipeUser ? "Signed up successfully!" : "Signed in successfully!",
-              });
-
-              let redirectTo = "/home";
-              if (response.createdNewRecipeUser) {
-                const userData = await apiClient.getUser();
-                const subscriptionStatus = userData?.user?.subscriptionStatus;
-                const isTrialActive = userData?.user?.trialEndDate && new Date(userData.user.trialEndDate) > new Date();
-                const hasActiveSubscription = ["active", "trialing"].includes(subscriptionStatus) || isTrialActive;
-
-                if (!hasActiveSubscription) {
-                  redirectTo = "/settings";
-                }
-              } else if (location.state?.selectedItem) {
-                redirectTo = "/payment";
-              }
-
-              navigate(redirectTo, {
-                state: { selectedItem: location.state?.selectedItem },
-                replace: true,
-              });
-            } else {
-              toast({
-                variant: "destructive",
-                title: "Error",
-                description:
-                  response.status === "RESTART_FLOW_ERROR"
-                    ? "Session expired. Please request a new OTP."
-                    : response.status === "INCORRECT_USER_INPUT_CODE_ERROR"
-                    ? `Incorrect OTP. ${response.maximumCodeInputAttempts - response.failedCodeInputAttemptCount} attempts remaining.`
-                    : "Failed to verify OTP. Please try again.",
-              });
-              await clearLoginAttemptInfo();
-              navigate("/auth/email", { replace: true });
-            }
-          } catch (err: any) {
-            console.error("[AUTH] OTP verification error:", err);
-            toast({
-              variant: "destructive",
-              title: "Error",
-              description: err.isSuperTokensGeneralError ? err.message : "Failed to verify OTP.",
+                response.status === "RESTART_FLOW_ERROR"
+                  ? "Session expired. Please request a new OTP."
+                  : response.status === "INCORRECT_USER_INPUT_CODE_ERROR"
+                  ? `Incorrect OTP. ${response.maximumCodeInputAttempts - response.failedCodeInputAttemptCount} attempts remaining.`
+                  : "Failed to verify OTP. Please try again.",
             });
             await clearLoginAttemptInfo();
-            navigate("/auth/email", { replace: true });
+            window.location.href = "/auth/email";
           }
-          return;
-        }
-
-        const sessionExists = await doesSessionExist();
-
-        if (sessionExists && location.pathname !== "/auth/callback/google" && location.pathname !== "/auth/verify") {
-          const redirectTo = location.state?.selectedItem ? "/payment" : "/home";
-          navigate(redirectTo, {
-            state: { selectedItem: location.state?.selectedItem },
-            replace: true,
+        } catch (err: any) {
+          console.error("[AUTH] OTP verification error:", err);
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: err.isSuperTokensGeneralError ? err.message : "Failed to verify OTP.",
           });
-        } else {
-          setIsProcessing(false);
+          await clearLoginAttemptInfo();
+          window.location.href = "/auth/email";
         }
-      } catch (err: any) {
-        console.error("[AUTH] Error during auth handling:", err);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: err.isSuperTokensGeneralError ? err.message : "Authentication failed.",
-        });
-        navigate("/auth", { replace: true });
+      } else {
+        setIsProcessing(false);
       }
+    } catch (err: any) {
+      console.error("[AUTH] Error during auth handling:", err);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: err.isSuperTokensGeneralError ? err.message : "Authentication failed.",
+      });
+      window.location.href = "/auth";
     }
-
-    handleAuth();
-  }, [navigate, location.pathname, location.state, toast]);
+  }
+  handleAuth();
+}, [location.pathname, location.state, toast]);
 
   if (isProcessing) {
     return (

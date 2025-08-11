@@ -54,23 +54,25 @@ export default function Home() {
             console.warn("[HOME] No user data in response:", userData);
             setError("No user data returned. Please try logging in again.");
             setUser(null);
-            if (window.location.pathname !== "/auth") {
-              window.location.href = "/auth";
-            }
+            window.location.href = "/auth";
           }
         } else {
           // console.log("[HOME] No session exists, proceeding as guest");
           setUser(null);
+          // Clear cached data
+          queryClient.clear();
         }
       } catch (err: any) {
         console.error("[HOME] Error handling session or user data:", err);
         setError("Failed to load user data: " + (err.message || "Unknown error"));
         setUser(null);
+        // Force redirect to auth on session error
+        window.location.href = "/auth";
       }
       // console.log("[HOME] User state after initialization:", user);
     }
     initialize();
-  }, []);
+  }, [queryClient]);
 
   const agentsQuery = useQuery({
     queryKey: ["agents"],

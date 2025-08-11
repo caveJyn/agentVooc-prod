@@ -1,5 +1,5 @@
 import type { UUID, Character, Plugin } from "@elizaos/core";
-import Session from "supertokens-web-js/recipe/session";
+import Session, { signOut }  from "supertokens-web-js/recipe/session";
 
 // Base URL for API requests
 // this routes trafic to the server(backend) localhost:3000
@@ -136,12 +136,14 @@ const fetcher = async ({
         } else {
           // console.log(`[FETCHER] Session refresh failed, redirecting to auth for ${url}`);
           // Session refresh failed, redirect to auth
+          await signOut(); // Explicitly sign out if refresh fails
           window.location.href = "/auth";
           throw new Error("Session expired, please login again");
         }
       } catch (refreshError) {
         // console.error(`[FETCHER] Session refresh error for ${url}:`, refreshError);
         // Session refresh failed, redirect to auth
+        await signOut(); // Explicitly sign out on refresh error
         window.location.href = "/auth";
         throw new Error("Session expired, please login again");
       }

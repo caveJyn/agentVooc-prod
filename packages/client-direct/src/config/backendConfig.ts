@@ -5,6 +5,7 @@ import ThirdParty from "supertokens-node/recipe/thirdparty";
 import Dashboard from "supertokens-node/recipe/dashboard";
 import { sanityClient } from "@elizaos-plugins/plugin-sanity";
 import { elizaLogger } from "@elizaos/core";
+import { v4 as uuidv4 } from "uuid";
 
 export function backendConfig(): InputType {
   return {
@@ -35,7 +36,6 @@ export function backendConfig(): InputType {
                   /^https?:\/\/[^/]+\/auth\/verify/,
                   `${process.env.ST_WEBSITE_DOMAIN}/auth/verify`
                 ),
-
               });
               elizaLogger.debug(`OTP email sent successfully to ${input.email}`);
             },
@@ -155,47 +155,71 @@ export function backendConfig(): InputType {
         },
       }),
       Session.init({
-  cookieSecure: true,
-  cookieSameSite: "lax",
-  sessionExpiredStatusCode: 401,
-  // Override functions for logging
-  override: {
-    functions: (originalImplementation) => ({
-      ...originalImplementation,
-      createNewSession: async function (input) {
-        elizaLogger.debug(`Creating new session for user: ${input.userId}`);
-        return await originalImplementation.createNewSession(input);
-      },
-      getSession: async function (input) {
-        try {
-          const result = await originalImplementation.getSession(input);
-          elizaLogger.debug(`Session retrieved successfully for user: ${result.getUserId()}`);
-          return result;
-        } catch (error: any) {
-          if (error.type === "TRY_REFRESH_TOKEN") {
-            elizaLogger.debug("Session refresh token required");
-          } else if (error.type === "UNAUTHORISED") {
-            // elizaLogger.warn("Unauthorized session access attempt");
-          } else {
-            // elizaLogger.error("Session error:", error);
-          }
-          throw error;
-        }
-      },
-      refreshSession: async function (input) {
-        try {
-          elizaLogger.debug("Refreshing session");
-          const result = await originalImplementation.refreshSession(input);
-          elizaLogger.debug(`Session refreshed successfully for user: ${result.getUserId()}`);
-          return result;
-        } catch (error: any) {
-          elizaLogger.error("Session refresh error:", error);
-          throw error;
-        }
-      },
-    }),
-  },
-}),
+        cookieSecure: process.env.NODE_ENV === "production",
+        cookieSameSite: "strict",
+        sessionExpiredStatusCode: 401,
+        antiCsrf: "VIA_TOKEN",
+        override: {
+          functions: (originalImplementation) => ({
+            ...originalImplementation,
+            createNewSession: async function (input) {
+              const clientId = uuidv4(); // Generate a unique client ID
+              elizaLogger.debug(`Creating new session for user: ${input.userId}, clientId: ${clientId}`);
+              const session = await originalImplementation.createNewSession({
+                ...input,
+                accessTokenPayload: {
+                  ...input.accessTokenPayload,
+                  clientId,
+                },
+              });
+              return session;
+            },
+            getSession: async function (input) {
+              try {
+                const result = await originalImplementation.getSession(input);
+                const payload = await result.getAccessTokenPayload();
+                elizaLogger.debug(`Session retrieved for user: ${result.getUserId()}, clientId: ${payload.clientId}`);
+                return result;
+              } catch (error: any) {
+                elizaLogger.error("Session error:", error);
+                throw error;
+              }
+            },
+            refreshSession: async function (input) {
+              try {
+                const result = await originalImplementation.refreshSession(input);
+                const payload = await result.getAccessTokenPayload();
+                elizaLogger.debug(`Session refreshed for user: ${result.getUserId()}, clientId: ${payload.clientId}`);
+                return result;
+              } catch (error: any) {
+                elizaLogger.error("Session refresh error:", error);
+                throw error;
+              }
+            },
+            revokeSession: async function (input) {
+              try {
+                // Fetch session info to get userId for logging, but don't require a session
+                const sessionInfo = await originalImplementation.getSessionInformation(input);
+                const userId = sessionInfo ? sessionInfo.userId : "unknown";
+                elizaLogger.debug(`Revoking session for user: ${userId}, sessionHandle: ${input.sessionHandle}`);
+                const result = await originalImplementation.revokeSession(input);
+                elizaLogger.debug("Session revoked successfully");
+                return result;
+              } catch (error: any) {
+                // Log error if session fetch fails, but proceed with revocation
+                if (error.type === "UNAUTHORISED") {
+                  elizaLogger.debug(`No session found for handle: ${input.sessionHandle}, proceeding with revocation`);
+                } else {
+                  elizaLogger.error("Session revocation error:", error);
+                }
+                const result = await originalImplementation.revokeSession(input);
+                elizaLogger.debug("Session revoked successfully");
+                return result;
+              }
+            },
+          }),
+        },
+      }),
       Dashboard.init({
         admins: ["agentvooc@gmail.com"],
         override: {
