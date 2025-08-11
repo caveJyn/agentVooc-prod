@@ -380,6 +380,7 @@ export default {
                   { title: "Facebook", value: "facebook" },
                   { title: "WhatsApp", value: "whatsapp" },
                   { title: "GitHub", value: "github" },
+                  { title: "LinkedIn", value: "linkedin" },
                 ],
               },
               validation: (Rule) => Rule.required(),
