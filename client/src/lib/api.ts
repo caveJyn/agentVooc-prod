@@ -799,23 +799,28 @@ updateEmailTemplate: (agentId: string, template: Partial<EmailTemplate>) =>
 
     updateConnectionStatus: async ({ isConnected, clientId }: { isConnected: boolean; clientId?: string }) => {
   try {
+    const accessToken = await Session.getAccessToken();
     console.log("[API_CLIENT] Sending updateConnectionStatus with:", { isConnected, clientId });
     const response = await fetcher({
       url: "/api/connection-status",
       method: "POST",
-      body: { isConnected, clientId },
-    });
-    console.log("[API_CLIENT] updateConnectionStatus response:", response);
-    return response;
-  } catch (error: any) {
-    console.error("[API_CLIENT] Failed to update connection status:", error);
-    if (error.status === 401) {
-      console.log("[API_CLIENT] Unauthorized, proceeding with logout");
-      return { status: "no-session" }; // Allow logout to continue
+        headers: {
+          'Content-Type': 'application/json',
+          ...(accessToken && { 'Authorization': `Bearer ${accessToken}` }),
+        },
+        body: { isConnected, clientId },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      return response.json();
+    } catch (error) {
+      console.error('[API_CLIENT] updateConnectionStatus error:', error);
+      throw error;
     }
-    throw error;
-  }
-},
+  },
 
   getConnectionStatus: () =>
     fetcher({
