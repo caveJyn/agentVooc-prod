@@ -10,7 +10,7 @@ export const frontendConfig = () => {
       Passwordless.init(),
       ThirdParty.init(),
       Session.init({
-        getTokenTransferMethod: () => "header",
+        tokenTransferMethod: "header",
         // Enable automatic session refresh
         sessionTokenBackendDomain: "agentvooc.com",
         sessionTokenFrontendDomain: "agentvooc.com"
