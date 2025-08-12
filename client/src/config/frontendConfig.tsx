@@ -12,7 +12,7 @@ export const frontendConfig = () => {
       Session.init({
         tokenTransferMethod: "header",
         // Enable automatic session refresh
-        sessionTokenBackendDomain: new URL(appInfo.apiDomain).hostname,
+        sessionTokenBackendDomain: "agentvooc.com",
       }),
     ],
   };

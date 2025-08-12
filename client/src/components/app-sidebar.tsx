@@ -107,13 +107,18 @@ const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
 
     // Sign out and revoke
     await signOut();
+    console.log("[APP_SIDEBAR] Sign out completed");
 
-    // Clear all cookies (existing code)
-    clearCookies();
+    // Verify session is gone
+    const sessionExists = await doesSessionExist();
+    if (sessionExists) {
+      console.warn("[APP_SIDEBAR] Session still exists after signOut");
+    }
 
-    // Clear storage
+    // Clear all storage
     localStorage.clear();
     sessionStorage.clear();
+    clearCookies();
 
     // Clear query cache
     queryClient.clear();
@@ -125,7 +130,8 @@ const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
     toast({ variant: "destructive", title: "Error", description: errorMessage });
   } finally {
     // Force redirect and reload
-    window.location.href = "/auth";
+    navigate("/auth", { replace: true });
+    window.location.reload();
   }
 };
 
