@@ -91,48 +91,77 @@ export function AppSidebar() {
   });
 
   const clearCookies = () => {
+  console.log("[APP_SIDEBAR] Cookies before clearing:", document.cookie);
   const cookies = document.cookie.split(";");
   for (const cookie of cookies) {
     const [name] = cookie.split("=").map((c) => c.trim());
     document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${window.location.hostname}`;
     document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=.${window.location.hostname}`;
   }
-  console.log("[APP_SIDEBAR] Cookies cleared:", document.cookie);
+  // Explicitly clear SuperTokens cookies
+  document.cookie = `st-last-access-token-update=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=agentvooc.com`;
+  document.cookie = `st-last-access-token-update=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=.agentvooc.com`;
+  console.log("[APP_SIDEBAR] Cookies after clearing:", document.cookie);
 };
 
 const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
   e.preventDefault();
   try {
-    // Update connection status
-    await apiClient.updateConnectionStatus({ isConnected: false, clientId: "logout" });
+    console.log("[APP_SIDEBAR] Initiating logout");
 
-    // Sign out and revoke
+    // Update connection status to false before signing out
+    try {
+      await apiClient.updateConnectionStatus({ isConnected: false, clientId: "logout" });
+      console.log("[APP_SIDEBAR] Connection status updated to disconnected");
+    } catch (err) {
+      console.warn("[APP_SIDEBAR] Failed to update connection status:", err);
+    }
+
+    // Sign out using SuperTokens
     await signOut();
-    console.log("[APP_SIDEBAR] Sign out completed");
+    console.log("[APP_SIDEBAR] Sign out completed successfully");
 
     // Verify session is gone
     const sessionExists = await doesSessionExist();
     if (sessionExists) {
       console.warn("[APP_SIDEBAR] Session still exists after signOut");
+    } else {
+      console.log("[APP_SIDEBAR] Session successfully revoked");
     }
 
     // Clear all storage
     localStorage.clear();
     sessionStorage.clear();
+    console.log("[APP_SIDEBAR] Local and session storage cleared");
+
+    // Clear cookies
     clearCookies();
 
-    // Clear query cache
+    // Invalidate React Query cache
     queryClient.clear();
+    queryClient.invalidateQueries({ queryKey: ["user"] });
+    queryClient.invalidateQueries({ queryKey: ["agents"] });
+    queryClient.invalidateQueries({ queryKey: ["characters"] });
+    console.log("[APP_SIDEBAR] React Query cache cleared");
 
+    // Show success toast
     toast({ title: "Success!", description: "Logged out successfully." });
+
+    // Force redirect to /auth and reload
+    navigate("/auth", { replace: true });
+    setTimeout(() => {
+      window.location.reload();
+    }, 100); // Small delay to ensure navigation completes
   } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : "Failed to log out.";
     console.error("[APP_SIDEBAR] Logout error:", err);
     toast({ variant: "destructive", title: "Error", description: errorMessage });
-  } finally {
-    // Force redirect and reload
+
+    // Still redirect and reload on error to ensure UI reset
     navigate("/auth", { replace: true });
-    window.location.reload();
+    setTimeout(() => {
+      window.location.reload();
+    }, 100);
   }
 };
 

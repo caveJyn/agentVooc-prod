@@ -159,6 +159,7 @@ export function backendConfig(): InputType {
         sessionExpiredStatusCode: 401,
         cookieDomain: "agentvooc.com",
         useDynamicAccessTokenSigningKey: false, // Ensure consistent token validation
+        antiCsrf: "NONE",
         override: {
           functions: (originalImplementation) => ({
             ...originalImplementation,
