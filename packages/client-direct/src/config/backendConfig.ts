@@ -173,10 +173,21 @@ export function backendConfig(): InputType {
             },
             getSession: async function (input: any) {
   try {
-    // Extract request from userContext
     const request = input.userContext?._default?.request;
-    let authHeader = request?.headers?.get?.("authorization") || "";
-    const cookies = request?.headers?.get?.("cookie") || "none";
+    let authHeader = "";
+    let cookies = "";
+
+    if (request) {
+      if (typeof request.headers?.get === "function") {
+        // Fetch API style
+        authHeader = request.headers.get("authorization") || "";
+        cookies = request.headers.get("cookie") || "";
+      } else if (request.headers) {
+        // Express / Node style
+        authHeader = request.headers["authorization"] || "";
+        cookies = request.headers["cookie"] || "";
+      }
+    }
 
     // Extract JWT from Authorization header
     let accessToken = null;
@@ -184,28 +195,27 @@ export function backendConfig(): InputType {
       accessToken = authHeader.replace("Bearer ", "");
     }
 
-    // Detailed logging of input and request details
     elizaLogger.debug("getSession called", {
       hasAuthorizationHeader: !!accessToken,
       authorization: accessToken ? "Bearer [REDACTED]" : "none",
       cookies,
       inputKeys: input && typeof input === "object" ? Object.keys(input) : [],
       userContextKeys: input.userContext && typeof input.userContext === "object" ? Object.keys(input.userContext) : [],
-      hasRequestInUserContext: !!input.userContext?._default?.request,
+      hasRequestInUserContext: !!request,
       requestHeaders: request?.headers
-        ? Array.from(request.headers.entries?.() || []).reduce((acc, [key, value]) => { acc[key] = value; return acc; }, {})
+        ? (typeof request.headers.entries === "function"
+            ? Array.from(request.headers.entries()).reduce((acc, [key, value]) => { acc[key] = value; return acc; }, {})
+            : request.headers)
         : "none",
       sessionRequired: input.options?.sessionRequired || false,
       accessTokenPresent: !!accessToken,
     });
 
-    // Pass the access token to SuperTokens
     const session = await originalImplementation.getSession({
       ...input,
       accessToken,
     });
 
-    // Log session details if retrieved
     if (session) {
       elizaLogger.debug("Session retrieved successfully", {
         userId: session.getUserId(),
@@ -218,12 +228,20 @@ export function backendConfig(): InputType {
 
     return session;
   } catch (error: any) {
-    // Extract request for error logging
     const request = input.userContext?._default?.request;
-    const authHeader = request?.headers?.get?.("authorization") || "";
-    const cookies = request?.headers?.get?.("cookie") || "none";
+    let authHeader = "";
+    let cookies = "";
 
-    // Log error with detailed context
+    if (request) {
+      if (typeof request.headers?.get === "function") {
+        authHeader = request.headers.get("authorization") || "";
+        cookies = request.headers.get("cookie") || "";
+      } else if (request.headers) {
+        authHeader = request.headers["authorization"] || "";
+        cookies = request.headers["cookie"] || "";
+      }
+    }
+
     elizaLogger.warn("Session retrieval failed", {
       errorMessage: error.message,
       errorStack: error.stack,
@@ -231,9 +249,11 @@ export function backendConfig(): InputType {
       authorization: authHeader.startsWith("Bearer ") ? "Bearer [REDACTED]" : "none",
       inputKeys: input && typeof input === "object" ? Object.keys(input) : [],
       userContextKeys: input.userContext && typeof input.userContext === "object" ? Object.keys(input.userContext) : [],
-      hasRequestInUserContext: !!input.userContext?._default?.request,
+      hasRequestInUserContext: !!request,
       requestHeaders: request?.headers
-        ? Array.from(request.headers.entries?.() || []).reduce((acc, [key, value]) => { acc[key] = value; return acc; }, {})
+        ? (typeof request.headers.entries === "function"
+            ? Array.from(request.headers.entries()).reduce((acc, [key, value]) => { acc[key] = value; return acc; }, {})
+            : request.headers)
         : "none",
       sessionRequired: input.options?.sessionRequired || false,
     });
@@ -241,6 +261,7 @@ export function backendConfig(): InputType {
     throw error;
   }
 },
+
             revokeSession: async function (input) {
               elizaLogger.debug(`Revoking session: ${input.sessionHandle}`);
               const session = await Session.getSessionInformation(input.sessionHandle);
