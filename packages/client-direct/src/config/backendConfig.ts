@@ -172,30 +172,37 @@ export function backendConfig(): InputType {
               return session;
             },
             getSession: async function (input) {
-              try {
-                const request = input.userContext?.req as any;
-                const authHeader = request?.headers?.authorization || "none";
-                elizaLogger.debug(`Getting session for request`, {
-                  hasAuthorizationHeader: !!authHeader && authHeader !== "none",
-                  cookies: request?.headers?.cookie || "none",
-                  authorization: authHeader,
-                });
-                const session = await originalImplementation.getSession(input);
-                if (session) {
-                  elizaLogger.debug(`Session retrieved: userId=${session.getUserId()}, sessionHandle=${session.getHandle()}`);
-                } else {
-                  elizaLogger.debug(`No session retrieved`);
-                }
-                return session;
-              } catch (error: any) {
-                elizaLogger.warn(`Session retrieval failed`, {
-                  errorMessage: error.message,
-                  cookies: input.userContext?.req?.headers?.cookie || "none",
-                  authorization: input.userContext?.req?.headers?.authorization || "none",
-                });
-                throw error;
-              }
-            },
+        try {
+          // Log the entire userContext to inspect its structure
+    elizaLogger.debug("userContext contents:", JSON.stringify(input.userContext, null, 2));
+          // Access request from userContext or ensure proper context is passed
+          const request = input.userContext?._default?.request;
+          const authHeader = request?.headers?.get("authorization") || "none";
+          const cookies = request?.headers?.get("cookie") || "none";
+          elizaLogger.debug(`Getting session for request`, {
+            hasAuthorizationHeader: !!authHeader && authHeader !== "none",
+            cookies,
+            authorization: authHeader,
+          });
+          const session = await originalImplementation.getSession(input);
+          if (session) {
+            elizaLogger.debug(`Session retrieved: userId=${session.getUserId()}, sessionHandle=${session.getHandle()}`);
+          } else {
+            elizaLogger.debug(`No session retrieved`);
+          }
+          return session;
+        } catch (error: any) {
+          const request = input.userContext?._default?.request;
+          const authHeader = request?.headers?.get("authorization") || "none";
+          const cookies = request?.headers?.get("cookie") || "none";
+          elizaLogger.warn(`Session retrieval failed`, {
+            errorMessage: error.message,
+            cookies,
+            authorization: authHeader,
+          });
+          throw error;
+        }
+      },
             revokeSession: async function (input) {
               elizaLogger.debug(`Revoking session: ${input.sessionHandle}`);
               const session = await Session.getSessionInformation(input.sessionHandle);
