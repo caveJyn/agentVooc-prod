@@ -158,6 +158,8 @@ export class DirectClient {
         this.agents = new Map();
 
 this.app.set('trust proxy', 1);
+// Initialize SuperTokens using backendConfig
+supertokens.init(backendConfig());
         // Define allowed origins
 const allowedOrigins = [
     process.env.WEBSITE_DOMAIN,

@@ -99,7 +99,7 @@ const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
   try {
     // Cancel and remove all queries immediately to prevent pending requests
     console.log("[APP_SIDEBAR] Canceling and clearing all queries");
-    queryClient.cancelQueries();
+    await queryClient.cancelQueries();
     queryClient.removeQueries();
     queryClient.clear();
 
@@ -162,7 +162,7 @@ const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
     const errorMessage = err instanceof Error ? err.message : "Failed to log out.";
 
     // Force cleanup on error
-    queryClient.cancelQueries();
+    await queryClient.cancelQueries();
     queryClient.removeQueries();
     queryClient.clear();
     localStorage.clear();
@@ -200,6 +200,7 @@ const clearCookies = () => {
     `.${window.location.hostname}`,
   ];
 
+  // Clear all cookies
   for (const cookie of cookies) {
     const [name] = cookie.split("=").map((c) => c.trim());
     for (const domain of domains) {
@@ -207,7 +208,7 @@ const clearCookies = () => {
     }
   }
 
-  // Explicitly clear SuperTokens cookies
+  // Explicitly clear SuperTokens and custom cookies
   const stCookies = [
     "sAccessToken",
     "sRefreshToken",

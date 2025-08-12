@@ -208,7 +208,10 @@ export function backendConfig(): InputType {
           apis: (originalImplementation) => ({
             ...originalImplementation,
             signOutPOST: async (input) => {
-              const response = input.options.res as unknown as Response; // Double cast to Express Response
+              elizaLogger.debug("signOutPOST response object:", {
+    resType: typeof input.options.res,
+    resMethods: Object.keys(input.options.res || {}),
+  });
               const request = input.userContext?.req as any;
               const authHeader = request?.headers?.authorization || "none";
               elizaLogger.debug("signOutPOST called", {
@@ -229,24 +232,7 @@ export function backendConfig(): InputType {
                 }
               }
 
-              // Clear cookies
-              const cookiesToClear = [
-                "sAccessToken",
-                "sRefreshToken",
-                "sFrontToken",
-                "st-last-access-token-update",
-                "st-access-token",
-                "st-refresh-token",
-              ];
-              cookiesToClear.forEach((cookieName) => {
-                response.clearCookie(cookieName, {
-                  domain: "agentvooc.com",
-                  path: "/",
-                  secure: true,
-                  sameSite: "strict",
-                });
-              });
-
+              // Rely on SuperTokens to clear cookies (st-access-token, st-refresh-token, sFrontToken)
               return await originalImplementation.signOutPOST(input);
             },
           }),
