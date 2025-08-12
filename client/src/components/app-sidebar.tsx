@@ -29,7 +29,6 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { MouseEvent, useState } from "react";
 import { Avatar, AvatarImage } from "./ui/avatar";
-import { doesSessionExist } from "supertokens-web-js/recipe/session";
 
 export function AppSidebar() {
   const location = useLocation();
@@ -90,17 +89,47 @@ export function AppSidebar() {
     enabled: filteredAgents.length > 0,
   });
 
-  const clearCookies = () => {
+  // Replace your current clearCookies and handleLogout functions in app-sidebar.tsx
+
+const clearCookies = () => {
   console.log("[APP_SIDEBAR] Cookies before clearing:", document.cookie);
+  
   const cookies = document.cookie.split(";");
+  const domains = [
+    window.location.hostname,
+    `.${window.location.hostname}`,
+    "agentvooc.com",
+    ".agentvooc.com"
+  ];
+  
   for (const cookie of cookies) {
     const [name] = cookie.split("=").map((c) => c.trim());
-    document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${window.location.hostname}`;
-    document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=.${window.location.hostname}`;
+    
+    // Clear for all possible domains and paths
+    for (const domain of domains) {
+      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${domain}`;
+      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${domain};secure`;
+      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${domain};samesite=strict`;
+    }
   }
-  // Explicitly clear SuperTokens cookies
-  document.cookie = `st-last-access-token-update=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=agentvooc.com`;
-  document.cookie = `st-last-access-token-update=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=.agentvooc.com`;
+  
+  // Explicitly clear known SuperTokens cookies
+  const stCookies = [
+    "st-last-access-token-update",
+    "sAccessToken",
+    "sRefreshToken",
+    "sFrontToken",
+    "st-access-token",
+    "st-refresh-token"
+  ];
+  
+  for (const cookieName of stCookies) {
+    for (const domain of domains) {
+      document.cookie = `${cookieName}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${domain}`;
+      document.cookie = `${cookieName}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${domain};secure`;
+    }
+  }
+  
   console.log("[APP_SIDEBAR] Cookies after clearing:", document.cookie);
 };
 
@@ -109,74 +138,73 @@ const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
   console.log("[APP_SIDEBAR] Initiating logout");
 
   try {
-    // Attempt to update connection status, but don't fail logout if it errors
+    // Update connection status first
     try {
       await apiClient.updateConnectionStatus({ isConnected: false, clientId: "logout" });
       console.log("[APP_SIDEBAR] Connection status updated to disconnected");
     } catch (err) {
-      console.warn("[APP_SIDEBAR] Failed to update connection status, proceeding with logout:", err);
+      console.warn("[APP_SIDEBAR] Failed to update connection status:", err);
     }
 
     // Sign out using SuperTokens
     await signOut();
-    console.log("[APP_SIDEBAR] Sign out completed successfully");
+    console.log("[APP_SIDEBAR] SuperTokens signOut completed");
 
-    // Verify session is gone
-    const sessionExists = await doesSessionExist();
-    if (sessionExists) {
-      console.warn("[APP_SIDEBAR] Session still exists after signOut, forcing cleanup");
-    } else {
-      console.log("[APP_SIDEBAR] Session successfully revoked");
+    // Force revoke all sessions on backend
+    try {
+      await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3000'}/auth/signout`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+    } catch (err) {
+      console.warn("[APP_SIDEBAR] Backend signout request failed:", err);
     }
 
-    // Clear all storage
+    // Clear all storage and cookies
     localStorage.clear();
     sessionStorage.clear();
-    console.log("[APP_SIDEBAR] Local and session storage cleared");
-
-    // Clear cookies
     clearCookies();
+    console.log("[APP_SIDEBAR] All storage cleared");
 
-    // Invalidate and clear React Query cache
+    // Clear React Query cache
     queryClient.clear();
-    queryClient.invalidateQueries({ queryKey: ["user"] });
-    queryClient.invalidateQueries({ queryKey: ["agents"] });
-    queryClient.invalidateQueries({ queryKey: ["characters"] });
-    queryClient.removeQueries({ queryKey: ["user"] });
-    queryClient.removeQueries({ queryKey: ["agents"] });
-    queryClient.removeQueries({ queryKey: ["characters"] });
-    console.log("[APP_SIDEBAR] React Query cache cleared and invalidated");
+    queryClient.invalidateQueries();
+    queryClient.removeQueries();
+    console.log("[APP_SIDEBAR] React Query cache cleared");
 
-    // Reset sidebar state
+    // Reset state
     setSearchQuery("");
-    console.log("[APP_SIDEBAR] Search query reset");
 
     // Show success toast
     toast({ title: "Success!", description: "Logged out successfully." });
 
-    // Force redirect to /auth and reload
+    // Navigate and reload
     navigate("/auth", { replace: true });
+    
+    // Force a clean reload after a short delay
     setTimeout(() => {
-      window.location.reload();
-    }, 100); // Small delay to ensure navigation completes
+      window.location.href = "/auth";
+    }, 100);
+    
   } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : "Failed to log out.";
     console.error("[APP_SIDEBAR] Logout error:", err);
-    toast({ variant: "destructive", title: "Error", description: errorMessage });
-
-    // Clear storage and cache even on error
+    
+    // Force cleanup even on error
     localStorage.clear();
     sessionStorage.clear();
     clearCookies();
     queryClient.clear();
-    queryClient.invalidateQueries();
-    queryClient.removeQueries();
     setSearchQuery("");
-
-    // Force redirect and reload on error
-    navigate("/auth", { replace: true });
+    
+    toast({ variant: "destructive", title: "Error", description: errorMessage });
+    
+    // Force navigation on error too
     setTimeout(() => {
-      window.location.reload();
+      window.location.href = "/auth";
     }, 100);
   }
 };
