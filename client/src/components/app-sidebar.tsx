@@ -97,6 +97,11 @@ const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
   console.log("[APP_SIDEBAR] Initiating logout");
 
   try {
+    // Update connection status to disconnected
+    console.log("[APP_SIDEBAR] Updating connection status to disconnected");
+    await apiClient.updateConnectionStatus({ isConnected: false });
+
+    
     // Cancel and remove all queries immediately to prevent pending requests
     console.log("[APP_SIDEBAR] Canceling and clearing all queries");
     await queryClient.cancelQueries();

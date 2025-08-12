@@ -60,6 +60,7 @@ const fetcher = async ({
       Accept: "application/json",
       ...(body instanceof FormData ? {} : { "Content-Type": "application/json" }),
       ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      'st-auth-mode': 'header',
       ...headers,
     };
 
