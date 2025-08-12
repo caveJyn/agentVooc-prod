@@ -5438,13 +5438,14 @@ router.post('/characters/:characterId/email/reconnect', async (req, res) => {
 
 
   router.post("/connection-status", async (req, res) => {
+    let userId: string | undefined;
   try {
     elizaLogger.debug("[CLIENT-DIRECT] Request received: POST /connection-status", {
       body: req.body,
       cookies: req.headers.cookie || "none",
     });
 
-    let userId: string | undefined;
+    
     try {
       const session = await Session.getSession(req, res, { sessionRequired: false });
       userId = session?.getUserId();
@@ -5509,12 +5510,13 @@ router.post('/characters/:characterId/email/reconnect', async (req, res) => {
 });
 
 router.get("/connection-status", async (req, res) => {
+  let userId: string | undefined;
   try {
     elizaLogger.debug("[CLIENT-DIRECT] Request received: GET /connection-status", {
       cookies: req.headers.cookie || "none",
     });
 
-    let userId: string | undefined;
+    
     try {
       const session = await Session.getSession(req, res, { sessionRequired: false });
       userId = session?.getUserId();

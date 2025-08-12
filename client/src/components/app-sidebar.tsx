@@ -102,54 +102,30 @@ export function AppSidebar() {
 const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
   e.preventDefault();
   try {
-    // Update connection status first
-    console.log("[APP_SIDEBAR] Updating connection status to false");
-    const updateResponse = await apiClient.updateConnectionStatus({ isConnected: false, clientId: "logout" });
-    console.log("[APP_SIDEBAR] updateConnectionStatus response:", updateResponse);
+    // Update connection status
+    await apiClient.updateConnectionStatus({ isConnected: false, clientId: "logout" });
 
-    // Proceed even if no session
-    if (updateResponse.status === "no-session") {
-      console.log("[APP_SIDEBAR] No session for updateConnectionStatus, continuing logout");
-    }
+    // Sign out and revoke
+    await signOut();
 
-    // Revoke SuperTokens session
-    console.log("[APP_SIDEBAR] Calling signOut");
-    const signOutResponse = await signOut();
-    console.log("[APP_SIDEBAR] signOut response:", signOutResponse);
-
-    // Clear cookies
+    // Clear all cookies (existing code)
     clearCookies();
 
-    // Clear local and session storage
+    // Clear storage
     localStorage.clear();
     sessionStorage.clear();
 
-    // Clear React Query cache
+    // Clear query cache
     queryClient.clear();
 
-    // Notify user
-    toast({
-      title: "Success!",
-      description: "Logged out from all devices successfully.",
-    });
-
-    // Navigate to auth page
-    navigate("/auth");
+    toast({ title: "Success!", description: "Logged out successfully." });
   } catch (err: unknown) {
-    const errorMessage = err instanceof Error ? err.message : "Failed to log out. Please try again.";
+    const errorMessage = err instanceof Error ? err.message : "Failed to log out.";
     console.error("[APP_SIDEBAR] Logout error:", err);
-    toast({
-      variant: "destructive",
-      title: "Error",
-      description: errorMessage,
-    });
-
-    // Fallback: Clear cookies and redirect
-    clearCookies();
-    localStorage.clear();
-    sessionStorage.clear();
-    queryClient.clear();
-    navigate("/auth");
+    toast({ variant: "destructive", title: "Error", description: errorMessage });
+  } finally {
+    // Force redirect and reload
+    window.location.href = "/auth";
   }
 };
 

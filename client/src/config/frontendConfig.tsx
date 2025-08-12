@@ -10,7 +10,7 @@ export const frontendConfig = () => {
       Passwordless.init(),
       ThirdParty.init(),
       Session.init({
-        tokenTransferMethod: "cookie",
+        tokenTransferMethod: "header",
         // Enable automatic session refresh
         sessionTokenBackendDomain: new URL(appInfo.apiDomain).hostname,
       }),
