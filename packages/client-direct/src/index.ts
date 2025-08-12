@@ -156,10 +156,15 @@ export class DirectClient {
         elizaLogger.log("DirectClient constructor");
         this.app = express();
         this.agents = new Map();
-
+supertokens.init(backendConfig());
 this.app.set('trust proxy', 1);
 // Initialize SuperTokens using backendConfig
-supertokens.init(backendConfig());
+
+this.app.use((req, res, next) => {
+    console.log("[Initial Headers]", req.headers);
+    elizaLogger.debug("Incoming request", req.method, req.url);
+    next();
+});
         // Define allowed origins
 const allowedOrigins = [
     process.env.WEBSITE_DOMAIN,
@@ -212,21 +217,29 @@ const corsOptions = {
             };
             next();
         });
-          
- /// Webhook middleware
-        this.app.use('/api/webhook', bodyParser.raw({ type: 'application/json' }), (req, res, next) => {
-            elizaLogger.debug('[INDEX] Webhook middleware', {
-                path: req.path,
-                originalUrl: req.originalUrl,
-                isBuffer: Buffer.isBuffer(req.body),
-                bodyType: typeof req.body,
-            });
-            next();
+
+
+
+        // Webhook raw parser FIRST
+this.app.use('/api/webhook',
+    bodyParser.raw({ type: 'application/json' }),
+    (req, res, next) => {
+        elizaLogger.debug('[INDEX] Webhook middleware', {
+            path: req.path,
+            originalUrl: req.originalUrl,
+            isBuffer: Buffer.isBuffer(req.body),
+            bodyType: typeof req.body,
         });
+        next();
+    }
+);
+
+// Then normal body parsers for the rest of the app
+this.app.use(bodyParser.json());
+this.app.use(bodyParser.urlencoded({ extended: true }));
 
 
-        this.app.use(bodyParser.json());
-        this.app.use(bodyParser.urlencoded({ extended: true }));
+        
 
 
  
