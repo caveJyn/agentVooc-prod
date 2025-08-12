@@ -156,7 +156,7 @@ export function backendConfig(): InputType {
       }),
       Session.init({
         cookieSecure: true,
-        cookieSameSite: "strict",
+        cookieSameSite: "none",
         sessionExpiredStatusCode: 401,
         cookieDomain: undefined,
         useDynamicAccessTokenSigningKey: false,
