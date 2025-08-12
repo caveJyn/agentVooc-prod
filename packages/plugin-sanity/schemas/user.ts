@@ -20,12 +20,6 @@ export default {
       validation: (Rule) => Rule.required(),
     },
     {
-      name: "clientId",
-      title: "Client ID",
-      type: "string",
-      description: "Unique client ID for the user's session",
-    },
-    {
       name: "interest",
       title: "Interest",
       type: "string",

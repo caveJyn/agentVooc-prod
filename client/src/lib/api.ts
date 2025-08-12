@@ -158,7 +158,6 @@ const fetcher = async ({
 export interface User {
   _id: string;
   userId: string;
-  clientId?: string; // Optional clientId for session tracking
   userType?: string;
   email?: string;
   name?: string;

@@ -29,7 +29,6 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { MouseEvent, useState } from "react";
 import { Avatar, AvatarImage } from "./ui/avatar";
-import { doesSessionExist } from "supertokens-web-js/recipe/session"; // Add this import
 
 export function AppSidebar() {
   const location = useLocation();
