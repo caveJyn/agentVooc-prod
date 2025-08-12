@@ -29,7 +29,8 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { MouseEvent, useState } from "react";
 import { Avatar, AvatarImage } from "./ui/avatar";
-import { doesSessionExist } from "supertokens-web-js/recipe/session";
+import Session from "supertokens-web-js/recipe/session";
+
 
 export function AppSidebar() {
   const location = useLocation();
@@ -133,74 +134,94 @@ const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
   console.log("[APP_SIDEBAR] Initiating logout");
 
   try {
-    // Attempt to update connection status, but don't fail logout if it errors
-    try {
-      await apiClient.updateConnectionStatus({ isConnected: false, clientId: "logout" });
-      console.log("[APP_SIDEBAR] Connection status updated to disconnected");
-    } catch (err) {
-      console.warn("[APP_SIDEBAR] Failed to update connection status, proceeding with logout:", err);
+    // Cancel and remove all queries immediately to prevent pending requests
+    console.log("[APP_SIDEBAR] Canceling and clearing all queries");
+    await queryClient.cancelQueries();
+    queryClient.removeQueries();
+    queryClient.clear();
+
+    // Check if session exists before attempting connection status update
+    const sessionExists = await Session.doesSessionExist();
+    console.log("[APP_SIDEBAR] Session exists:", sessionExists);
+
+    if (sessionExists) {
+      try {
+        console.log("[APP_SIDEBAR] Updating connection status to disconnected");
+        const response = await apiClient.updateConnectionStatus({
+          isConnected: false,
+          clientId: undefined,
+        });
+        console.log("[APP_SIDEBAR] Connection status response:", response);
+        if (response.status === "skipped") {
+          console.log("[APP_SIDEBAR] Connection status update skipped:", response.reason);
+        }
+      } catch (err) {
+        console.warn("[APP_SIDEBAR] Failed to update connection status:", err);
+      }
+    } else {
+      console.log("[APP_SIDEBAR] No session, skipping connection status update");
     }
 
     // Sign out using SuperTokens
+    console.log("[APP_SIDEBAR] Calling SuperTokens signOut");
     await signOut();
-    console.log("[APP_SIDEBAR] Sign out completed successfully");
+    console.log("[APP_SIDEBAR] SuperTokens signOut completed");
 
-    // Verify session is gone
-    const sessionExists = await doesSessionExist();
-    if (sessionExists) {
-      console.warn("[APP_SIDEBAR] Session still exists after signOut, forcing cleanup");
-    } else {
-      console.log("[APP_SIDEBAR] Session successfully revoked");
-    }
-
-    // Clear all storage
+    // Clear storage and cookies
     localStorage.clear();
     sessionStorage.clear();
-    console.log("[APP_SIDEBAR] Local and session storage cleared");
-
-    // Clear cookies
     clearCookies();
+    console.log("[APP_SIDEBAR] Storage and cookies cleared");
 
-    // Invalidate and clear React Query cache
-    queryClient.clear();
-    queryClient.invalidateQueries({ queryKey: ["user"] });
-    queryClient.invalidateQueries({ queryKey: ["agents"] });
-    queryClient.invalidateQueries({ queryKey: ["characters"] });
-    queryClient.removeQueries({ queryKey: ["user"] });
-    queryClient.removeQueries({ queryKey: ["agents"] });
-    queryClient.removeQueries({ queryKey: ["characters"] });
-    console.log("[APP_SIDEBAR] React Query cache cleared and invalidated");
-
-    // Reset sidebar state
+    // Reset local state
     setSearchQuery("");
     console.log("[APP_SIDEBAR] Search query reset");
 
     // Show success toast
     toast({ title: "Success!", description: "Logged out successfully." });
 
-    // Force redirect to /auth and reload
+    // Navigate to auth page
     navigate("/auth", { replace: true });
+    if (isMobile) {
+      setOpenMobile(false);
+    } else {
+      setOpen(false);
+    }
+    // Ensure navigation with a hard redirect as fallback
     setTimeout(() => {
-      window.location.reload();
-    }, 100); // Small delay to ensure navigation completes
+      if (window.location.pathname !== "/auth") {
+        console.log("[APP_SIDEBAR] Forcing redirect to /auth");
+        window.location.href = "/auth";
+      }
+    }, 100);
   } catch (err: unknown) {
-    const errorMessage = err instanceof Error ? err.message : "Failed to log out.";
     console.error("[APP_SIDEBAR] Logout error:", err);
-    toast({ variant: "destructive", title: "Error", description: errorMessage });
+    const errorMessage = err instanceof Error ? err.message : "Failed to log out.";
 
-    // Clear storage and cache even on error
+    // Force cleanup on error
+    await queryClient.cancelQueries();
+    queryClient.removeQueries();
+    queryClient.clear();
     localStorage.clear();
     sessionStorage.clear();
     clearCookies();
-    queryClient.clear();
-    queryClient.invalidateQueries();
-    queryClient.removeQueries();
     setSearchQuery("");
+    console.log("[APP_SIDEBAR] Forced cleanup completed");
 
-    // Force redirect and reload on error
+    toast({ variant: "destructive", title: "Error", description: errorMessage });
+
+    // Force navigation
     navigate("/auth", { replace: true });
+    if (isMobile) {
+      setOpenMobile(false);
+    } else {
+      setOpen(false);
+    }
     setTimeout(() => {
-      window.location.reload();
+      if (window.location.pathname !== "/auth") {
+        console.log("[APP_SIDEBAR] Forcing redirect to /auth after error");
+        window.location.href = "/auth";
+      }
     }, 100);
   }
 };
