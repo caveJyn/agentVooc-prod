@@ -164,10 +164,13 @@ export class DirectClient {
 
         // Log incoming headers & request details
         this.app.use((req, res, next) => {
-            console.log("[Initial Headers]", req.headers);
-            elizaLogger.debug("Incoming request", req.method, req.url);
-            next();
-        });
+  elizaLogger.debug("User headers:", {
+    authorization: req.headers.authorization ? '[REDACTED]' : 'none',
+    'st-auth-mode': req.headers['st-auth-mode'],
+    userAgent: req.headers['user-agent'],
+  });
+  next();
+});
 
         // Define allowed origins
         const allowedOrigins = [
