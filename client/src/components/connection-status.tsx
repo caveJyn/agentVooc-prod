@@ -1,9 +1,19 @@
+// client/src/components/connection-status.tsx
 import { cn } from "@/lib/utils";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api";
 import { useState, useEffect, Component, ErrorInfo } from "react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { Activity } from "lucide-react";
+import Session from "supertokens-web-js/recipe/session";
+import { Query } from "@tanstack/react-query";
+
+// Define the expected response type for getConnectionStatus
+interface ConnectionStatusResponse {
+  isConnected: boolean;
+  status?: "skipped";
+  reason?: string;
+}
 
 // Error Boundary Component
 class ConnectionStatusErrorBoundary extends Component<React.PropsWithChildren<{}>> {
@@ -32,64 +42,111 @@ class ConnectionStatusErrorBoundary extends Component<React.PropsWithChildren<{}
 
 export default function ConnectionStatus() {
   const [queryTime, setQueryTime] = useState<number | null>(null);
-  const [lastConnected, setLastConnected] = useState<boolean>(true); // Track last known connection state
-  const [lastStatusUpdate, setLastStatusUpdate] = useState<boolean | null>(null); // Track what we last sent to backend
+  const [lastConnected, setLastConnected] = useState<boolean>(true);
+  const [lastStatusUpdate, setLastStatusUpdate] = useState<boolean | null>(null);
+  const queryClient = useQueryClient();
 
   // Mutation to update connection status in the backend
-  const updateConnectionStatus = useMutation({
-    mutationFn: (isConnected: boolean) =>
-      apiClient.updateConnectionStatus({ isConnected }),
-    onError: (_error) => {
-      // console.error("[ConnectionStatus] Failed to update connection status:", error);
-      // Don't change lastConnected here - this is just a backend sync failure
+  const updateConnectionStatus = useMutation<
+    ConnectionStatusResponse | { status: "skipped"; reason: string },
+    Error,
+    boolean
+  >({
+    mutationFn: async (isConnected: boolean) => {
+      const sessionExists = await Session.doesSessionExist();
+      console.log("[ConnectionStatus] Session exists for updateConnectionStatus:", sessionExists);
+      if (!sessionExists) {
+        console.warn("[ConnectionStatus] No session, skipping updateConnectionStatus");
+        return { status: "skipped", reason: "No active session" };
+      }
+      return apiClient.updateConnectionStatus({ isConnected });
+    },
+    onSuccess: (response) => {
+      console.log("[ConnectionStatus] Backend status updated:", response);
+    },
+    onError: (error) => {
+      console.error("[ConnectionStatus] Failed to update connection status:", error);
     },
   });
 
-  // Query to fetch agents - this determines actual connection status
-  const query = useQuery({
+  // Query to check connection status
+  const query = useQuery<ConnectionStatusResponse | { status: "skipped"; reason: string }, Error>({
     queryKey: ["status"],
     queryFn: async () => {
+      const sessionExists = await Session.doesSessionExist();
+      console.log("[ConnectionStatus] Session exists for status query:", sessionExists);
+      if (!sessionExists) {
+        console.warn("[ConnectionStatus] No session, skipping status query");
+        throw new Error("No active session");
+      }
       const start = performance.now();
-      const data = await apiClient.getUser();
+      const data = await apiClient.getConnectionStatus();
       const end = performance.now();
       setQueryTime(end - start);
       return data;
     },
-    refetchInterval: 30_000,
-    retry: 5,
-    refetchOnWindowFocus: "always",
+    refetchInterval: (query: Query<ConnectionStatusResponse | { status: "skipped"; reason: string }, Error>) => {
+      const sessionExists = Session.doesSessionExistSync();
+      return sessionExists && !query.state.error ? 30_000 : false;
+    },
+    retry: 3,
+    retryDelay: 1000,
+    refetchOnWindowFocus: (query: Query<ConnectionStatusResponse | { status: "skipped"; reason: string }, Error>) => {
+      const sessionExists = Session.doesSessionExistSync();
+      return sessionExists && !query.state.error;
+    },
+    enabled: false, // Start disabled, enable via useEffect
   });
 
-  // Update connection state based on query status (original logic)
+  // Enable query only when session exists
   useEffect(() => {
-    if (query.isSuccess) {
-      setLastConnected(true);
+    let isMounted = true;
+    const checkSession = async () => {
+      const sessionExists = await Session.doesSessionExist();
+      if (isMounted && sessionExists) {
+        console.log("[ConnectionStatus] Enabling status query");
+        queryClient.invalidateQueries({ queryKey: ["status"] });
+      } else if (isMounted) {
+        console.log("[ConnectionStatus] No session, cancelling status query");
+        queryClient.cancelQueries({ queryKey: ["status"] });
+        queryClient.removeQueries({ queryKey: ["status"] });
+      }
+    };
+    checkSession();
+    return () => {
+      isMounted = false;
+    };
+  }, [queryClient]);
+
+  // Update connection state based on query status
+  useEffect(() => {
+    if (query.isSuccess && query.data && "isConnected" in query.data) {
+      setLastConnected(query.data.isConnected);
+      console.log("[ConnectionStatus] Connection status updated from query:", query.data.isConnected);
     } else if (query.isError) {
       setLastConnected(false);
-      // console.error("[ConnectionStatus] Failed to fetch agents:", query.error);
+      console.error("[ConnectionStatus] Failed to fetch connection status:", query.error);
     }
-  }, [query.isSuccess, query.isError]);
+  }, [query.isSuccess, query.isError, query.data]);
 
-  // Sync connection status to backend only when it actually changes
+  // Sync connection status to backend when it changes
   useEffect(() => {
-  const currentStatus = query.isSuccess && !query.isError;
-  if (lastStatusUpdate !== currentStatus) {
-    setLastStatusUpdate(currentStatus);
-    updateConnectionStatus.mutate(currentStatus, {
-      onSuccess: () => {
-        // console.log(`[ConnectionStatus] Backend status updated`, { currentStatus });
-      },
-      onError: (_error) => {
-        // console.log(`[ConnectionStatus] Backend status update failed`, { error });
-      }
-    });
-  }
-}, [query.isSuccess, query.isError]);
+    const currentStatus = query.isSuccess && !query.isError && query.data && "isConnected" in query.data ? query.data.isConnected : false;
+    if (lastStatusUpdate !== currentStatus && currentStatus !== undefined) {
+      setLastStatusUpdate(currentStatus);
+      updateConnectionStatus.mutate(currentStatus, {
+        onSuccess: (response) => {
+          console.log("[ConnectionStatus] Backend status updated:", { currentStatus, response });
+        },
+        onError: (error) => {
+          console.error("[ConnectionStatus] Backend status update failed:", error);
+        },
+      });
+    }
+  }, [query.isSuccess, query.isError, query.data, updateConnectionStatus]);
 
   const isLoading = query.isRefetching || query.isPending;
-  const connected = lastConnected; // Use last known state from API calls
-
-  // Only show "Connecting..." on initial load, not during refetches
+  const connected = lastConnected;
   const displayStatus = isLoading && queryTime === null ? "Connecting..." : connected ? "Connected" : "Disconnected";
 
   return (

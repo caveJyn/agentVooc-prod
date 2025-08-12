@@ -29,6 +29,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { MouseEvent, useState } from "react";
 import { Avatar, AvatarImage } from "./ui/avatar";
+import Session from "supertokens-web-js/recipe/session";
 
 export function AppSidebar() {
   const location = useLocation();
@@ -92,66 +93,98 @@ export function AppSidebar() {
   // Replace your current clearCookies and handleLogout functions in app-sidebar.tsx
 
 const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
-  e.preventDefault();
-  console.log("[APP_SIDEBAR] Initiating logout");
+    e.preventDefault();
+    console.log("[APP_SIDEBAR] Initiating logout");
 
-  try {
-    // Update connection status to disconnected
     try {
-      const userId = (await apiClient.getUser())?.user?.userId;
-      if (userId) {
-        await apiClient.updateConnectionStatus({ isConnected: false, clientId: "logout" });
-        console.log("[APP_SIDEBAR] Connection status updated to disconnected");
+      // Check if session exists before attempting connection status update
+      const sessionExists = await Session.doesSessionExist();
+      console.log("[APP_SIDEBAR] Session exists:", sessionExists);
+
+      if (sessionExists) {
+        try {
+          console.log("[APP_SIDEBAR] Updating connection status to disconnected");
+          const response = await apiClient.updateConnectionStatus({
+            isConnected: false,
+            clientId: undefined,
+          });
+          console.log("[APP_SIDEBAR] Connection status response:", response);
+          if (response.status === "skipped") {
+            console.log("[APP_SIDEBAR] Connection status update skipped:", response.reason);
+          }
+        } catch (err) {
+          console.warn("[APP_SIDEBAR] Failed to update connection status:", err);
+        }
+      } else {
+        console.log("[APP_SIDEBAR] No session, skipping connection status update");
       }
-    } catch (err) {
-      console.warn("[APP_SIDEBAR] Failed to update connection status:", err);
+
+      // Sign out using SuperTokens
+      console.log("[APP_SIDEBAR] Calling SuperTokens signOut");
+      await signOut();
+      console.log("[APP_SIDEBAR] SuperTokens signOut completed");
+
+      // Clear storage, cookies, and React Query cache
+      localStorage.clear();
+      sessionStorage.clear();
+      clearCookies();
+      queryClient.cancelQueries();
+      queryClient.clear();
+      queryClient.removeQueries();
+      console.log("[APP_SIDEBAR] Storage, cookies, and query cache cleared");
+
+      // Reset local state
+      setSearchQuery("");
+      console.log("[APP_SIDEBAR] Search query reset");
+
+      // Show success toast
+      toast({ title: "Success!", description: "Logged out successfully." });
+
+      // Navigate to auth page
+      navigate("/auth", { replace: true });
+      if (isMobile) {
+        setOpenMobile(false);
+      } else {
+        setOpen(false);
+      }
+      // Ensure navigation with a hard redirect as fallback
+      setTimeout(() => {
+        if (window.location.pathname !== "/auth") {
+          console.log("[APP_SIDEBAR] Forcing redirect to /auth");
+          window.location.href = "/auth";
+        }
+      }, 100);
+    } catch (err: unknown) {
+      console.error("[APP_SIDEBAR] Logout error:", err);
+      const errorMessage = err instanceof Error ? err.message : "Failed to log out.";
+
+      // Force cleanup on error
+      localStorage.clear();
+      sessionStorage.clear();
+      clearCookies();
+      queryClient.cancelQueries();
+      queryClient.clear();
+      queryClient.removeQueries();
+      setSearchQuery("");
+      console.log("[APP_SIDEBAR] Forced cleanup completed");
+
+      toast({ variant: "destructive", title: "Error", description: errorMessage });
+
+      // Force navigation
+      navigate("/auth", { replace: true });
+      if (isMobile) {
+        setOpenMobile(false);
+      } else {
+        setOpen(false);
+      }
+      setTimeout(() => {
+        if (window.location.pathname !== "/auth") {
+          console.log("[APP_SIDEBAR] Forcing redirect to /auth after error");
+          window.location.href = "/auth";
+        }
+      }, 100);
     }
-
-    // Sign out using SuperTokens
-    await signOut();
-    console.log("[APP_SIDEBAR] SuperTokens signOut completed");
-
-    // Clear all cookies
-    clearCookies();
-
-    // Clear storage and cache
-    localStorage.clear();
-    sessionStorage.clear();
-    queryClient.clear();
-    queryClient.invalidateQueries();
-    queryClient.removeQueries();
-    console.log("[APP_SIDEBAR] Storage and cache cleared");
-
-    // Reset state
-    setSearchQuery("");
-
-    // Show success toast
-    toast({ title: "Success!", description: "Logged out successfully." });
-
-    // Navigate to auth page
-    navigate("/auth", { replace: true });
-    setTimeout(() => {
-      window.location.href = "/auth";
-    }, 100);
-  } catch (err: unknown) {
-    console.error("[APP_SIDEBAR] Logout error:", err);
-    const errorMessage = err instanceof Error ? err.message : "Failed to log out.";
-
-    // Force cleanup on error
-    localStorage.clear();
-    sessionStorage.clear();
-    clearCookies();
-    queryClient.clear();
-    setSearchQuery("");
-
-    toast({ variant: "destructive", title: "Error", description: errorMessage });
-
-    // Force navigation
-    setTimeout(() => {
-      window.location.href = "/auth";
-    }, 100);
-  }
-};
+  };
 
 const clearCookies = () => {
   console.log("[APP_SIDEBAR] Cookies before clearing:", document.cookie);

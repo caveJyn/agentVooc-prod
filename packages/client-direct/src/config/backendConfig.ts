@@ -159,115 +159,97 @@ export function backendConfig(): InputType {
         sessionExpiredStatusCode: 401,
         cookieDomain: "agentvooc.com",
         useDynamicAccessTokenSigningKey: false,
-  antiCsrf: "NONE",
-  getTokenTransferMethod: () => "header",
-  override: {
-    functions: (originalImplementation) => ({
-      ...originalImplementation,
-      createNewSession: async function (input) {
-        elizaLogger.debug(`Creating new session for user: ${input.userId}`);
-        const session = await originalImplementation.createNewSession(input);
-        elizaLogger.debug(`Session created: userId=${input.userId}, sessionHandle=${session.getHandle()}`);
-        return session;
-      },
-      getSession: async function (input) {
-        try {
-          const request = input.userContext?.req as any;
-          elizaLogger.debug(`Getting session for request`, {
-            hasAuthorizationHeader: !!input.accessToken,
-            cookies: request?.headers?.cookie || "none",
-            authorization: request?.headers?.authorization || "none",
-          });
-          const session = await originalImplementation.getSession(input);
-          elizaLogger.debug(`Session retrieved: userId=${session.getUserId()}, sessionHandle=${session.getHandle()}`);
-          return session;
-        } catch (error: any) {
-          elizaLogger.warn(`Session retrieval failed`, {
-            errorMessage: error.message,
-            cookies: input.userContext?.req?.headers?.cookie || "none",
-            authorization: input.userContext?.req?.headers?.authorization || "none",
-          });
-          throw error;
-        }
-      },
-      revokeSession: async function (input) {
-        elizaLogger.debug(`Revoking session: ${input.sessionHandle}`);
-        const session = await Session.getSessionInformation(input.sessionHandle);
-        const userId = session?.userId || "unknown";
-        const result = await originalImplementation.revokeSession(input);
-        elizaLogger.debug(`Session revoked: userId=${userId}`);
-        return result;
-      },
-    }),
-    apis: (originalImplementation) => ({
-      ...originalImplementation,
-      signOutPOST: async (input) => {
-        const request = input.userContext?.req as any;
-        const response = input.userContext?.res as any;
-        elizaLogger.debug("signOutPOST called", {
-          sessionExists: !!input.session,
-          userId: input.session?.getUserId() || "unknown",
-          cookies: request?.headers?.cookie || "none",
-          authorization: request?.headers?.authorization || "none",
-        });
+        antiCsrf: "NONE",
+        getTokenTransferMethod: () => "header",
+        override: {
+          functions: (originalImplementation) => ({
+            ...originalImplementation,
+            createNewSession: async function (input) {
+              elizaLogger.debug(`Creating new session for user: ${input.userId}`);
+              const session = await originalImplementation.createNewSession(input);
+              elizaLogger.debug(`Session created: userId=${input.userId}, sessionHandle=${session.getHandle()}`);
+              return session;
+            },
+            getSession: async function (input) {
+              try {
+                const request = input.userContext?.req as any;
+                const authHeader = request?.headers?.authorization || "none";
+                elizaLogger.debug(`Getting session for request`, {
+                  hasAuthorizationHeader: !!authHeader && authHeader !== "none",
+                  cookies: request?.headers?.cookie || "none",
+                  authorization: authHeader,
+                });
+                const session = await originalImplementation.getSession(input);
+                if (session) {
+                  elizaLogger.debug(`Session retrieved: userId=${session.getUserId()}, sessionHandle=${session.getHandle()}`);
+                } else {
+                  elizaLogger.debug(`No session retrieved`);
+                }
+                return session;
+              } catch (error: any) {
+                elizaLogger.warn(`Session retrieval failed`, {
+                  errorMessage: error.message,
+                  cookies: input.userContext?.req?.headers?.cookie || "none",
+                  authorization: input.userContext?.req?.headers?.authorization || "none",
+                });
+                throw error;
+              }
+            },
+            revokeSession: async function (input) {
+              elizaLogger.debug(`Revoking session: ${input.sessionHandle}`);
+              const session = await Session.getSessionInformation(input.sessionHandle);
+              const userId = session?.userId || "unknown";
+              const result = await originalImplementation.revokeSession(input);
+              elizaLogger.debug(`Session revoked: userId=${userId}`);
+              return result;
+            },
+          }),
+          apis: (originalImplementation) => ({
+            ...originalImplementation,
+            signOutPOST: async (input) => {
+              const request = input.userContext?.req as any;
+              const response = input.userContext?.res as any;
+              const authHeader = request?.headers?.authorization || "none";
+              elizaLogger.debug("signOutPOST called", {
+                sessionExists: !!input.session,
+                userId: input.session?.getUserId() || "unknown",
+                cookies: request?.headers?.cookie || "none",
+                authorization: authHeader,
+              });
 
-        let userId: string | undefined;
-        if (input.session) {
-          userId = input.session.getUserId();
-          try {
-            await Session.revokeAllSessionsForUser(userId);
-            elizaLogger.debug(`Revoked all sessions for userId: ${userId}`);
-          } catch (error) {
-            elizaLogger.error(`Failed to revoke sessions for userId: ${userId}`, error);
-          }
-        }
+              let userId: string | undefined;
+              if (input.session) {
+                userId = input.session.getUserId();
+                try {
+                  await Session.revokeAllSessionsForUser(userId);
+                  elizaLogger.debug(`Revoked all sessions for userId: ${userId}`);
+                } catch (error) {
+                  elizaLogger.error(`Failed to revoke sessions for userId: ${userId}`, error);
+                }
+              }
 
-        // Update connection status in Sanity
-        if (userId) {
-          try {
-            const user = await sanityClient.fetch(
-              `*[_type == "User" && userId == $userId][0]{_id}`,
-              { userId }
-            );
-            if (user) {
-              await sanityClient
-                .patch(user._id)
-                .set({ isConnected: false, lastClientId: null })
-                .commit();
-              elizaLogger.debug(`Updated connection status to disconnected for userId: ${userId}`);
-            }
-          } catch (error) {
-            elizaLogger.error(`Failed to update connection status for userId: ${userId}`, error);
-          }
-        }
+              const cookiesToClear = [
+                "sAccessToken",
+                "sRefreshToken",
+                "sFrontToken",
+                "st-last-access-token-update",
+                "st-access-token",
+                "st-refresh-token",
+              ];
+              cookiesToClear.forEach((cookieName) => {
+                response.clearCookie(cookieName, {
+                  domain: ".agentvooc.com",
+                  path: "/",
+                  secure: true,
+                  sameSite: "strict",
+                });
+              });
 
-        // Call original signOut implementation
-        const result = await originalImplementation.signOutPOST(input);
-
-        // Clear cookies in response
-        const cookiesToClear = [
-          "sAccessToken",
-          "sRefreshToken",
-          "sFrontToken",
-          "st-last-access-token-update",
-          "st-access-token",
-          "st-refresh-token",
-        ];
-        cookiesToClear.forEach((cookieName) => {
-          response.clearCookie(cookieName, {
-            domain: ".agentvooc.com",
-            path: "/",
-            secure: true,
-            sameSite: "strict",
-          });
-        });
-
-        elizaLogger.debug("signOutPOST response:", { status: result.status });
-        return result;
-      },
-    }),
-  },
-}),
+              return await originalImplementation.signOutPOST(input);
+            },
+          }),
+        },
+      }),
       Dashboard.init({
         admins: ["agentvooc@gmail.com"],
         override: {

@@ -1,6 +1,5 @@
 import type { UUID, Character, Plugin } from "@elizaos/core";
 import Session, { signOut }  from "supertokens-web-js/recipe/session";
-import { getAccessToken } from "supertokens-web-js/recipe/session";
 
 // Base URL for API requests
 // this routes trafic to the server(backend) localhost:3000
@@ -12,95 +11,101 @@ const BASE_URL  =
 
 const fetcher = async ({
   url,
-  method,
+  method = "GET",
   body,
-  headers,
+  headers = {},
 }: {
   url: string;
   method?: "GET" | "POST" | "DELETE" | "PATCH";
   body?: object | FormData;
   headers?: HeadersInit;
 }) => {
-  // Prevent redirect loop if already on /auth, except for auth-related endpoints
+  // Prevent redirect loop for auth page, except for auth-related endpoints
   if (
     window.location.pathname === "/auth" &&
     !url.startsWith("/api/auth") &&
-    !url.startsWith("/api/user")
+    !url.startsWith("/api/user") &&
+    !url.startsWith("/api/invoice")
   ) {
     console.log(`[FETCHER] Aborting fetch: Already on auth page for ${url}`);
     throw new Error("Already on auth page, aborting fetch");
   }
 
   const makeRequest = async (): Promise<any> => {
-    const accessToken = await getAccessToken();
-    const options: RequestInit = {
-      method: method ?? "GET",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}), // Add Authorization header
-        ...(headers || {}), // Merge any provided headers
-      },
-      credentials: "include", // Keep for compatibility, though headers are primary
-    };
+    // Check if session exists for non-auth endpoints
+    const sessionExists = await Session.doesSessionExist();
+    console.log(`[FETCHER] Session exists: ${sessionExists}, URL: ${url}`);
+    if (
+      !sessionExists &&
+      !url.startsWith("/api/auth") &&
+      !url.startsWith("/api/user") &&
+      !url.startsWith("/api/invoice")
+    ) {
+      console.warn(`[FETCHER] No session exists, aborting request to ${url}`);
+      throw new Error("No active session");
+    }
 
-    if (method === "POST" || method === "PATCH") {
-      if (body instanceof FormData) {
-        options.headers = {
-          ...options.headers,
-          // Remove Content-Type for FormData to let browser set it
-          "Content-Type": undefined as any,
-        };
-        options.body = body;
-        console.log(`[FETCHER] Preparing ${method} request with FormData body for ${url}`);
-      } else {
-        options.body = JSON.stringify(body);
-        console.log(`[FETCHER] Preparing ${method} request with JSON body for ${url}:`, body);
+    let accessToken: string | undefined;
+    if (sessionExists) {
+      try {
+        accessToken = await Session.getAccessToken();
+        console.log(`[FETCHER] Access token retrieved: ${accessToken ? "present" : "missing"}`);
+      } catch (error) {
+        console.error(`[FETCHER] Failed to get access token:`, error);
       }
     }
 
-    console.log(`[FETCHER] Sending request to ${BASE_URL}${url} with method: ${method}`);
-    console.log(`[FETCHER] Request headers:`, options.headers);
-    console.log(`[FETCHER] Cookies available:`, document.cookie);
+    const requestHeaders: HeadersInit = {
+      Accept: "application/json",
+      ...(body instanceof FormData ? {} : { "Content-Type": "application/json" }),
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      ...headers,
+    };
+
+    const options: RequestInit = {
+      method,
+      headers: requestHeaders,
+      credentials: "include",
+      ...(body && (method === "POST" || method === "PATCH")
+        ? { body: body instanceof FormData ? body : JSON.stringify(body) }
+        : {}),
+    };
+
+    console.log(`[FETCHER] Sending ${method} request to ${BASE_URL}${url}`, {
+      headers: requestHeaders,
+      body: body instanceof FormData ? "[FormData]" : body,
+      cookies: document.cookie,
+    });
 
     const resp = await fetch(`${BASE_URL}${url}`, options);
-    console.log(`[FETCHER] Response status for ${url}: ${resp.status}`);
-    console.log(`[FETCHER] Response headers for ${url}:`, {
+    console.log(`[FETCHER] Response status for ${url}: ${resp.status}`, {
       "access-control-allow-origin": resp.headers.get("access-control-allow-origin"),
       "access-control-allow-credentials": resp.headers.get("access-control-allow-credentials"),
     });
 
-    const contentType = resp.headers.get("Content-Type");
-    if (contentType?.includes("audio/mpeg")) {
-      console.log(`[FETCHER] Response is audio/mpeg for ${url}, returning blob`);
-      return await resp.blob();
-    }
-
     if (!resp.ok) {
       const errorText = await resp.text();
-      console.error(`[FETCHER] Fetch error for ${url}:`, errorText, "Status:", resp.status);
+      console.error(`[FETCHER] Fetch error for ${url}: ${errorText}, Status: ${resp.status}`);
 
-      let errorMessage = "An error occurred.";
-      let errorObj: any = {};
-
+      let errorObj: any = { error: errorText };
       try {
         errorObj = JSON.parse(errorText);
-        errorMessage = errorObj.error || errorObj.message || errorText;
-        console.log(`[FETCHER] Parsed error for ${url}:`, errorMessage);
       } catch {
-        errorMessage = errorText || "Unknown error";
-        console.log(`[FETCHER] Failed to parse error response for ${url}:`, errorText);
+        // Non-JSON response
       }
 
       if (resp.status === 401 && errorObj.message === "try refresh token") {
-        console.log(`[FETCHER] Session refresh needed for ${url}`);
         throw new Error("TRY_REFRESH_TOKEN");
       }
 
-      const error = new Error(errorMessage);
+      const error = new Error(errorObj.error || errorObj.message || "Request failed");
       (error as any).status = resp.status;
-      console.log(`[FETCHER] Throwing error for ${url}:`, errorMessage);
       throw error;
+    }
+
+    if (resp.headers.get("Content-Type")?.includes("audio/mpeg")) {
+      console.log(`[FETCHER] Response is audio/mpeg for ${url}, returning blob`);
+      return await resp.blob();
     }
 
     if (resp.status === 204) {
@@ -108,7 +113,6 @@ const fetcher = async ({
       return {};
     }
 
-    console.log(`[FETCHER] Parsing response as JSON for ${url}`);
     const responseData = await resp.json();
     console.log(`[FETCHER] Response data for ${url}:`, responseData);
     return responseData;
@@ -124,24 +128,25 @@ const fetcher = async ({
       try {
         const refreshed = await Session.attemptRefreshingSession();
         if (refreshed) {
-          console.log(`[FETCHER] Session refreshed successfully, retrying ${url}`);
+          console.log(`[FETCHER] Session refreshed, retrying ${url}`);
           return await makeRequest();
-        } else {
-          console.log(`[FETCHER] Session refresh failed, redirecting to auth for ${url}`);
-          await signOut();
-          console.log("[FETCHER] Sign out completed successfully");
-          window.location.href = "/auth";
-          throw new Error("Session expired, please login again");
         }
-      } catch (refreshError) {
-        console.error(`[FETCHER] Session refresh error for ${url}:`, refreshError);
+        console.log(`[FETCHER] Session refresh failed, signing out`);
         await signOut();
         console.log("[FETCHER] Sign out completed successfully");
         window.location.href = "/auth";
-        throw new Error("Session expired, please login again");
+        throw new Error("Session expired, redirecting to login");
+      } catch (refreshError) {
+        console.error(`[FETCHER] Session refresh error:`, refreshError);
+        await signOut();
+        console.log("[FETCHER] Sign out completed successfully");
+        window.location.href = "/auth";
+        throw new Error("Session expired, redirecting to login");
       }
+    } else if (error.message === "No active session") {
+      console.warn(`[FETCHER] Request aborted due to no active session: ${url}`);
+      throw error;
     }
-
     throw error;
   }
 };
@@ -798,35 +803,53 @@ updateEmailTemplate: (agentId: string, template: Partial<EmailTemplate>) =>
     }),
 
     updateConnectionStatus: async ({ isConnected, clientId }: { isConnected: boolean; clientId?: string }) => {
-  try {
-    const accessToken = await Session.getAccessToken();
-    console.log("[API_CLIENT] Sending updateConnectionStatus with:", { isConnected, clientId });
-    const response = await fetcher({
-      url: "/api/connection-status",
-      method: "POST",
-        headers: {
-          'Content-Type': 'application/json',
-          ...(accessToken && { 'Authorization': `Bearer ${accessToken}` }),
-        },
-        body: { isConnected, clientId },
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    console.log("[API_CLIENT] updateConnectionStatus called with:", { isConnected, clientId });
+    try {
+      const sessionExists = await Session.doesSessionExist();
+      console.log("[API_CLIENT] Session exists for updateConnectionStatus:", sessionExists);
+      if (!sessionExists) {
+        console.warn("[API_CLIENT] No session exists, skipping updateConnectionStatus");
+        return { status: "skipped", reason: "No active session" };
       }
-      
-      return response.json();
-    } catch (error) {
-      console.error('[API_CLIENT] updateConnectionStatus error:', error);
-      throw error;
+
+      const accessToken = await Session.getAccessToken();
+      console.log("[API_CLIENT] Access token for updateConnectionStatus:", accessToken ? "present" : "missing");
+
+      const response = await fetcher({
+        url: "/api/connection-status",
+        method: "POST",
+        body: { isConnected, clientId },
+        headers: {
+          "Content-Type": "application/json",
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
+      });
+
+      console.log("[API_CLIENT] updateConnectionStatus response:", response);
+      return response;
+    } catch (error: any) {
+      console.error("[API_CLIENT] updateConnectionStatus error:", error);
+      throw new Error(error.message || "Failed to update connection status");
     }
   },
-
-  getConnectionStatus: () =>
-    fetcher({
-      url: "/api/connection-status",
-      method: "GET",
-    }),
+  getConnectionStatus: async () => {
+    console.log("[API_CLIENT] Calling getConnectionStatus");
+    try {
+      const sessionExists = await Session.doesSessionExist();
+      console.log("[API_CLIENT] Session exists for getConnectionStatus:", sessionExists);
+      if (!sessionExists) {
+        console.warn("[API_CLIENT] No session exists, skipping getConnectionStatus");
+        return { status: "skipped", reason: "No active session" };
+      }
+      return await fetcher({
+        url: "/api/connection-status",
+        method: "GET",
+      });
+    } catch (error: any) {
+      console.error("[API_CLIENT] getConnectionStatus error:", error);
+      throw new Error(error.message || "Failed to get connection status");
+    }
+  },
 
     getLegalDocuments: (): Promise<{ legalDocuments: LegalDocument[] }> => {
     // console.log("[API_CLIENT] Calling getLegalDocuments");
@@ -934,10 +957,26 @@ updateEmailTemplate: (agentId: string, template: Partial<EmailTemplate>) =>
 },
 
 getInvoiceBySessionId: async (sessionId: string) => {
+    console.log("[API_CLIENT] Calling getInvoiceBySessionId", { sessionId });
+    const sessionExists = await Session.doesSessionExist();
+    console.log("[API_CLIENT] Session exists for getInvoiceBySessionId:", sessionExists);
+    if (!sessionExists) {
+      console.warn("[API_CLIENT] No session exists, skipping getInvoiceBySessionId");
+      throw new Error("No active session");
+    }
+    const accessToken = await Session.getAccessToken();
     const response = await fetch(`/api/invoice?sessionId=${encodeURIComponent(sessionId)}`, {
-      credentials: 'include',
+      credentials: "include",
+      headers: {
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      },
     });
-    if (!response.ok) throw new Error('Failed to fetch invoice');
-    return response.json();
+    if (!response.ok) {
+      console.error("[API_CLIENT] getInvoiceBySessionId error:", response.statusText);
+      throw new Error("Failed to fetch invoice");
+    }
+    const data = await response.json();
+    console.log("[API_CLIENT] getInvoiceBySessionId response:", data);
+    return data;
   },
 };
