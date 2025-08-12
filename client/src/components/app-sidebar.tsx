@@ -1,5 +1,5 @@
 // client/src/components/app-sidebar.tsx
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 // import info from "@/lib/info.json";
 import {
   Sidebar,
@@ -101,32 +101,39 @@ export function AppSidebar() {
 
 const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
   e.preventDefault();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-
   try {
+    // Update connection status first
     console.log("[APP_SIDEBAR] Updating connection status to false");
     const updateResponse = await apiClient.updateConnectionStatus({ isConnected: false, clientId: "logout" });
     console.log("[APP_SIDEBAR] updateConnectionStatus response:", updateResponse);
 
-    if (updateResponse.status === "no-session" || updateResponse.error === "Unauthorized") {
-      console.log("[APP_SIDEBAR] No session or unauthorized for updateConnectionStatus, continuing logout");
+    // Proceed even if no session
+    if (updateResponse.status === "no-session") {
+      console.log("[APP_SIDEBAR] No session for updateConnectionStatus, continuing logout");
     }
 
+    // Revoke SuperTokens session
     console.log("[APP_SIDEBAR] Calling signOut");
     const signOutResponse = await signOut();
     console.log("[APP_SIDEBAR] signOut response:", signOutResponse);
 
+    // Clear cookies
     clearCookies();
+
+    // Clear local and session storage
     localStorage.clear();
     sessionStorage.clear();
+
+    // Clear React Query cache
     queryClient.clear();
 
+    // Notify user
     toast({
       title: "Success!",
       description: "Logged out from all devices successfully.",
     });
 
+    // Navigate to auth page
     navigate("/auth");
   } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : "Failed to log out. Please try again.";
@@ -137,6 +144,7 @@ const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
       description: errorMessage,
     });
 
+    // Fallback: Clear cookies and redirect
     clearCookies();
     localStorage.clear();
     sessionStorage.clear();
