@@ -175,8 +175,8 @@ export function backendConfig(): InputType {
   try {
     // Extract request from userContext
     const request = input.userContext?._default?.request;
-    let authHeader = request?.headers?.get("authorization") || "";
-    const cookies = request?.headers?.get("cookie") || "none";
+    let authHeader = request?.headers?.get?.("authorization") || "";
+    const cookies = request?.headers?.get?.("cookie") || "none";
 
     // Extract JWT from Authorization header
     let accessToken = null;
@@ -189,10 +189,12 @@ export function backendConfig(): InputType {
       hasAuthorizationHeader: !!accessToken,
       authorization: accessToken ? "Bearer [REDACTED]" : "none",
       cookies,
-      inputKeys: Object.keys(input || {}),
-      userContextKeys: Object.keys(input.userContext || {}),
+      inputKeys: input && typeof input === "object" ? Object.keys(input) : [],
+      userContextKeys: input.userContext && typeof input.userContext === "object" ? Object.keys(input.userContext) : [],
       hasRequestInUserContext: !!input.userContext?._default?.request,
-      requestHeaders: request ? Object.fromEntries(request.headers.entries()) : "none",
+      requestHeaders: request?.headers
+        ? Array.from(request.headers.entries?.() || []).reduce((acc, [key, value]) => { acc[key] = value; return acc; }, {})
+        : "none",
       sessionRequired: input.options?.sessionRequired || false,
       accessTokenPresent: !!accessToken,
     });
@@ -218,8 +220,8 @@ export function backendConfig(): InputType {
   } catch (error: any) {
     // Extract request for error logging
     const request = input.userContext?._default?.request;
-    const authHeader = request?.headers?.get("authorization") || "none";
-    const cookies = request?.headers?.get("cookie") || "none";
+    const authHeader = request?.headers?.get?.("authorization") || "";
+    const cookies = request?.headers?.get?.("cookie") || "none";
 
     // Log error with detailed context
     elizaLogger.warn("Session retrieval failed", {
@@ -227,10 +229,12 @@ export function backendConfig(): InputType {
       errorStack: error.stack,
       cookies,
       authorization: authHeader.startsWith("Bearer ") ? "Bearer [REDACTED]" : "none",
-      inputKeys: Object.keys(input || {}),
-      userContextKeys: Object.keys(input.userContext || {}),
+      inputKeys: input && typeof input === "object" ? Object.keys(input) : [],
+      userContextKeys: input.userContext && typeof input.userContext === "object" ? Object.keys(input.userContext) : [],
       hasRequestInUserContext: !!input.userContext?._default?.request,
-      requestHeaders: request ? Object.fromEntries(request.headers.entries()) : "none",
+      requestHeaders: request?.headers
+        ? Array.from(request.headers.entries?.() || []).reduce((acc, [key, value]) => { acc[key] = value; return acc; }, {})
+        : "none",
       sessionRequired: input.options?.sessionRequired || false,
     });
 
