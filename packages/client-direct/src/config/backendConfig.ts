@@ -5,7 +5,6 @@ import ThirdParty from "supertokens-node/recipe/thirdparty";
 import Dashboard from "supertokens-node/recipe/dashboard";
 import { sanityClient } from "@elizaos-plugins/plugin-sanity";
 import { elizaLogger } from "@elizaos/core";
-import { Response } from "express";
 
 export function backendConfig(): InputType {
   return {
@@ -156,12 +155,12 @@ export function backendConfig(): InputType {
       }),
       Session.init({
         cookieSecure: true,
-        cookieSameSite: "none",
+        cookieSameSite: "none", // Changed from "strict" to "none" for cross-origin requests
         sessionExpiredStatusCode: 401,
-        cookieDomain: undefined,
+        cookieDomain: undefined, // Changed from "agentvooc.com" to undefined for header-based auth
         useDynamicAccessTokenSigningKey: false,
         antiCsrf: "NONE",
-        getTokenTransferMethod: () => "header",
+        getTokenTransferMethod: () => "header", // Force header-based token transfer
         override: {
           functions: (originalImplementation) => ({
             ...originalImplementation,
@@ -172,62 +171,93 @@ export function backendConfig(): InputType {
               return session;
             },
             getSession: async function (input: any) {
-  try {
-    const request = input.userContext?._default?.request;
-    let authHeader = "";
+              try {
+                const request = input.userContext?._default?.request;
+                let authHeader = "";
 
-    if (request?.headers) {
-      // Handle both Express and Fetch API style headers
-      authHeader = request.headers.authorization || request.headers["authorization"] || "";
-    }
+                if (request?.headers) {
+                  // Handle both Express and Fetch API style headers
+                  authHeader = request.headers.authorization || request.headers["authorization"] || "";
+                }
 
-    // Extract JWT from Authorization header
-    let accessToken = null;
-    if (authHeader && authHeader.startsWith("Bearer ")) {
-      accessToken = authHeader.replace("Bearer ", "");
-    }
+                // Extract JWT from Authorization header
+                let accessToken = null;
+                if (authHeader && authHeader.startsWith("Bearer ")) {
+                  accessToken = authHeader.replace("Bearer ", "");
+                }
 
-    elizaLogger.debug("getSession called", {
-      hasAuthorizationHeader: !!authHeader,
-      authorization: authHeader ? "Bearer [PRESENT]" : "none",
-      accessTokenPresent: !!accessToken,
-      sessionRequired: input.options?.sessionRequired || false,
-      headerKeys: request?.headers ? Object.keys(request.headers) : [],
-    });
+                elizaLogger.debug("getSession called", {
+                  hasAuthorizationHeader: !!authHeader,
+                  authorization: authHeader ? "Bearer [PRESENT]" : "none",
+                  accessTokenPresent: !!accessToken,
+                  sessionRequired: input.options?.sessionRequired || false,
+                  headerKeys: request?.headers ? Object.keys(request.headers) : [],
+                });
 
-    const session = await originalImplementation.getSession({
-      ...input,
-      accessToken,
-    });
+                const session = await originalImplementation.getSession({
+                  ...input,
+                  accessToken,
+                });
 
-    if (session) {
-      elizaLogger.debug("Session retrieved successfully", {
-        userId: session.getUserId(),
-        sessionHandle: session.getHandle(),
-      });
-    } else {
-      elizaLogger.debug("No session retrieved");
-    }
+                if (session) {
+                  elizaLogger.debug("Session retrieved successfully", {
+                    userId: session.getUserId(),
+                    sessionHandle: session.getHandle(),
+                  });
+                } else {
+                  elizaLogger.debug("No session retrieved");
+                }
 
-    return session;
-  } catch (error: any) {
-    const request = input.userContext?._default?.request;
-    let authHeader = "";
+                return session;
+              } catch (error: any) {
+                const request = input.userContext?._default?.request;
+                let authHeader = "";
 
-    if (request?.headers) {
-      authHeader = request.headers.authorization || request.headers["authorization"] || "";
-    }
+                if (request?.headers) {
+                  authHeader = request.headers.authorization || request.headers["authorization"] || "";
+                }
 
-    elizaLogger.warn("Session retrieval failed", {
-      errorMessage: error.message,
-      errorType: error.type || "unknown",
-      authorization: authHeader ? "Bearer [PRESENT]" : "none",
-      sessionRequired: input.options?.sessionRequired || false,
-    });
+                elizaLogger.warn("Session retrieval failed", {
+                  errorMessage: error.message,
+                  errorType: error.type || "unknown",
+                  authorization: authHeader ? "Bearer [PRESENT]" : "none",
+                  sessionRequired: input.options?.sessionRequired || false,
+                });
 
-    throw error;
-  }
-},
+                throw error;
+              }
+            },
+            refreshSession: async function (input) {
+              try {
+                const request = input.userContext?._default?.request;
+                let authHeader = "";
+
+                if (request?.headers) {
+                  authHeader = request.headers.authorization || request.headers["authorization"] || "";
+                }
+
+                elizaLogger.debug("Refreshing session", {
+                  authorization: authHeader ? "Bearer [PRESENT]" : "none",
+                });
+
+                const session = await originalImplementation.refreshSession(input);
+                elizaLogger.debug(`Session refreshed: userId=${session.getUserId()}, sessionHandle=${session.getHandle()}`);
+                return session;
+              } catch (error: any) {
+                const request = input.userContext?._default?.request;
+                let authHeader = "";
+
+                if (request?.headers) {
+                  authHeader = request.headers.authorization || request.headers["authorization"] || "";
+                }
+
+                elizaLogger.error(`Session refresh error: ${error.message}`, {
+                  errorType: error.type,
+                  authorization: authHeader ? "Bearer [PRESENT]" : "none",
+                });
+                throw error;
+              }
+            },
             revokeSession: async function (input) {
               elizaLogger.debug(`Revoking session: ${input.sessionHandle}`);
               const session = await Session.getSessionInformation(input.sessionHandle);
@@ -240,31 +270,31 @@ export function backendConfig(): InputType {
           apis: (originalImplementation) => ({
             ...originalImplementation,
             signOutPOST: async (input) => {
-  const request = input.userContext?.req as any;
-  const authHeader = request?.headers?.authorization || "none";
-  const cookies = request?.headers?.cookie || "none";
+              const request = input.userContext?.req as any;
+              const authHeader = request?.headers?.authorization || "none";
+              const cookies = request?.headers?.cookie || "none";
 
-  elizaLogger.debug("signOutPOST called", {
-    sessionExists: !!input.session,
-    userId: input.session?.getUserId() || "unknown",
-    cookies,
-    authorization: authHeader.startsWith("Bearer ") ? "Bearer [REDACTED]" : "none",
-  });
+              elizaLogger.debug("signOutPOST called", {
+                sessionExists: !!input.session,
+                userId: input.session?.getUserId() || "unknown",
+                cookies,
+                authorization: authHeader.startsWith("Bearer ") ? "Bearer [REDACTED]" : "none",
+              });
 
-  let userId: string | undefined;
-  if (input.session) {
-    userId = input.session.getUserId();
-    try {
-      await Session.revokeAllSessionsForUser(userId);
-      elizaLogger.debug(`Revoked all sessions for userId: ${userId}`);
-    } catch (error) {
-      elizaLogger.error(`Failed to revoke sessions for userId: ${userId}`, error);
-    }
-  }
+              let userId: string | undefined;
+              if (input.session) {
+                userId = input.session.getUserId();
+                try {
+                  await Session.revokeAllSessionsForUser(userId);
+                  elizaLogger.debug(`Revoked all sessions for userId: ${userId}`);
+                } catch (error) {
+                  elizaLogger.error(`Failed to revoke sessions for userId: ${userId}`, error);
+                }
+              }
 
-  // Rely on SuperTokens to handle the response
-  return await originalImplementation.signOutPOST(input);
-},
+              // Rely on SuperTokens to handle the response
+              return await originalImplementation.signOutPOST(input);
+            },
           }),
         },
       }),

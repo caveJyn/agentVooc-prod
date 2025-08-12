@@ -150,8 +150,34 @@ const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
     toast({ title: "Success", description: "Logged out successfully." });
     window.location.href = "/auth"; // Force full reload
   } catch (err) {
-    // ... error handling ...
-    window.location.href = "/auth";
+    console.error("[APP_SIDEBAR] Logout error:", err);
+    const errorMessage = err instanceof Error ? err.message : "Failed to log out.";
+
+    // Force cleanup on error
+    await queryClient.cancelQueries();
+    queryClient.removeQueries();
+    queryClient.clear();
+    localStorage.clear();
+    sessionStorage.clear();
+    clearCookies();
+    setSearchQuery("");
+    console.log("[APP_SIDEBAR] Forced cleanup completed");
+
+    toast({ variant: "destructive", title: "Error", description: errorMessage });
+
+    // Force navigation
+    navigate("/auth", { replace: true });
+    if (isMobile) {
+      setOpenMobile(false);
+    } else {
+      setOpen(false);
+    }
+    setTimeout(() => {
+      if (window.location.pathname !== "/auth") {
+        console.log("[APP_SIDEBAR] Forcing redirect to /auth after error");
+        window.location.href = "/auth";
+      }
+    }, 100);
   }
 };
 
