@@ -11,7 +11,7 @@ const BASE_URL  =
 
 const fetcher = async ({
   url,
-  method,
+  method = "GET",
   body,
   headers = {},
 }: {
@@ -20,11 +20,12 @@ const fetcher = async ({
   body?: object | FormData;
   headers?: HeadersInit;
 }) => {
-  // Prevent redirect loop if already on /auth, except for auth-related endpoints
+  // Prevent redirect loop for auth page, except for auth-related endpoints
   if (
     window.location.pathname === "/auth" &&
     !url.startsWith("/api/auth") &&
-    !url.startsWith("/api/user")
+    !url.startsWith("/api/user") &&
+    !url.startsWith("/api/invoice")
   ) {
     console.log(`[FETCHER] Aborting fetch: Already on auth page for ${url}`);
     throw new Error("Already on auth page, aborting fetch");
@@ -34,11 +35,12 @@ const fetcher = async ({
     // Check if session exists for non-auth endpoints
     const sessionExists = await Session.doesSessionExist();
     console.log(`[FETCHER] Session exists: ${sessionExists}, URL: ${url}`);
-
+    
     if (
       !sessionExists &&
       !url.startsWith("/api/auth") &&
-      !url.startsWith("/api/user")
+      !url.startsWith("/api/user") &&
+      !url.startsWith("/api/invoice")
     ) {
       console.warn(`[FETCHER] No session exists, aborting request to ${url}`);
       throw new Error("No active session");
@@ -58,14 +60,14 @@ const fetcher = async ({
       Accept: "application/json",
       ...(body instanceof FormData ? {} : { "Content-Type": "application/json" }),
       ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-      'st-auth-mode': 'header', // Add st-auth-mode header
-      ...headers, // Merge any provided headers
+      'st-auth-mode': 'header',
+      ...headers,
     };
 
     const options: RequestInit = {
-      method: method ?? "GET",
+      method,
       headers: requestHeaders,
-      // Removed credentials: "include" to align with second fetcher
+      // Remove credentials: "include" since we're using header-based auth
       ...(body && (method === "POST" || method === "PATCH")
         ? { body: body instanceof FormData ? body : JSON.stringify(body) }
         : {}),
@@ -79,42 +81,30 @@ const fetcher = async ({
 
     const resp = await fetch(`${BASE_URL}${url}`, options);
     console.log(`[FETCHER] Response status for ${url}: ${resp.status}`);
-    console.log(`[FETCHER] Response headers for ${url}:`, {
-      "access-control-allow-origin": resp.headers.get("access-control-allow-origin"),
-      "access-control-allow-credentials": resp.headers.get("access-control-allow-credentials"),
-    });
-
-    const contentType = resp.headers.get("Content-Type");
-    if (contentType?.includes("audio/mpeg")) {
-      console.log(`[FETCHER] Response is audio/mpeg for ${url}, returning blob`);
-      return await resp.blob();
-    }
 
     if (!resp.ok) {
       const errorText = await resp.text();
-      console.error(`[FETCHER] Fetch error for ${url}:`, errorText, "Status:", resp.status);
+      console.error(`[FETCHER] Fetch error for ${url}: ${errorText}, Status: ${resp.status}`);
 
-      let errorMessage = "An error occurred.";
-      let errorObj: any = {};
-
+      let errorObj: any = { error: errorText };
       try {
         errorObj = JSON.parse(errorText);
-        errorMessage = errorObj.error || errorObj.message || errorText;
-        console.log(`[FETCHER] Parsed error for ${url}:`, errorMessage);
       } catch {
-        errorMessage = errorText || "Unknown error";
-        console.log(`[FETCHER] Failed to parse error response for ${url}:`, errorText);
+        // Non-JSON response
       }
 
       if (resp.status === 401 && errorObj.message === "try refresh token") {
-        console.log(`[FETCHER] Session refresh needed for ${url}`);
         throw new Error("TRY_REFRESH_TOKEN");
       }
 
-      const error = new Error(errorMessage);
+      const error = new Error(errorObj.error || errorObj.message || "Request failed");
       (error as any).status = resp.status;
-      console.log(`[FETCHER] Throwing error for ${url}:`, errorMessage);
       throw error;
+    }
+
+    if (resp.headers.get("Content-Type")?.includes("audio/mpeg")) {
+      console.log(`[FETCHER] Response is audio/mpeg for ${url}, returning blob`);
+      return await resp.blob();
     }
 
     if (resp.status === 204) {
@@ -122,7 +112,6 @@ const fetcher = async ({
       return {};
     }
 
-    console.log(`[FETCHER] Parsing response as JSON for ${url}`);
     const responseData = await resp.json();
     console.log(`[FETCHER] Response data for ${url}:`, responseData);
     return responseData;
@@ -138,27 +127,25 @@ const fetcher = async ({
       try {
         const refreshed = await Session.attemptRefreshingSession();
         if (refreshed) {
-          console.log(`[FETCHER] Session refreshed successfully, retrying ${url}`);
+          console.log(`[FETCHER] Session refreshed, retrying ${url}`);
           return await makeRequest();
-        } else {
-          console.log(`[FETCHER] Session refresh failed, redirecting to auth for ${url}`);
-          await signOut();
-          console.log("[FETCHER] Sign out completed successfully");
-          window.location.href = "/auth";
-          throw new Error("Session expired, please login again");
         }
-      } catch (refreshError) {
-        console.error(`[FETCHER] Session refresh error for ${url}:`, refreshError);
+        console.log(`[FETCHER] Session refresh failed, signing out`);
         await signOut();
         console.log("[FETCHER] Sign out completed successfully");
         window.location.href = "/auth";
-        throw new Error("Session expired, please login again");
+        throw new Error("Session expired, redirecting to login");
+      } catch (refreshError) {
+        console.error(`[FETCHER] Session refresh error:`, refreshError);
+        await signOut();
+        console.log("[FETCHER] Sign out completed successfully");
+        window.location.href = "/auth";
+        throw new Error("Session expired, redirecting to login");
       }
     } else if (error.message === "No active session") {
       console.warn(`[FETCHER] Request aborted due to no active session: ${url}`);
       throw error;
     }
-
     throw error;
   }
 };
