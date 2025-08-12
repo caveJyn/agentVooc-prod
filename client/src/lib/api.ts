@@ -61,14 +61,16 @@ const fetcher = async ({
 
     // console.log(`[FETCHER] Sending request to ${BASE_URL}${url} with method: ${method}`);
     // console.log(`[FETCHER] Fetching ${BASE_URL}${url} with headers:`, options.headers);
+    console.log(`[FETCHER] Sending request to ${BASE_URL}${url} with method: ${method}`);
+    console.log(`[FETCHER] Cookies available:`, document.cookie); // Log cookies
 
     const resp = await fetch(`${BASE_URL}${url}`, options);
-    // console.log(`[FETCHER] Response status for ${url}: ${resp.status}`);
-    // console.log(`[FETCHER] Response headers for ${url}:`, 
-    //   {
-    //   "access-control-allow-origin": resp.headers.get("access-control-allow-origin"),
-    //   "access-control-allow-credentials": resp.headers.get("access-control-allow-credentials"),
-    // });
+    console.log(`[FETCHER] Response status for ${url}: ${resp.status}`);
+    console.log(`[FETCHER] Response headers for ${url}:`, 
+      {
+      "access-control-allow-origin": resp.headers.get("access-control-allow-origin"),
+      "access-control-allow-credentials": resp.headers.get("access-control-allow-credentials"),
+    });
 
     const contentType = resp.headers.get("Content-Type");
     if (contentType?.includes("audio/mpeg")) {
@@ -119,11 +121,11 @@ const fetcher = async ({
   try {
     return await makeRequest();
   } catch (error: any) {
-    // console.error(`[FETCHER] Error for ${url}:`, error);
+    console.error(`[FETCHER] Error for ${url}:`, error);
     
     // Handle SuperTokens session refresh
     if (error.message === "TRY_REFRESH_TOKEN") {
-      // console.log(`[FETCHER] Attempting session refresh for ${url}`);
+      console.log(`[FETCHER] Attempting session refresh for ${url}`);
       
       try {
         // Attempt to refresh the session
@@ -136,16 +138,23 @@ const fetcher = async ({
         } else {
           console.log(`[FETCHER] Session refresh failed, redirecting to auth for ${url}`);
           // Session refresh failed, redirect to auth
-          await signOut(); // Explicitly sign out if refresh fails
+          try {
+          await signOut();
+          console.log("[FETCHER] Sign out completed successfully");
+        } catch (signOutError) {
+          console.error("[FETCHER] Sign out failed:", signOutError);
+        }
           window.location.href = "/auth";
           throw new Error("Session expired, please login again");
         }
       } catch (refreshError) {
         console.error(`[FETCHER] Session refresh error for ${url}:`, refreshError);
-        console.log("[FETCHER] Attempting sign out due to refresh error");
-        // Session refresh failed, redirect to auth
-        await signOut(); // Explicitly sign out on refresh error
+        try {
+        await signOut();
         console.log("[FETCHER] Sign out completed successfully");
+      } catch (signOutError) {
+        console.error("[FETCHER] Sign out failed:", signOutError);
+      }
         window.location.href = "/auth";
         throw new Error("Session expired, please login again");
       }
@@ -806,43 +815,33 @@ updateEmailTemplate: (agentId: string, template: Partial<EmailTemplate>) =>
     }),
 
     updateConnectionStatus: async ({ isConnected, clientId }: { isConnected: boolean; clientId?: string }) => {
+  try {
+    let userId: string | undefined;
     try {
-      let userId: string | undefined;
-      try {
-        const session = await Session.getSession({ sessionRequired: false });
-        userId = session?.getUserId();
-      } catch (error) {
-        console.warn("[API_CLIENT] Failed to get session for userId:", error);
+      const session = await Session.getSession({ sessionRequired: false });
+      userId = session?.getUserId();
+      if (!session) {
+        console.warn("[API_CLIENT] No session found for updateConnectionStatus, proceeding without userId");
       }
-
-      const cookies = document.cookie;
-      console.log("[API_CLIENT] Cookies sent with updateConnectionStatus:", cookies);
-
-      const response = await fetch("/api/connection-status", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include", // Ensure session cookies are sent
-        body: JSON.stringify({ isConnected, clientId, userId }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("[API_CLIENT] updateConnectionStatus failed:", {
-          status: response.status,
-          statusText: response.statusText,
-          response: errorText,
-        });
-        throw new Error(`HTTP error! status: ${response.status}, response: ${errorText}`);
-      }
-
-      return await response.json();
-    } catch (error: any) {
-      console.error("[API_CLIENT] Failed to update connection status:", error);
-      throw error;
+    } catch (error) {
+      console.warn("[API_CLIENT] Failed to get session for userId:", error);
     }
-  },
+
+    console.log("[API_CLIENT] Sending updateConnectionStatus with:", { isConnected, clientId, userId });
+    
+    const response = await fetcher({
+      url: "/api/connection-status",
+      method: "POST",
+      body: { isConnected, clientId, userId },
+    });
+
+    console.log("[API_CLIENT] updateConnectionStatus response:", response);
+    return response;
+  } catch (error: any) {
+    console.error("[API_CLIENT] Failed to update connection status:", error);
+    throw error;
+  }
+},
 
   getConnectionStatus: () =>
     fetcher({

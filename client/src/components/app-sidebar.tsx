@@ -102,28 +102,14 @@ export function AppSidebar() {
 const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
   e.preventDefault();
   try {
-    // Retry updateConnectionStatus up to 3 times
-    let updateSuccess = false;
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      try {
-        console.log(`[APP_SIDEBAR] Attempt ${attempt} to update connection status`);
-        await apiClient.updateConnectionStatus({ isConnected: false, clientId: "logout" });
-        updateSuccess = true;
-        break;
-      } catch (error) {
-        console.warn(`[APP_SIDEBAR] Attempt ${attempt} failed:`, error);
-        if (attempt === 3) throw error;
-        await new Promise((resolve) => setTimeout(resolve, 500)); // Wait before retry
-      }
-    }
-
-    if (!updateSuccess) {
-      throw new Error("Failed to update connection status after retries");
-    }
+    // Update connection status first
+    console.log("[APP_SIDEBAR] Updating connection status to false");
+    await apiClient.updateConnectionStatus({ isConnected: false, clientId: "logout" });
 
     // Revoke SuperTokens session
-    await signOut();
-    console.log("[APP_SIDEBAR] Session revoked via signOut");
+    console.log("[APP_SIDEBAR] Calling signOut");
+    const signOutResponse = await signOut();
+    console.log("[APP_SIDEBAR] signOut response:", signOutResponse);
 
     // Clear cookies
     clearCookies();
@@ -138,26 +124,26 @@ const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
     // Notify user
     toast({
       title: "Success!",
-      description: "Logged out successfully.",
+      description: "Logged out from all devices successfully.",
     });
 
-    // Force full page reload
-    window.location.assign("/");
+    // Navigate to auth page
+    navigate("/auth");
   } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : "Failed to log out. Please try again.";
+    console.error("[APP_SIDEBAR] Logout error:", err);
     toast({
       variant: "destructive",
       title: "Error",
       description: errorMessage,
     });
-    console.error("[APP_SIDEBAR] Logout error:", err);
 
     // Fallback: Clear cookies and redirect
     clearCookies();
     localStorage.clear();
     sessionStorage.clear();
     queryClient.clear();
-    window.location.assign("/");
+    navigate("/auth");
   }
 };
 

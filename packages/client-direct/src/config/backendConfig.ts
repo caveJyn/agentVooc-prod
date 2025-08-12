@@ -155,7 +155,7 @@ export function backendConfig(): InputType {
       }),
       Session.init({
         cookieSecure: true,
-        cookieSameSite: "lax",
+        cookieSameSite: "strict",
         sessionExpiredStatusCode: 401,
         override: {
           functions: (originalImplementation) => ({
@@ -194,18 +194,22 @@ export function backendConfig(): InputType {
           }),
           apis: (originalImplementation) => ({
             ...originalImplementation,
-            signOutPOST: async (input) => {
-              // Call the original signOutPOST to revoke the current session
-              const response = await originalImplementation.signOutPOST(input);
-              
-              // If successful, revoke all sessions for this user
-              if (response.status === "OK") {
-                const userId = input.session.getUserId();
-                await Session.revokeAllSessionsForUser(userId);
-                elizaLogger.debug(`Revoked all sessions for userId: ${userId}`);
-              }
-              
-              return response;
+            ssignOutPOST: async (input) => {
+        elizaLogger.debug("signOutPOST called with input:", {
+          sessionExists: !!input.session,
+          userId: input.session?.getUserId() || "unknown",
+        });
+        const response = await originalImplementation.signOutPOST(input);
+        elizaLogger.debug("signOutPOST response:", response);
+        if (response.status === "OK") {
+          const userId = input.session.getUserId();
+          elizaLogger.debug(`Revoking all sessions for userId: ${userId}`);
+          await Session.revokeAllSessionsForUser(userId);
+          elizaLogger.debug(`Revoked all sessions for userId: ${userId}`);
+        } else {
+          elizaLogger.warn(`signOutPOST failed with status: ${response.status}`);
+        }
+        return response;
             },
           }),
         },
