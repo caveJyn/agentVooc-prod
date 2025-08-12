@@ -154,56 +154,58 @@ export class DirectClient {
 
     constructor() {
         elizaLogger.log("DirectClient constructor");
+        // Initialize Express app
         this.app = express();
         this.agents = new Map();
-supertokens.init(backendConfig());
-this.app.set('trust proxy', 1);
-// Initialize SuperTokens using backendConfig
 
-this.app.use((req, res, next) => {
-    console.log("[Initial Headers]", req.headers);
-    elizaLogger.debug("Incoming request", req.method, req.url);
-    next();
-});
+        // Initialize SuperTokens with backend configuration
+        supertokens.init(backendConfig());
+        this.app.set("trust proxy", 1);
+
+        // Log incoming headers & request details
+        this.app.use((req, res, next) => {
+            console.log("[Initial Headers]", req.headers);
+            elizaLogger.debug("Incoming request", req.method, req.url);
+            next();
+        });
+
         // Define allowed origins
-const allowedOrigins = [
-    process.env.WEBSITE_DOMAIN,
-    process.env.ST_SERVER_BASE_URL,
-    "https://agentvooc.com", // Explicitly include the primary domain
-].filter(Boolean); // Remove undefined/null values
-elizaLogger.debug(`[CORS] Allowed origins: ${allowedOrigins.join(", ")}`);
+        const allowedOrigins = [
+            process.env.WEBSITE_DOMAIN,
+            process.env.ST_SERVER_BASE_URL,
+            "https://agentvooc.com", // Primary domain
+        ].filter(Boolean);
 
-// Reusable CORS configuration
-const corsOptions = {
-    origin: (origin, callback) => {
-        elizaLogger.debug(`[CORS] Request origin: ${origin || "none"}`);
-        if (!origin || allowedOrigins.includes(origin)) {
-            callback(null, true);
-        } else {
-            elizaLogger.warn(`[CORS] Blocked request from origin: ${origin}`);
-            callback(new Error(`CORS policy: Origin ${origin} not allowed`));
-        }
-    },
-    credentials: true,
-    allowedHeaders: [
-        "Content-Type",
-        "Authorization",
-        ...supertokens.getAllCORSHeaders(),
-    ],
-    methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
-    exposedHeaders: ["Content-Range"], // Optional: Expose headers if needed
-};
+        elizaLogger.debug(`[CORS] Allowed origins: ${allowedOrigins.join(", ")}`);
 
-     // Apply CORS globally
+        // Reusable CORS configuration
+        const corsOptions = {
+            origin: (origin, callback) => {
+                elizaLogger.debug(`[CORS] Request origin: ${origin || "none"}`);
+                if (!origin || allowedOrigins.includes(origin)) {
+                    callback(null, true);
+                } else {
+                    elizaLogger.warn(`[CORS] Blocked request from origin: ${origin}`);
+                    callback(new Error(`CORS policy: Origin ${origin} not allowed`));
+                }
+            },
+            credentials: true,
+            allowedHeaders: [
+                "Content-Type",
+                "Authorization",
+                ...supertokens.getAllCORSHeaders(),
+            ],
+            methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+            exposedHeaders: ["Content-Range"], // Optional: additional exposed headers
+        };
+
+        // Apply CORS globally
         this.app.use(cors(corsOptions));
 
-
-       
-
-          
-         // Debug middleware
+        // Debug middleware for requests & responses
         this.app.use((req, res, next) => {
             elizaLogger.debug(`Incoming request: ${req.method} ${req.url}, Cookies:`, req.cookies);
+
             const originalJson = res.json;
             res.json = function (body) {
                 elizaLogger.debug(`Response for ${req.method} ${req.url}:`, JSON.stringify(body));
@@ -215,36 +217,31 @@ const corsOptions = {
                 });
                 return originalJson.call(this, body);
             };
+
             next();
         });
 
+        // Webhook raw parser (must be before normal body parsing)
+        this.app.use(
+            "/api/webhook",
+            bodyParser.raw({ type: "application/json" }),
+            (req, res, next) => {
+                elizaLogger.debug("[INDEX] Webhook middleware", {
+                    path: req.path,
+                    originalUrl: req.originalUrl,
+                    isBuffer: Buffer.isBuffer(req.body),
+                    bodyType: typeof req.body,
+                });
+                next();
+            }
+        );
 
+        // Standard body parsers
+        this.app.use(bodyParser.json());
+        this.app.use(bodyParser.urlencoded({ extended: true }));
 
-        // Webhook raw parser FIRST
-this.app.use('/api/webhook',
-    bodyParser.raw({ type: 'application/json' }),
-    (req, res, next) => {
-        elizaLogger.debug('[INDEX] Webhook middleware', {
-            path: req.path,
-            originalUrl: req.originalUrl,
-            isBuffer: Buffer.isBuffer(req.body),
-            bodyType: typeof req.body,
-        });
-        next();
-    }
-);
-
-// Then normal body parsers for the rest of the app
-this.app.use(bodyParser.json());
-this.app.use(bodyParser.urlencoded({ extended: true }));
-
-
-        
-
-
- 
-           // Add SuperTokens middleware before other routes
-   this.app.use(middleware());
+        // SuperTokens middleware (before other routes)
+        this.app.use(middleware());
 
         // Serve both uploads and generated images
         this.app.use(
