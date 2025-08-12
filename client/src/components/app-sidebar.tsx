@@ -106,15 +106,15 @@ export function AppSidebar() {
 
 const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
   e.preventDefault();
-  try {
-    console.log("[APP_SIDEBAR] Initiating logout");
+  console.log("[APP_SIDEBAR] Initiating logout");
 
-    // Update connection status to false before signing out
+  try {
+    // Attempt to update connection status, but don't fail logout if it errors
     try {
       await apiClient.updateConnectionStatus({ isConnected: false, clientId: "logout" });
       console.log("[APP_SIDEBAR] Connection status updated to disconnected");
     } catch (err) {
-      console.warn("[APP_SIDEBAR] Failed to update connection status:", err);
+      console.warn("[APP_SIDEBAR] Failed to update connection status, proceeding with logout:", err);
     }
 
     // Sign out using SuperTokens
@@ -124,7 +124,7 @@ const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
     // Verify session is gone
     const sessionExists = await doesSessionExist();
     if (sessionExists) {
-      console.warn("[APP_SIDEBAR] Session still exists after signOut");
+      console.warn("[APP_SIDEBAR] Session still exists after signOut, forcing cleanup");
     } else {
       console.log("[APP_SIDEBAR] Session successfully revoked");
     }
@@ -137,12 +137,19 @@ const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
     // Clear cookies
     clearCookies();
 
-    // Invalidate React Query cache
+    // Invalidate and clear React Query cache
     queryClient.clear();
     queryClient.invalidateQueries({ queryKey: ["user"] });
     queryClient.invalidateQueries({ queryKey: ["agents"] });
     queryClient.invalidateQueries({ queryKey: ["characters"] });
-    console.log("[APP_SIDEBAR] React Query cache cleared");
+    queryClient.removeQueries({ queryKey: ["user"] });
+    queryClient.removeQueries({ queryKey: ["agents"] });
+    queryClient.removeQueries({ queryKey: ["characters"] });
+    console.log("[APP_SIDEBAR] React Query cache cleared and invalidated");
+
+    // Reset sidebar state
+    setSearchQuery("");
+    console.log("[APP_SIDEBAR] Search query reset");
 
     // Show success toast
     toast({ title: "Success!", description: "Logged out successfully." });
@@ -157,7 +164,16 @@ const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
     console.error("[APP_SIDEBAR] Logout error:", err);
     toast({ variant: "destructive", title: "Error", description: errorMessage });
 
-    // Still redirect and reload on error to ensure UI reset
+    // Clear storage and cache even on error
+    localStorage.clear();
+    sessionStorage.clear();
+    clearCookies();
+    queryClient.clear();
+    queryClient.invalidateQueries();
+    queryClient.removeQueries();
+    setSearchQuery("");
+
+    // Force redirect and reload on error
     navigate("/auth", { replace: true });
     setTimeout(() => {
       window.location.reload();

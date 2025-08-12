@@ -149,6 +149,7 @@ const fetcher = async ({
 export interface User {
   _id: string;
   userId: string;
+  lastClientId?: string;
   userType?: string;
   email?: string;
   name?: string;

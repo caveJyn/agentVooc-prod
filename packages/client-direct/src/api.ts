@@ -2432,6 +2432,7 @@ router.post("/user", async (req: express.Request, res: express.Response) => {
         user: {
           _id: existingUser._id,
           userId: existingUser.userId,
+          lastClientId: existingUser.lastClientId || null,
           userType: existingUser.userType || "email",
           email: existingUser.email,
           name: existingUser.name,
@@ -2460,6 +2461,7 @@ router.post("/user", async (req: express.Request, res: express.Response) => {
       interest,
       referralSource,
       userId,
+      lastClientId: null,
       createdAt: createdAt || new Date().toISOString(),
       userType: userType || "email",
       trialStartDate: trialStartDate.toISOString(),
@@ -2478,6 +2480,7 @@ router.post("/user", async (req: express.Request, res: express.Response) => {
 
     elizaLogger.debug("[CLIENT-DIRECT] Created User:", {
       userId: user.userId,
+      lastClientId: user.lastClientId,
       email: user.email,
       name: user.name,
       subscriptionStatus: user.subscriptionStatus,
@@ -2494,6 +2497,7 @@ router.post("/user", async (req: express.Request, res: express.Response) => {
     res.json({
       user: {
         userId: user.userId,
+        lastClientId: user.lastClientId || null,
         userType: user.userType || "email",
         email: user.email,
         name: user.name,
@@ -2555,6 +2559,7 @@ router.get("/user", async (req: express.Request, res: express.Response) => {
     const responseUser = {
       _id: user._id,
       userId: user.userId,
+      lastClientId: user.lastClientId || null,
       userType: user.userType || "email",
       email: user.email,
       name: user.name,
