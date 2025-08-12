@@ -1,5 +1,5 @@
 // client/src/components/app-sidebar.tsx
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 // import info from "@/lib/info.json";
 import {
   Sidebar,
