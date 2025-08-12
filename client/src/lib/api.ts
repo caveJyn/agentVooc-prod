@@ -803,53 +803,61 @@ updateEmailTemplate: (agentId: string, template: Partial<EmailTemplate>) =>
     }),
 
     updateConnectionStatus: async ({ isConnected, clientId }: { isConnected: boolean; clientId?: string }) => {
-    console.log("[API_CLIENT] updateConnectionStatus called with:", { isConnected, clientId });
-    try {
-      const sessionExists = await Session.doesSessionExist();
-      console.log("[API_CLIENT] Session exists for updateConnectionStatus:", sessionExists);
-      if (!sessionExists) {
-        console.warn("[API_CLIENT] No session exists, skipping updateConnectionStatus");
-        return { status: "skipped", reason: "No active session" };
-      }
-
-      const accessToken = await Session.getAccessToken();
-      console.log("[API_CLIENT] Access token for updateConnectionStatus:", accessToken ? "present" : "missing");
-
-      const response = await fetcher({
-        url: "/api/connection-status",
-        method: "POST",
-        body: { isConnected, clientId },
-        headers: {
-          "Content-Type": "application/json",
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-        },
-      });
-
-      console.log("[API_CLIENT] updateConnectionStatus response:", response);
-      return response;
-    } catch (error: any) {
-      console.error("[API_CLIENT] updateConnectionStatus error:", error);
-      throw new Error(error.message || "Failed to update connection status");
+  console.log("[API_CLIENT] updateConnectionStatus called with:", { isConnected, clientId });
+  try {
+    const sessionExists = await Session.doesSessionExist();
+    console.log("[API_CLIENT] Session exists for updateConnectionStatus:", sessionExists);
+    if (!sessionExists) {
+      console.warn("[API_CLIENT] No session exists, skipping updateConnectionStatus");
+      return { status: "skipped", reason: "No active session" };
     }
-  },
-  getConnectionStatus: async () => {
-    console.log("[API_CLIENT] Calling getConnectionStatus");
-    try {
-      const sessionExists = await Session.doesSessionExist();
-      console.log("[API_CLIENT] Session exists for getConnectionStatus:", sessionExists);
-      if (!sessionExists) {
-        console.warn("[API_CLIENT] No session exists, skipping getConnectionStatus");
-        return { status: "skipped", reason: "No active session" };
-      }
-      return await fetcher({
-        url: "/api/connection-status",
-        method: "GET",
-      });
-    } catch (error: any) {
-      console.error("[API_CLIENT] getConnectionStatus error:", error);
-      throw new Error(error.message || "Failed to get connection status");
+
+    const accessToken = await Session.getAccessToken();
+    console.log("[API_CLIENT] Access token for updateConnectionStatus:", accessToken ? "present" : "missing");
+
+    const response = await fetcher({
+      url: "/api/connection-status",
+      method: "POST",
+      body: { isConnected, clientId },
+      headers: {
+        "Content-Type": "application/json",
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      },
+    });
+
+    console.log("[API_CLIENT] updateConnectionStatus response:", response);
+    return response;
+  } catch (error: any) {
+    console.error("[API_CLIENT] updateConnectionStatus error:", error);
+    if (error.message === "No active session" || error.status === 401) {
+      return { status: "skipped", reason: "No active session or unauthorized" };
     }
-  },
+    throw new Error(error.message || "Failed to update connection status");
+  }
+},
+getConnectionStatus: async () => {
+  console.log("[API_CLIENT] Calling getConnectionStatus");
+  try {
+    const sessionExists = await Session.doesSessionExist();
+    console.log("[API_CLIENT] Session exists for getConnectionStatus:", sessionExists);
+    if (!sessionExists) {
+      console.warn("[API_CLIENT] No session exists, skipping getConnectionStatus");
+      return { status: "skipped", reason: "No active session" };
+    }
+    const response = await fetcher({
+      url: "/api/connection-status",
+      method: "GET",
+    });
+    console.log("[API_CLIENT] getConnectionStatus response:", response);
+    return response;
+  } catch (error: any) {
+    console.error("[API_CLIENT] getConnectionStatus error:", error);
+    if (error.message === "No active session" || error.status === 401) {
+      return { status: "skipped", reason: "No active session or unauthorized" };
+    }
+    throw new Error(error.message || "Failed to get connection status");
+  }
+},
 
     getLegalDocuments: (): Promise<{ legalDocuments: LegalDocument[] }> => {
     // console.log("[API_CLIENT] Calling getLegalDocuments");

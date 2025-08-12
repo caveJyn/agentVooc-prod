@@ -11,6 +11,9 @@ import { Query } from "@tanstack/react-query";
 // Define the expected response type for getConnectionStatus
 interface ConnectionStatusResponse {
   isConnected: boolean;
+  userId?: string;
+  clientId?: string;
+  timestamp?: string;
   status?: "skipped";
   reason?: string;
 }
@@ -110,11 +113,18 @@ export default function ConnectionStatus() {
         console.log("[ConnectionStatus] No session, cancelling status query");
         queryClient.cancelQueries({ queryKey: ["status"] });
         queryClient.removeQueries({ queryKey: ["status"] });
+        setLastConnected(false); // Reset connection status on no session
       }
     };
     checkSession();
+
+    // Poll session status to catch logout or session expiration
+    const intervalId = setInterval(checkSession, 5000); // Check every 5 seconds
     return () => {
       isMounted = false;
+      clearInterval(intervalId);
+      queryClient.cancelQueries({ queryKey: ["status"] });
+      queryClient.removeQueries({ queryKey: ["status"] });
     };
   }, [queryClient]);
 

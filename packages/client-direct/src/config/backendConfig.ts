@@ -5,6 +5,7 @@ import ThirdParty from "supertokens-node/recipe/thirdparty";
 import Dashboard from "supertokens-node/recipe/dashboard";
 import { sanityClient } from "@elizaos-plugins/plugin-sanity";
 import { elizaLogger } from "@elizaos/core";
+import { Response } from "express";
 
 export function backendConfig(): InputType {
   return {
@@ -207,8 +208,8 @@ export function backendConfig(): InputType {
           apis: (originalImplementation) => ({
             ...originalImplementation,
             signOutPOST: async (input) => {
+              const response = input.options.res as unknown as Response; // Double cast to Express Response
               const request = input.userContext?.req as any;
-              const response = input.userContext?.res as any;
               const authHeader = request?.headers?.authorization || "none";
               elizaLogger.debug("signOutPOST called", {
                 sessionExists: !!input.session,
@@ -228,6 +229,7 @@ export function backendConfig(): InputType {
                 }
               }
 
+              // Clear cookies
               const cookiesToClear = [
                 "sAccessToken",
                 "sRefreshToken",
@@ -238,7 +240,7 @@ export function backendConfig(): InputType {
               ];
               cookiesToClear.forEach((cookieName) => {
                 response.clearCookie(cookieName, {
-                  domain: ".agentvooc.com",
+                  domain: "agentvooc.com",
                   path: "/",
                   secure: true,
                   sameSite: "strict",
