@@ -162,23 +162,29 @@ this.app.set('trust proxy', 1);
 const allowedOrigins = [
     process.env.WEBSITE_DOMAIN,
     process.env.ST_SERVER_BASE_URL,
+    "https://agentvooc.com", // Explicitly include the primary domain
 ].filter(Boolean); // Remove undefined/null values
 elizaLogger.debug(`[CORS] Allowed origins: ${allowedOrigins.join(", ")}`);
 
 // Reusable CORS configuration
 const corsOptions = {
     origin: (origin, callback) => {
-      elizaLogger.debug(`[CORS] Request origin: ${origin}`);
+        elizaLogger.debug(`[CORS] Request origin: ${origin || "none"}`);
         if (!origin || allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
-            // elizaLogger.warn(`[CORS] Blocked request from origin: ${origin}`);
+            elizaLogger.warn(`[CORS] Blocked request from origin: ${origin}`);
             callback(new Error(`CORS policy: Origin ${origin} not allowed`));
         }
     },
     credentials: true,
-    allowedHeaders: ["Content-Type", ...supertokens.getAllCORSHeaders()],
+    allowedHeaders: [
+        "Content-Type",
+        "Authorization",
+        ...supertokens.getAllCORSHeaders(),
+    ],
     methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+    exposedHeaders: ["Content-Range"], // Optional: Expose headers if needed
 };
 
      // Apply CORS globally
@@ -323,7 +329,7 @@ async function getUserLimits(user) {
 
 this.app.post(
   "/api/:agentId/message",
-  cors(corsOptions), // Use global corsOptions
+  
   upload.single("file"),
   async (req: express.Request, res: express.Response) => {
     try {
@@ -910,7 +916,7 @@ this.app.post(
 
 this.app.post(
   "/api/characters/:characterId/upload-profile-image",
-   cors(corsOptions), // Use global corsOptions
+   
   upload.single("image"),
   async (req, res) => {
     try {
@@ -1035,7 +1041,7 @@ this.app.post(
 
 this.app.post(
   "/api/:agentId/upload-agent-image",
-  cors(corsOptions), // Use global corsOptions
+  
   middleware(),
   upload.single("image"),
   async (req, res) => {

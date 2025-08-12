@@ -91,57 +91,18 @@ export function AppSidebar() {
 
   // Replace your current clearCookies and handleLogout functions in app-sidebar.tsx
 
-const clearCookies = () => {
-  console.log("[APP_SIDEBAR] Cookies before clearing:", document.cookie);
-  
-  const cookies = document.cookie.split(";");
-  const domains = [
-    window.location.hostname,
-    `.${window.location.hostname}`,
-    "agentvooc.com",
-    ".agentvooc.com"
-  ];
-  
-  for (const cookie of cookies) {
-    const [name] = cookie.split("=").map((c) => c.trim());
-    
-    // Clear for all possible domains and paths
-    for (const domain of domains) {
-      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${domain}`;
-      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${domain};secure`;
-      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${domain};samesite=strict`;
-    }
-  }
-  
-  // Explicitly clear known SuperTokens cookies
-  const stCookies = [
-    "st-last-access-token-update",
-    "sAccessToken",
-    "sRefreshToken",
-    "sFrontToken",
-    "st-access-token",
-    "st-refresh-token"
-  ];
-  
-  for (const cookieName of stCookies) {
-    for (const domain of domains) {
-      document.cookie = `${cookieName}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${domain}`;
-      document.cookie = `${cookieName}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${domain};secure`;
-    }
-  }
-  
-  console.log("[APP_SIDEBAR] Cookies after clearing:", document.cookie);
-};
-
 const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
   e.preventDefault();
   console.log("[APP_SIDEBAR] Initiating logout");
 
   try {
-    // Update connection status first
+    // Update connection status to disconnected
     try {
-      await apiClient.updateConnectionStatus({ isConnected: false, clientId: "logout" });
-      console.log("[APP_SIDEBAR] Connection status updated to disconnected");
+      const userId = (await apiClient.getUser())?.user?.userId;
+      if (userId) {
+        await apiClient.updateConnectionStatus({ isConnected: false, clientId: "logout" });
+        console.log("[APP_SIDEBAR] Connection status updated to disconnected");
+      }
     } catch (err) {
       console.warn("[APP_SIDEBAR] Failed to update connection status:", err);
     }
@@ -150,30 +111,16 @@ const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
     await signOut();
     console.log("[APP_SIDEBAR] SuperTokens signOut completed");
 
-    // Force revoke all sessions on backend
-    try {
-      await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3000'}/auth/signout`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-    } catch (err) {
-      console.warn("[APP_SIDEBAR] Backend signout request failed:", err);
-    }
+    // Clear all cookies
+    clearCookies();
 
-    // Clear all storage and cookies
+    // Clear storage and cache
     localStorage.clear();
     sessionStorage.clear();
-    clearCookies();
-    console.log("[APP_SIDEBAR] All storage cleared");
-
-    // Clear React Query cache
     queryClient.clear();
     queryClient.invalidateQueries();
     queryClient.removeQueries();
-    console.log("[APP_SIDEBAR] React Query cache cleared");
+    console.log("[APP_SIDEBAR] Storage and cache cleared");
 
     // Reset state
     setSearchQuery("");
@@ -181,32 +128,66 @@ const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
     // Show success toast
     toast({ title: "Success!", description: "Logged out successfully." });
 
-    // Navigate and reload
+    // Navigate to auth page
     navigate("/auth", { replace: true });
-    
-    // Force a clean reload after a short delay
     setTimeout(() => {
       window.location.href = "/auth";
     }, 100);
-    
   } catch (err: unknown) {
-    const errorMessage = err instanceof Error ? err.message : "Failed to log out.";
     console.error("[APP_SIDEBAR] Logout error:", err);
-    
-    // Force cleanup even on error
+    const errorMessage = err instanceof Error ? err.message : "Failed to log out.";
+
+    // Force cleanup on error
     localStorage.clear();
     sessionStorage.clear();
     clearCookies();
     queryClient.clear();
     setSearchQuery("");
-    
+
     toast({ variant: "destructive", title: "Error", description: errorMessage });
-    
-    // Force navigation on error too
+
+    // Force navigation
     setTimeout(() => {
       window.location.href = "/auth";
     }, 100);
   }
+};
+
+const clearCookies = () => {
+  console.log("[APP_SIDEBAR] Cookies before clearing:", document.cookie);
+
+  const cookies = document.cookie.split(";");
+  const domains = [
+    "agentvooc.com",
+    ".agentvooc.com",
+    window.location.hostname,
+    `.${window.location.hostname}`,
+  ];
+
+  for (const cookie of cookies) {
+    const [name] = cookie.split("=").map((c) => c.trim());
+    for (const domain of domains) {
+      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${domain};secure;samesite=strict`;
+    }
+  }
+
+  // Explicitly clear SuperTokens cookies
+  const stCookies = [
+    "sAccessToken",
+    "sRefreshToken",
+    "sFrontToken",
+    "st-last-access-token-update",
+    "st-access-token",
+    "st-refresh-token",
+  ];
+
+  for (const cookieName of stCookies) {
+    for (const domain of domains) {
+      document.cookie = `${cookieName}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${domain};secure;samesite=strict`;
+    }
+  }
+
+  console.log("[APP_SIDEBAR] Cookies after clearing:", document.cookie);
 };
 
 

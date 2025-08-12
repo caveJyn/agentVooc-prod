@@ -13,6 +13,7 @@ export const frontendConfig = () => {
         tokenTransferMethod: "header",
         // Enable automatic session refresh
         sessionTokenBackendDomain: "agentvooc.com",
+        sessionTokenFrontendDomain: "agentvooc.com"
       }),
     ],
   };
