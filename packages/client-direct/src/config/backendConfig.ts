@@ -157,6 +157,7 @@ export function backendConfig(): InputType {
         cookieSecure: true,
         cookieSameSite: "strict",
         sessionExpiredStatusCode: 401,
+        cookieDomain: "agentvooc.com",
         override: {
           functions: (originalImplementation) => ({
             ...originalImplementation,
