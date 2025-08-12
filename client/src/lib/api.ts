@@ -35,6 +35,7 @@ const fetcher = async ({
     // Check if session exists for non-auth endpoints
     const sessionExists = await Session.doesSessionExist();
     console.log(`[FETCHER] Session exists: ${sessionExists}, URL: ${url}`);
+    
     if (
       !sessionExists &&
       !url.startsWith("/api/auth") &&
@@ -65,23 +66,20 @@ const fetcher = async ({
     const options: RequestInit = {
       method,
       headers: requestHeaders,
-      credentials: "include",
+      // Remove credentials: "include" since we're using header-based auth
       ...(body && (method === "POST" || method === "PATCH")
         ? { body: body instanceof FormData ? body : JSON.stringify(body) }
         : {}),
     };
 
     console.log(`[FETCHER] Sending ${method} request to ${BASE_URL}${url}`, {
-      headers: requestHeaders,
+      headers: Object.keys(requestHeaders), // Log header keys only for security
+      hasAuthToken: !!accessToken,
       body: body instanceof FormData ? "[FormData]" : body,
-      cookies: document.cookie,
     });
 
     const resp = await fetch(`${BASE_URL}${url}`, options);
-    console.log(`[FETCHER] Response status for ${url}: ${resp.status}`, {
-      "access-control-allow-origin": resp.headers.get("access-control-allow-origin"),
-      "access-control-allow-credentials": resp.headers.get("access-control-allow-credentials"),
-    });
+    console.log(`[FETCHER] Response status for ${url}: ${resp.status}`);
 
     if (!resp.ok) {
       const errorText = await resp.text();
@@ -150,7 +148,6 @@ const fetcher = async ({
     throw error;
   }
 };
-
 export interface User {
   _id: string;
   userId: string;
@@ -549,15 +546,17 @@ export const apiClient = {
       body: formData,
     });
   },
+
   getAgents: () => {
-    // console.log("[API_CLIENT] Calling getAgents");
     return fetcher({
       url: "/api/agents",
       method: "GET",
     });
   },
+
   getAgent: (agentId: string): Promise<{ id: UUID; character: Character }> =>
     fetcher({ url: `/api/agents/${agentId}` }),
+
   tts: (agentId: string, text: string) =>
     fetcher({
       url: `/api/${agentId}/tts`,
@@ -571,6 +570,7 @@ export const apiClient = {
         "Transfer-Encoding": "chunked",
       },
     }),
+
   whisper: async (agentId: string, audioBlob: Blob) => {
     const formData = new FormData();
     formData.append("file", audioBlob, "recording.wav");
@@ -580,6 +580,7 @@ export const apiClient = {
       body: formData,
     });
   },
+
   createUser: async (user: User) => {
     try {
       const response = await fetcher({
@@ -596,51 +597,52 @@ export const apiClient = {
           userType: user.userType || "email",
         },
       });
-      return response.user; // Updated to match response format
+      return response.user;
     } catch (error: any) {
-      // console.error("Error in createUser:", error);
       throw new Error(error.message || "Failed to create or fetch user");
     }
   },
-    getPlugins: (): Promise<{ plugins: Plugin[] }> => {
-    // console.log("[API_CLIENT] Calling getPlugins");
+
+  getPlugins: (): Promise<{ plugins: Plugin[] }> => {
     return fetcher({
       url: "/api/plugins",
       method: "GET",
     });
   },
-async uploadCharacterProfileImage(characterId: UUID, formData: FormData) {
-  return fetcher({
-    url: `/api/characters/${characterId}/upload-profile-image`,
-    method: "POST",
-    body: formData,
-  });
-},
 
-    uploadAgentImage: (agentId: string, image: File, postTo?: string[]) => {
-        const formData = new FormData();
-        formData.append("image", image);
-        if (postTo && postTo.length > 0) {
-            formData.append("postTo", postTo.join(","));
-        }
-        return fetcher({
-            url: `/api/${agentId}/upload-agent-image`,
-            method: "POST",
-            body: formData,
-        });
-    },
-    getCharacters: () => {
-  // console.log("[API_CLIENT] Calling getCharacters");
-  return fetcher({
-    url: "/api/characters",
-    method: "GET",
-  });
-},
+  async uploadCharacterProfileImage(characterId: UUID, formData: FormData) {
+    return fetcher({
+      url: `/api/characters/${characterId}/upload-profile-image`,
+      method: "POST",
+      body: formData,
+    });
+  },
+
+  uploadAgentImage: (agentId: string, image: File, postTo?: string[]) => {
+    const formData = new FormData();
+    formData.append("image", image);
+    if (postTo && postTo.length > 0) {
+      formData.append("postTo", postTo.join(","));
+    }
+    return fetcher({
+      url: `/api/${agentId}/upload-agent-image`,
+      method: "POST",
+      body: formData,
+    });
+  },
+
+  getCharacters: () => {
+    return fetcher({
+      url: "/api/characters",
+      method: "GET",
+    });
+  },
+
   getCharacter: (characterId: string): 
-  Promise<{ 
-    id: UUID; character: Character 
-  }> =>
-    fetcher({ url: `/api/characters/${characterId}` }),
+    Promise<{ 
+      id: UUID; character: Character 
+    }> =>
+      fetcher({ url: `/api/characters/${characterId}` }),
 
   createCharacter: (character: CharacterInput) =>
     fetcher({
@@ -655,54 +657,55 @@ async uploadCharacterProfileImage(characterId: UUID, formData: FormData) {
       method: "PATCH",
       body: character,
     }),
-    // lib/api.ts
-getCharacterPresets: (): Promise<{ characterPresets: any[] }> => {
-  // console.log("[API_CLIENT] Calling getCharacterPresets");
-  return fetcher({
-    url: "/api/character-presets",
-    method: "GET",
-  });
-},
+
+  getCharacterPresets: (): Promise<{ characterPresets: any[] }> => {
+    return fetcher({
+      url: "/api/character-presets",
+      method: "GET",
+    });
+  },
 
   deleteCharacter: (characterId: string) =>
     fetcher({
       url: `/api/characters/${characterId}`,
       method: "DELETE",
     }),
-    createCheckoutSession: (data: { userId: string; items: { id: string; name: string; description: string; price: number; itemType: string }[] }) => {
-      // console.log("[API_CLIENT] Calling createCheckoutSession with data:", data);
-      return fetcher({
-        url: "/api/checkout-session",
-        method: "POST",
-        body: data,
-      });
-    },
+
+  createCheckoutSession: (data: { userId: string; items: { id: string; name: string; description: string; price: number; itemType: string }[] }) => {
+    return fetcher({
+      url: "/api/checkout-session",
+      method: "POST",
+      body: data,
+    });
+  },
+
   getKnowledge: (agentId: string): Promise<KnowledgeResponse> =>
     fetcher({
       url: `/api/agents/${agentId}/knowledge`,
       method: "GET",
     }),
     
-    createKnowledge: (agentId: string, knowledge: { name: string; text: string; metadata?: object }) =>
-      fetcher({
-        url: `/api/agents/${agentId}/knowledge`,
-        method: "POST",
-        body: knowledge,
-      }),
-      updateKnowledge: (agentId: string, knowledgeId: string, knowledge: { name?: string; text?: string; metadata?: object }) =>
-        fetcher({
-          url: `/api/agents/${agentId}/knowledge/${knowledgeId}`,
-          method: "PATCH",
-          body: knowledge,
-        }),
-    
-      deleteKnowledge: (agentId: string, knowledgeId: string) =>
-        fetcher({
-          url: `/api/agents/${agentId}/knowledge/${knowledgeId}`,
-          method: "DELETE",
-        }),
+  createKnowledge: (agentId: string, knowledge: { name: string; text: string; metadata?: object }) =>
+    fetcher({
+      url: `/api/agents/${agentId}/knowledge`,
+      method: "POST",
+      body: knowledge,
+    }),
+
+  updateKnowledge: (agentId: string, knowledgeId: string, knowledge: { name?: string; text?: string; metadata?: object }) =>
+    fetcher({
+      url: `/api/agents/${agentId}/knowledge/${knowledgeId}`,
+      method: "PATCH",
+      body: knowledge,
+    }),
+
+  deleteKnowledge: (agentId: string, knowledgeId: string) =>
+    fetcher({
+      url: `/api/agents/${agentId}/knowledge/${knowledgeId}`,
+      method: "DELETE",
+    }),
+
   getUser: () => {
-    // console.log("[API_CLIENT] Calling getUser");
     return fetcher({
       url: "/api/user",
       method: "GET",
@@ -710,91 +713,91 @@ getCharacterPresets: (): Promise<{ characterPresets: any[] }> => {
   },
 
   getUserStats: () => {
-  // console.log("[API_CLIENT] Calling getUserStats");
-  return fetcher({
-    url: "/api/user-stats",
-    method: "GET",
-  });
-},
+    return fetcher({
+      url: "/api/user-stats",
+      method: "GET",
+    });
+  },
   
   getItems: ({ itemType }: { itemType?: string } = {}) => {
-  // console.log("[API_CLIENT] Calling getItems", { itemType });
-  let url = "/api/items";
-  if (itemType && typeof itemType === "string" && itemType.trim() !== "") {
-    url += `?itemType=${encodeURIComponent(itemType)}`;
-  }
-  return fetcher({
-    url,
-    method: "GET",
-  }) as Promise<{ items: Item[] }>;
-},
+    let url = "/api/items";
+    if (itemType && typeof itemType === "string" && itemType.trim() !== "") {
+      url += `?itemType=${encodeURIComponent(itemType)}`;
+    }
+    return fetcher({
+      url,
+      method: "GET",
+    }) as Promise<{ items: Item[] }>;
+  },
+
   addPlugin: (pluginName: string) =>
-  fetcher({
-    url: "/api/subscription/add-plugin",
-    method: "POST",
-    body: { pluginName },
-  }),
+    fetcher({
+      url: "/api/subscription/add-plugin",
+      method: "POST",
+      body: { pluginName },
+    }),
 
-removePlugin: (pluginName: string) =>
-  fetcher({
-    url: "/api/subscription/remove-plugin",
-    method: "POST",
-    body: { pluginName },
-  }),
+  removePlugin: (pluginName: string) =>
+    fetcher({
+      url: "/api/subscription/remove-plugin",
+      method: "POST",
+      body: { pluginName },
+    }),
 
-updateBasePlan: (newBasePlanId: string) =>
-  fetcher({
-    url: "/api/subscription/update-base-plan",
-    method: "POST",
-    body: { newBasePlanId },
-  }),
-   getSubscriptionItems: ({ includeDetails }: { includeDetails?: boolean } = {}) => {
-    // console.log("[API_CLIENT] Calling getSubscriptionItems", { includeDetails });
+  updateBasePlan: (newBasePlanId: string) =>
+    fetcher({
+      url: "/api/subscription/update-base-plan",
+      method: "POST",
+      body: { newBasePlanId },
+    }),
+
+  getSubscriptionItems: ({ includeDetails }: { includeDetails?: boolean } = {}) => {
     return fetcher({
       url: `/api/subscription-items${includeDetails ? "?includeDetails=true" : ""}`,
       method: "GET",
     });
   },
+
   getSubscriptionStatus: () => {
-    // console.log("[API_CLIENT] Calling getSubscriptionStatus");
     return fetcher({
       url: "/api/subscription-status",
       method: "GET",
     });
   },
+
   createPortalSession: () => {
-    // console.log("[API_CLIENT] Calling createPortalSession");
     return fetcher({
       url: "/api/create-portal-session",
       method: "POST",
     });
   },
+
   cancelSubscription: () => {
-    // console.log("[API_CLIENT] Calling cancelSubscription");
     return fetcher({
       url: "/api/cancel-subscription",
       method: "POST",
     });
   },
+
   getLandingPage: (): Promise<{ landingPage: LandingPage }> => {
-    // console.log("[API_CLIENT] Calling getLandingPage");
     return fetcher({
       url: "/api/landing-page",
       method: "GET",
     });
   },
-  getEmailTemplate: (agentId: string) =>
-  fetcher({
-    url: `/api/agents/${agentId}/email-template`,
-    method: "GET",
-  }),
 
-updateEmailTemplate: (agentId: string, template: Partial<EmailTemplate>) =>
-  fetcher({
-    url: `/api/agents/${agentId}/email-template`,
-    method: "PATCH",
-    body: template,
-  }),
+  getEmailTemplate: (agentId: string) =>
+    fetcher({
+      url: `/api/agents/${agentId}/email-template`,
+      method: "GET",
+    }),
+
+  updateEmailTemplate: (agentId: string, template: Partial<EmailTemplate>) =>
+    fetcher({
+      url: `/api/agents/${agentId}/email-template`,
+      method: "PATCH",
+      body: template,
+    }),
 
   reconnectEmail: (characterId: string) =>
     fetcher({
@@ -802,65 +805,62 @@ updateEmailTemplate: (agentId: string, template: Partial<EmailTemplate>) =>
         method: "POST",
     }),
 
-    updateConnectionStatus: async ({ isConnected, clientId }: { isConnected: boolean; clientId?: string }) => {
-  console.log("[API_CLIENT] updateConnectionStatus called with:", { isConnected, clientId });
-  try {
-    const sessionExists = await Session.doesSessionExist();
-    console.log("[API_CLIENT] Session exists for updateConnectionStatus:", sessionExists);
-    if (!sessionExists) {
-      console.warn("[API_CLIENT] No session exists, skipping updateConnectionStatus");
-      return { status: "skipped", reason: "No active session" };
-    }
+  updateConnectionStatus: async ({ isConnected, clientId }: { isConnected: boolean; clientId?: string }) => {
+    console.log("[API_CLIENT] updateConnectionStatus called with:", { isConnected, clientId });
+    try {
+      const sessionExists = await Session.doesSessionExist();
+      console.log("[API_CLIENT] Session exists for updateConnectionStatus:", sessionExists);
+      if (!sessionExists) {
+        console.warn("[API_CLIENT] No session exists, skipping updateConnectionStatus");
+        return { status: "skipped", reason: "No active session" };
+      }
 
-    const accessToken = await Session.getAccessToken();
-    console.log("[API_CLIENT] Access token for updateConnectionStatus:", accessToken ? "present" : "missing");
+      // Let fetcher handle token retrieval and headers
+      const response = await fetcher({
+        url: "/api/connection-status",
+        method: "POST",
+        body: { isConnected, clientId },
+      });
 
-    const response = await fetcher({
-      url: "/api/connection-status",
-      method: "POST",
-      body: { isConnected, clientId },
-      headers: {
-        "Content-Type": "application/json",
-        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-      },
-    });
+      console.log("[API_CLIENT] updateConnectionStatus response:", response);
+      return response;
+    } catch (error: any) {
+      console.error("[API_CLIENT] updateConnectionStatus error:", error);
+      if (error.message === "No active session" || error.status === 401) {
+        return { status: "skipped", reason: "No active session or unauthorized" };
+      }
+      throw new Error(error.message || "Failed to update connection status");
+    }
+  },
 
-    console.log("[API_CLIENT] updateConnectionStatus response:", response);
-    return response;
-  } catch (error: any) {
-    console.error("[API_CLIENT] updateConnectionStatus error:", error);
-    if (error.message === "No active session" || error.status === 401) {
-      return { status: "skipped", reason: "No active session or unauthorized" };
-    }
-    throw new Error(error.message || "Failed to update connection status");
-  }
-},
-getConnectionStatus: async () => {
-  console.log("[API_CLIENT] Calling getConnectionStatus");
-  try {
-    const sessionExists = await Session.doesSessionExist();
-    console.log("[API_CLIENT] Session exists for getConnectionStatus:", sessionExists);
-    if (!sessionExists) {
-      console.warn("[API_CLIENT] No session exists, skipping getConnectionStatus");
-      return { status: "skipped", reason: "No active session" };
-    }
-    const response = await fetcher({
-      url: "/api/connection-status",
-      method: "GET",
-    });
-    console.log("[API_CLIENT] getConnectionStatus response:", response);
-    return response;
-  } catch (error: any) {
-    console.error("[API_CLIENT] getConnectionStatus error:", error);
-    if (error.message === "No active session" || error.status === 401) {
-      return { status: "skipped", reason: "No active session or unauthorized" };
-    }
-    throw new Error(error.message || "Failed to get connection status");
-  }
-},
+  getConnectionStatus: async () => {
+    console.log("[API_CLIENT] Calling getConnectionStatus");
+    try {
+      const sessionExists = await Session.doesSessionExist();
+      console.log("[API_CLIENT] Session exists for getConnectionStatus:", sessionExists);
+      if (!sessionExists) {
+        console.warn("[API_CLIENT] No session exists, skipping getConnectionStatus");
+        return { status: "skipped", reason: "No active session" };
+      }
 
-    getLegalDocuments: (): Promise<{ legalDocuments: LegalDocument[] }> => {
-    // console.log("[API_CLIENT] Calling getLegalDocuments");
+      // Let fetcher handle token retrieval and headers
+      const response = await fetcher({
+        url: "/api/connection-status",
+        method: "GET",
+      });
+
+      console.log("[API_CLIENT] getConnectionStatus response:", response);
+      return response;
+    } catch (error: any) {
+      console.error("[API_CLIENT] getConnectionStatus error:", error);
+      if (error.message === "No active session" || error.status === 401) {
+        return { status: "skipped", reason: "No active session or unauthorized" };
+      }
+      throw new Error(error.message || "Failed to get connection status");
+    }
+  },
+
+  getLegalDocuments: (): Promise<{ legalDocuments: LegalDocument[] }> => {
     return fetcher({
       url: "/api/legal-documents",
       method: "GET",
@@ -868,14 +868,13 @@ getConnectionStatus: async () => {
   },
 
   getLegalDocumentBySlug: (slug: string): Promise<{ legalDocuments: LegalDocument }> => {
-    // console.log("[API_CLIENT] Calling getLegalDocumentBySlug", { slug });
     return fetcher({
       url: `/api/legal-documents/${slug}`,
       method: "GET",
     });
   },
+
   getCompanyPages: (): Promise<{ companyPages: CompanyPage[] }> => {
-    // console.log("[API_CLIENT] Calling getCompanyPages");
     return fetcher({
       url: "/api/company-pages",
       method: "GET",
@@ -883,7 +882,6 @@ getConnectionStatus: async () => {
   },
 
   getCompanyPageBySlug: (slug: string): Promise<{ companyPages: CompanyPage }> => {
-    // console.log("[API_CLIENT] Calling getCompanyPageBySlug", { slug });
     return fetcher({
       url: `/api/company-pages/${slug}`,
       method: "GET",
@@ -896,6 +894,7 @@ getConnectionStatus: async () => {
       method: "GET",
     });
   },
+
   getBlogPostBySlug: (slug: string): Promise<{ blogPosts: BlogPost }> => {
     return fetcher({
       url: `/api/blog-posts/${slug}`,
@@ -903,12 +902,13 @@ getConnectionStatus: async () => {
     });
   },
 
-    getDocs: (slug?: string): Promise<{ docs: Docs | Docs[] }> => {
+  getDocs: (slug?: string): Promise<{ docs: Docs | Docs[] }> => {
     return fetcher({
       url: slug ? `/api/docs/${slug}` : "/api/docs",
       method: "GET",
     });
   },
+
   getDocBySlug: (slug: string): Promise<{ docs: Docs }> => {
     return fetcher({
       url: `/api/docs/${slug}`,
@@ -916,7 +916,7 @@ getConnectionStatus: async () => {
     });
   },
 
- getPressPosts: (slug?: string): Promise<{ pressPosts: PressPost | PressPost[] }> => {
+  getPressPosts: (slug?: string): Promise<{ pressPosts: PressPost | PressPost[] }> => {
     return fetcher({
       url: slug ? `/api/press-posts/${slug}` : "/api/press-posts",
       method: "GET",
@@ -929,9 +929,8 @@ getConnectionStatus: async () => {
       method: "GET",
     });
   },
-
   
-   getProductPages: (slug?: string): Promise<{ productPages: ProductPage | ProductPage[] }> => {
+  getProductPages: (slug?: string): Promise<{ productPages: ProductPage | ProductPage[] }> => {
     return fetcher({
       url: slug ? `/api/product-pages/${slug}` : "/api/product-pages",
       method: "GET",
@@ -945,26 +944,25 @@ getConnectionStatus: async () => {
     });
   },
 
-
-   getInvoices: (): Promise<{ invoices: Invoice[]; subscriptionId: string | null }> => {
-  console.log("[API_CLIENT] Calling getInvoices");
-  return fetcher({
-    url: "/api/invoices",
-    method: "GET",
-  }).then((response) => {
-    console.log("[API_CLIENT] getInvoices response:", {
-      invoiceCount: response.invoices.length,
-      subscriptionId: response.subscriptionId,
-      invoices: response.invoices.map((inv: Invoice) => ({
-        stripeInvoiceId: inv.stripeInvoiceId,
-        status: inv.status,
-      })),
+  getInvoices: (): Promise<{ invoices: Invoice[]; subscriptionId: string | null }> => {
+    console.log("[API_CLIENT] Calling getInvoices");
+    return fetcher({
+      url: "/api/invoices",
+      method: "GET",
+    }).then((response) => {
+      console.log("[API_CLIENT] getInvoices response:", {
+        invoiceCount: response.invoices.length,
+        subscriptionId: response.subscriptionId,
+        invoices: response.invoices.map((inv: Invoice) => ({
+          stripeInvoiceId: inv.stripeInvoiceId,
+          status: inv.status,
+        })),
+      });
+      return response;
     });
-    return response;
-  });
-},
+  },
 
-getInvoiceBySessionId: async (sessionId: string) => {
+  getInvoiceBySessionId: async (sessionId: string) => {
     console.log("[API_CLIENT] Calling getInvoiceBySessionId", { sessionId });
     const sessionExists = await Session.doesSessionExist();
     console.log("[API_CLIENT] Session exists for getInvoiceBySessionId:", sessionExists);
@@ -972,19 +970,11 @@ getInvoiceBySessionId: async (sessionId: string) => {
       console.warn("[API_CLIENT] No session exists, skipping getInvoiceBySessionId");
       throw new Error("No active session");
     }
-    const accessToken = await Session.getAccessToken();
-    const response = await fetch(`/api/invoice?sessionId=${encodeURIComponent(sessionId)}`, {
-      credentials: "include",
-      headers: {
-        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-      },
+
+    // Use fetcher instead of direct fetch for consistency
+    return fetcher({
+      url: `/api/invoice?sessionId=${encodeURIComponent(sessionId)}`,
+      method: "GET",
     });
-    if (!response.ok) {
-      console.error("[API_CLIENT] getInvoiceBySessionId error:", response.statusText);
-      throw new Error("Failed to fetch invoice");
-    }
-    const data = await response.json();
-    console.log("[API_CLIENT] getInvoiceBySessionId response:", data);
-    return data;
   },
 };

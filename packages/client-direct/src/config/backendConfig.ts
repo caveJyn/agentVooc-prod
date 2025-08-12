@@ -175,18 +175,10 @@ export function backendConfig(): InputType {
   try {
     const request = input.userContext?._default?.request;
     let authHeader = "";
-    let cookies = "";
 
-    if (request) {
-      if (typeof request.headers?.get === "function") {
-        // Fetch API style
-        authHeader = request.headers.get("authorization") || "";
-        cookies = request.headers.get("cookie") || "";
-      } else if (request.headers) {
-        // Express / Node style
-        authHeader = request.headers["authorization"] || "";
-        cookies = request.headers["cookie"] || "";
-      }
+    if (request?.headers) {
+      // Handle both Express and Fetch API style headers
+      authHeader = request.headers.authorization || request.headers["authorization"] || "";
     }
 
     // Extract JWT from Authorization header
@@ -196,19 +188,11 @@ export function backendConfig(): InputType {
     }
 
     elizaLogger.debug("getSession called", {
-      hasAuthorizationHeader: !!accessToken,
-      authorization: accessToken ? "Bearer [REDACTED]" : "none",
-      cookies,
-      inputKeys: input && typeof input === "object" ? Object.keys(input) : [],
-      userContextKeys: input.userContext && typeof input.userContext === "object" ? Object.keys(input.userContext) : [],
-      hasRequestInUserContext: !!request,
-      requestHeaders: request?.headers
-        ? (typeof request.headers.entries === "function"
-            ? Array.from(request.headers.entries()).reduce((acc, [key, value]) => { acc[key] = value; return acc; }, {})
-            : request.headers)
-        : "none",
-      sessionRequired: input.options?.sessionRequired || false,
+      hasAuthorizationHeader: !!authHeader,
+      authorization: authHeader ? "Bearer [PRESENT]" : "none",
       accessTokenPresent: !!accessToken,
+      sessionRequired: input.options?.sessionRequired || false,
+      headerKeys: request?.headers ? Object.keys(request.headers) : [],
     });
 
     const session = await originalImplementation.getSession({
@@ -220,7 +204,6 @@ export function backendConfig(): InputType {
       elizaLogger.debug("Session retrieved successfully", {
         userId: session.getUserId(),
         sessionHandle: session.getHandle(),
-        accessTokenPayload: session.getAccessTokenPayload(),
       });
     } else {
       elizaLogger.debug("No session retrieved");
@@ -230,38 +213,21 @@ export function backendConfig(): InputType {
   } catch (error: any) {
     const request = input.userContext?._default?.request;
     let authHeader = "";
-    let cookies = "";
 
-    if (request) {
-      if (typeof request.headers?.get === "function") {
-        authHeader = request.headers.get("authorization") || "";
-        cookies = request.headers.get("cookie") || "";
-      } else if (request.headers) {
-        authHeader = request.headers["authorization"] || "";
-        cookies = request.headers["cookie"] || "";
-      }
+    if (request?.headers) {
+      authHeader = request.headers.authorization || request.headers["authorization"] || "";
     }
 
     elizaLogger.warn("Session retrieval failed", {
       errorMessage: error.message,
-      errorStack: error.stack,
-      cookies,
-      authorization: authHeader.startsWith("Bearer ") ? "Bearer [REDACTED]" : "none",
-      inputKeys: input && typeof input === "object" ? Object.keys(input) : [],
-      userContextKeys: input.userContext && typeof input.userContext === "object" ? Object.keys(input.userContext) : [],
-      hasRequestInUserContext: !!request,
-      requestHeaders: request?.headers
-        ? (typeof request.headers.entries === "function"
-            ? Array.from(request.headers.entries()).reduce((acc, [key, value]) => { acc[key] = value; return acc; }, {})
-            : request.headers)
-        : "none",
+      errorType: error.type || "unknown",
+      authorization: authHeader ? "Bearer [PRESENT]" : "none",
       sessionRequired: input.options?.sessionRequired || false,
     });
 
     throw error;
   }
 },
-
             revokeSession: async function (input) {
               elizaLogger.debug(`Revoking session: ${input.sessionHandle}`);
               const session = await Session.getSessionInformation(input.sessionHandle);
