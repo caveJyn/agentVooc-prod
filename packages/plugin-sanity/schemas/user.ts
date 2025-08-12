@@ -20,6 +20,11 @@ export default {
       validation: (Rule) => Rule.required(),
     },
     {
+      name: "lastClientId",
+      type: "string",
+      title: "Last Client ID",
+    },
+    {
       name: "interest",
       title: "Interest",
       type: "string",

@@ -104,7 +104,13 @@ const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
   try {
     // Update connection status first
     console.log("[APP_SIDEBAR] Updating connection status to false");
-    await apiClient.updateConnectionStatus({ isConnected: false, clientId: "logout" });
+    const updateResponse = await apiClient.updateConnectionStatus({ isConnected: false, clientId: "logout" });
+    console.log("[APP_SIDEBAR] updateConnectionStatus response:", updateResponse);
+
+    // Proceed even if no session
+    if (updateResponse.status === "no-session") {
+      console.log("[APP_SIDEBAR] No session for updateConnectionStatus, continuing logout");
+    }
 
     // Revoke SuperTokens session
     console.log("[APP_SIDEBAR] Calling signOut");

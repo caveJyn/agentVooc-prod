@@ -820,11 +820,9 @@ updateEmailTemplate: (agentId: string, template: Partial<EmailTemplate>) =>
     try {
       const session = await Session.getSession({ sessionRequired: false });
       userId = session?.getUserId();
-      if (!session) {
-        console.warn("[API_CLIENT] No session found for updateConnectionStatus, proceeding without userId");
-      }
+      console.log("[API_CLIENT] Session for updateConnectionStatus:", { userId, exists: !!session });
     } catch (error) {
-      console.warn("[API_CLIENT] Failed to get session for userId:", error);
+      console.warn("[API_CLIENT] No session found for updateConnectionStatus:", error);
     }
 
     console.log("[API_CLIENT] Sending updateConnectionStatus with:", { isConnected, clientId, userId });
@@ -839,6 +837,11 @@ updateEmailTemplate: (agentId: string, template: Partial<EmailTemplate>) =>
     return response;
   } catch (error: any) {
     console.error("[API_CLIENT] Failed to update connection status:", error);
+    // If the error is due to a missing session, continue with logout
+    if (error.message.includes("Session does not exist")) {
+      console.log("[API_CLIENT] Session missing, proceeding with logout");
+      return { status: "no-session" }; // Allow logout to continue
+    }
     throw error;
   }
 },

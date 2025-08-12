@@ -5439,41 +5439,68 @@ router.post('/characters/:characterId/email/reconnect', async (req, res) => {
 
   router.post("/connection-status", async (req, res) => {
   try {
-    const session = await Session.getSession(req, res, { sessionRequired: true });
-    const userId = session.getUserId();
-    const { isConnected } = req.body;
+    elizaLogger.debug("[CLIENT-DIRECT] Request received: POST /connection-status", {
+      body: req.body,
+      cookies: req.headers.cookie || "none",
+    });
 
-    elizaLogger.debug(`[CLIENT-DIRECT] Processing POST /connection-status for userId: ${userId}, isConnected: ${isConnected}`);
+    let userId: string | undefined;
+    try {
+      const session = await Session.getSession(req, res, { sessionRequired: false });
+      userId = session?.getUserId();
+      elizaLogger.debug("[CLIENT-DIRECT] Session for POST /connection-status:", {
+        userId,
+        sessionExists: !!session,
+      });
+    } catch (error) {
+      elizaLogger.warn("[CLIENT-DIRECT] No session found for POST /connection-status:", error);
+    }
+
+    const { isConnected, clientId, userId: providedUserId } = req.body;
+
+    // Use provided userId if session is unavailable
+    userId = userId || providedUserId;
+
+    if (!userId) {
+      elizaLogger.warn("[CLIENT-DIRECT] No userId provided or found in session for POST /connection-status");
+      return res.status(401).json({ error: "Unauthorized", details: "No valid session or userId provided" });
+    }
 
     if (typeof isConnected !== "boolean") {
-      elizaLogger.warn("[CLIENT-DIRECT] Invalid isConnected value in /connection-status", { isConnected });
+      elizaLogger.warn("[CLIENT-DIRECT] Invalid isConnected value in POST /connection-status", { isConnected });
       return res.status(400).json({ error: "isConnected must be a boolean" });
     }
 
     const user = await sanityClient.fetch(
-      `*[_type == "User" && userId == $userId][0]{_id}`,
+      `*[_type == "User" && userId == $userId][0]{_id, isConnected}`,
       { userId }
     );
 
     if (!user) {
-      elizaLogger.warn(`[CLIENT-DIRECT] User not found for userId: ${userId}`);
+      elizaLogger.warn("[CLIENT-DIRECT] User not found for POST /connection-status", { userId });
       return res.status(404).json({ error: "User not found" });
     }
 
+    // Update connection status
     await sanityClient
       .patch(user._id)
-      .set({ isConnected })
+      .set({ isConnected, lastClientId: clientId }) // Store clientId for tracking
       .commit();
 
     // Clear connection cache
     clearConnectionCache();
 
-    elizaLogger.debug(`[CLIENT-DIRECT] User connection status updated for userId: ${userId}`, { isConnected });
+    elizaLogger.debug("[CLIENT-DIRECT] User connection status updated", {
+      userId,
+      isConnected,
+      clientId,
+    });
 
-    res.json({ status: "updated", isConnected });
+    res.json({ status: "updated", isConnected, clientId });
   } catch (error: any) {
     elizaLogger.error("[CLIENT-DIRECT] Error updating connection status:", {
-      userId: req.body.userId || "unknown",
+      userId: req.body.userId || userId || "unknown",
+      clientId: req.body.clientId,
       error: error.message,
       stack: error.stack,
     });
@@ -5483,41 +5510,59 @@ router.post('/characters/:characterId/email/reconnect', async (req, res) => {
 
 router.get("/connection-status", async (req, res) => {
   try {
-    const session = await Session.getSession(req, res, { sessionRequired: true });
-    const userId = session.getUserId();
+    elizaLogger.debug("[CLIENT-DIRECT] Request received: GET /connection-status", {
+      cookies: req.headers.cookie || "none",
+    });
 
-    elizaLogger.debug(`[CLIENT-DIRECT] Processing GET /connection-status for userId: ${userId}`);
+    let userId: string | undefined;
+    try {
+      const session = await Session.getSession(req, res, { sessionRequired: false });
+      userId = session?.getUserId();
+      elizaLogger.debug("[CLIENT-DIRECT] Session for GET /connection-status:", {
+        userId,
+        sessionExists: !!session,
+      });
+    } catch (error) {
+      elizaLogger.warn("[CLIENT-DIRECT] No session found for GET /connection-status:", error);
+      return res.status(401).json({ error: "Unauthorized", details: "No valid session" });
+    }
 
-    // Query Sanity to get user connection status
+    if (!userId) {
+      elizaLogger.warn("[CLIENT-DIRECT] No userId found in session for GET /connection-status");
+      return res.status(401).json({ error: "Unauthorized", details: "No valid session" });
+    }
+
     const user = await sanityClient.fetch(
-      `*[_type == "User" && userId == $userId][0]{ userId, isConnected }`,
+      `*[_type == "User" && userId == $userId][0]{ userId, isConnected, lastClientId }`,
       { userId }
     );
 
     if (!user) {
-      elizaLogger.warn(`[CLIENT-DIRECT] User not found in connection status check`, { userId });
+      elizaLogger.warn("[CLIENT-DIRECT] User not found in GET /connection-status", { userId });
       return res.status(404).json({ error: "User not found" });
     }
 
     const isConnected = user.isConnected === true;
-    
-    elizaLogger.debug(`[CLIENT-DIRECT] Connection status retrieved for userId: ${userId}`, { 
+
+    elizaLogger.debug("[CLIENT-DIRECT] Connection status retrieved", {
+      userId: user.userId,
       isConnected,
-      userId: user.userId 
+      lastClientId: user.lastClientId,
     });
 
-    res.json({ 
+    res.json({
       isConnected,
       userId: user.userId,
-      timestamp: new Date().toISOString()
+      clientId: user.lastClientId,
+      timestamp: new Date().toISOString(),
     });
-
   } catch (error: any) {
     elizaLogger.error("[CLIENT-DIRECT] Error checking connection status:", {
+      userId: userId || "unknown",
       error: error.message,
       stack: error.stack,
     });
-    res.status(500).json({ error: "Failed to check connection status" });
+    res.status(500).json({ error: "Failed to check connection status", details: error.message });
   }
 });
 
