@@ -37,20 +37,6 @@ const clearCookies = () => {
   console.log("[FETCHER] Cookies after clearing:", document.cookie);
 };
 
-// Rate limiter to prevent request flooding
-const rateLimiter = new Map<string, number>();
-
-// Circuit breaker to prevent infinite reload loops
-const circuitBreaker = {
-  failures: 0,
-  lastFailure: 0,
-  isOpen: false,
-  openUntil: 0,
-};
-
-const CIRCUIT_BREAKER_THRESHOLD = 3; // Max failures before opening circuit
-const CIRCUIT_BREAKER_TIMEOUT = 30000; // 30 seconds before retry
-
 const fetcher = async ({
   url,
   method = "GET",
@@ -62,28 +48,6 @@ const fetcher = async ({
   body?: object | FormData;
   headers?: HeadersInit;
 }) => {
-  // Check circuit breaker
-  const now = Date.now();
-  if (circuitBreaker.isOpen && now < circuitBreaker.openUntil) {
-    console.warn(`[FETCHER] Circuit breaker OPEN - blocking requests until ${new Date(circuitBreaker.openUntil).toLocaleTimeString()}`);
-    throw new Error("Circuit breaker open - too many auth failures");
-  } else if (circuitBreaker.isOpen && now >= circuitBreaker.openUntil) {
-    // Reset circuit breaker after timeout
-    console.log(`[FETCHER] Circuit breaker RESET - attempting recovery`);
-    circuitBreaker.isOpen = false;
-    circuitBreaker.failures = 0;
-  }
-
-  // Rate limiting to prevent request flooding
-  const rateLimitKey = `${method}:${url}`;
-  const lastAttempt = rateLimiter.get(rateLimitKey) || 0;
-  
-  if (now - lastAttempt < 1000) { // 1 second cooldown per endpoint
-    console.warn(`[FETCHER] Rate limited: ${rateLimitKey}, skipping request`);
-    throw new Error("Rate limited - too many requests");
-  }
-  
-  rateLimiter.set(rateLimitKey, now);
   // Prevent requests when already on auth page (except auth-related endpoints)
   if (
     window.location.pathname === "/auth" &&
@@ -138,8 +102,6 @@ const fetcher = async ({
           }
           throw new Error("No access token available");
         }
-        const transferMethod = Session.getTokenTransferMethod();
-        console.log(`[FETCHER] Token transfer method: ${transferMethod}`);
       } catch (error) {
         if (!isRetry) console.error(`[FETCHER] Failed to get access token:`, error);
         if (!isRetry) {
@@ -150,17 +112,15 @@ const fetcher = async ({
         }
         throw new Error("Failed to retrieve access token");
       }
-      const transferMethod = Session.getTokenTransferMethod();
-        console.log(`[FETCHER] Token transfer method: ${transferMethod}`);
     }
 
     // Build headers with header-based auth enforcement
     const requestHeaders: HeadersInit = {
       Accept: "application/json",
+      "st-auth-mode": "header", // ✅ enforce header-based auth
       ...(body instanceof FormData ? {} : { "Content-Type": "application/json" }),
       ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       ...headers,
-      "st-auth-mode": "header", // ✅ enforce header-based auth (must be last to prevent override)
     };
 
     const options: RequestInit = {
@@ -201,30 +161,10 @@ const fetcher = async ({
         // Non-JSON response
       }
 
-      // Handle refresh token scenario or general 401
-      if (resp.status === 401 && !isRetry) {
-        // Try to detect if this is a "try refresh token" scenario
-        const isRefreshTokenScenario = errorObj.message === "try refresh token" || 
-                                     errorObj.type === "TRY_REFRESH_TOKEN" ||
-                                     errorText.includes("try refresh token");
-        
-        if (isRefreshTokenScenario) {
-          console.log(`[FETCHER] Received TRY_REFRESH_TOKEN for ${url}`);
-          throw new Error("TRY_REFRESH_TOKEN");
-        } else {
-          // Generic 401 - likely auth mode mismatch or expired session
-          console.warn(`[FETCHER] 401 Unauthorized for ${url}, incrementing circuit breaker`);
-          circuitBreaker.failures++;
-          circuitBreaker.lastFailure = Date.now();
-          
-          if (circuitBreaker.failures >= CIRCUIT_BREAKER_THRESHOLD) {
-            circuitBreaker.isOpen = true;
-            circuitBreaker.openUntil = Date.now() + CIRCUIT_BREAKER_TIMEOUT;
-            console.error(`[FETCHER] Circuit breaker OPENED - too many 401s (${circuitBreaker.failures})`);
-          }
-          
-          throw new Error("FORCE_LOGOUT");
-        }
+      // Handle refresh token scenario
+      if (resp.status === 401 && errorObj.message === "try refresh token" && !isRetry) {
+        console.log(`[FETCHER] Received TRY_REFRESH_TOKEN for ${url}`);
+        throw new Error("TRY_REFRESH_TOKEN");
       }
 
       const error = new Error(errorObj.error || errorObj.message || "Request failed");
@@ -274,15 +214,6 @@ const fetcher = async ({
         window.location.href = `/auth?cb=${Date.now()}`;
         throw new Error("Session expired, redirecting to login");
       }
-    } else if (error.message === "FORCE_LOGOUT") {
-      // Only redirect if circuit breaker allows it
-      if (!circuitBreaker.isOpen) {
-        console.warn(`[FETCHER] Forcing logout due to 401 for ${url}`);
-        await signOut();
-        clearCookies();
-        window.location.href = `/auth?cb=${Date.now()}`;
-      }
-      throw new Error("Authentication failed, redirecting to login");
     } else if (error.message === "No active session" || error.message === "No access token available" || error.message === "Failed to retrieve access token") {
       console.warn(`[FETCHER] Request aborted: ${error.message} for ${url}`);
       throw error;

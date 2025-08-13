@@ -146,25 +146,30 @@ export function backendConfig(): InputType {
       Session.init({
         cookieSecure: true,
         antiCsrf: "NONE",
-        getTokenTransferMethod: (input) => {
-          // Check for explicit header mode request first
-          const authMode = input.req.getHeaderValue("st-auth-mode");
-          elizaLogger.debug("[SESSION] Token transfer method check:", {
-            authMode,
-            hasAuthHeader: !!input.req.getHeaderValue("authorization"),
-            forCreateNewSession: input.forCreateNewSession,
-          });
-          
-          if (authMode === "header") {
-            return "header";
-          }
-          
-          // Default to header mode for your app
-          return "header";
-        },
+        getTokenTransferMethod: () => "header", // Force header-based transfer
         useDynamicAccessTokenSigningKey: false,
-        // Remove the custom getSession override - let SuperTokens handle it automatically
-        // The override was causing the issue by manually extracting tokens
+        override: {
+          functions: (originalImplementation) => ({
+            ...originalImplementation,
+            getSession: async function (input: any) {
+              const request = input.userContext?._default?.request;
+              const authHeader =
+                request?.headers?.authorization || request?.headers?.["authorization"] || "";
+              let accessToken = null;
+              if (authHeader?.startsWith("Bearer ")) {
+                accessToken = authHeader.slice(7);
+              }
+              elizaLogger.debug("getSession called", {
+                hasAuthHeader: !!authHeader,
+                tokenPresent: !!accessToken,
+              });
+              return originalImplementation.getSession({
+                ...input,
+                accessToken,
+              });
+            },
+          }),
+        },
       }),
       Dashboard.init({
         admins: ["agentvooc@gmail.com"],
