@@ -48,6 +48,7 @@ const fetcher = async ({
   body?: object | FormData;
   headers?: HeadersInit;
 }) => {
+  // Prevent requests when already on auth page (except auth-related endpoints)
   if (
     window.location.pathname === "/auth" &&
     !url.startsWith("/api/auth") &&
@@ -60,19 +61,20 @@ const fetcher = async ({
 
   const makeRequest = async (isRetry: boolean = false): Promise<any> => {
     const sessionExists = await Session.doesSessionExist();
-    console.log(`[FETCHER] Session exists: ${sessionExists}, URL: ${url}, Retry: ${isRetry}`);
+    if (!isRetry) {
+      console.log(`[FETCHER] Session exists: ${sessionExists}, URL: ${url}`);
+    }
 
+    // Check session for non-auth endpoints
     if (
       !sessionExists &&
       !url.startsWith("/api/auth") &&
       !url.startsWith("/api/user") &&
       !url.startsWith("/api/invoice")
     ) {
-      console.warn(`[FETCHER] No session exists, aborting request to ${url}`);
+      if (!isRetry) console.warn(`[FETCHER] No session exists, aborting request to ${url}`);
       if (!isRetry) {
         await signOut();
-        localStorage.clear();
-        sessionStorage.clear();
         clearCookies();
         console.log(`[FETCHER] Forcing logout due to no session`);
         window.location.href = `/auth?cb=${Date.now()}`;
@@ -80,13 +82,16 @@ const fetcher = async ({
       throw new Error("No active session");
     }
 
+    // Get access token for header-based auth
     let accessToken: string | undefined;
     if (sessionExists) {
       try {
         accessToken = await Session.getAccessToken();
-        console.log(`[FETCHER] Access token retrieved: ${accessToken ? "present" : "missing"}`);
+        if (!isRetry) {
+          console.log(`[FETCHER] Access token retrieved: ${accessToken ? "present" : "missing"}`);
+        }
         if (!accessToken && !url.startsWith("/api/auth") && !url.startsWith("/api/user") && !url.startsWith("/api/invoice")) {
-          console.warn(`[FETCHER] No access token available, aborting request to ${url}`);
+          if (!isRetry) console.warn(`[FETCHER] No access token available, aborting request to ${url}`);
           if (!isRetry) {
             await signOut();
             localStorage.clear();
@@ -98,11 +103,9 @@ const fetcher = async ({
           throw new Error("No access token available");
         }
       } catch (error) {
-        console.error(`[FETCHER] Failed to get access token:`, error);
+        if (!isRetry) console.error(`[FETCHER] Failed to get access token:`, error);
         if (!isRetry) {
           await signOut();
-          localStorage.clear();
-          sessionStorage.clear();
           clearCookies();
           console.log(`[FETCHER] Forcing logout due to token retrieval failure`);
           window.location.href = `/auth?cb=${Date.now()}`;
@@ -111,9 +114,12 @@ const fetcher = async ({
       }
     }
 
+    // Build headers with header-based auth enforcement
     const requestHeaders: HeadersInit = {
       Accept: "application/json",
+      "st-auth-mode": "header", // ✅ enforce header-based auth
       ...(body instanceof FormData ? {} : { "Content-Type": "application/json" }),
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       ...headers,
     };
 
@@ -125,21 +131,28 @@ const fetcher = async ({
         : {}),
     };
 
-    console.log(`[FETCHER] Sending ${method} request to ${BASE_URL}${url}`, {
-      headers: Object.keys(requestHeaders),
-      hasAuthToken: !!accessToken,
-      body: body instanceof FormData ? "[FormData]" : body,
-    });
+    if (!isRetry) {
+      console.log(`[FETCHER] Sending ${method} request to ${BASE_URL}${url}`, {
+        headers: Object.keys(requestHeaders),
+        hasAuthToken: !!accessToken,
+        authMode: "header",
+        body: body instanceof FormData ? "[FormData]" : body,
+      });
+    }
 
     const resp = await fetch(`${BASE_URL}${url}`, options);
-    console.log(`[FETCHER] Response status for ${url}: ${resp.status}, Headers:`, {
-      cfCacheStatus: resp.headers.get("cf-cache-status"),
-      contentType: resp.headers.get("Content-Type"),
-    });
+    if (!isRetry) {
+      console.log(`[FETCHER] Response status for ${url}: ${resp.status}, Headers:`, {
+        cfCacheStatus: resp.headers.get("cf-cache-status"),
+        contentType: resp.headers.get("Content-Type"),
+      });
+    }
 
     if (!resp.ok) {
       const errorText = await resp.text();
-      console.error(`[FETCHER] Fetch error for ${url}: ${errorText}, Status: ${resp.status}`);
+      if (!isRetry) {
+        console.error(`[FETCHER] Fetch error for ${url}: ${errorText}, Status: ${resp.status}`);
+      }
 
       let errorObj: any = { error: errorText };
       try {
@@ -148,6 +161,7 @@ const fetcher = async ({
         // Non-JSON response
       }
 
+      // Handle refresh token scenario
       if (resp.status === 401 && errorObj.message === "try refresh token" && !isRetry) {
         console.log(`[FETCHER] Received TRY_REFRESH_TOKEN for ${url}`);
         throw new Error("TRY_REFRESH_TOKEN");
@@ -158,18 +172,19 @@ const fetcher = async ({
       throw error;
     }
 
+    // Handle different response types
     if (resp.headers.get("Content-Type")?.includes("audio/mpeg")) {
-      console.log(`[FETCHER] Response is audio/mpeg for ${url}, returning blob`);
+      if (!isRetry) console.log(`[FETCHER] Response is audio/mpeg for ${url}, returning blob`);
       return await resp.blob();
     }
 
     if (resp.status === 204) {
-      console.log(`[FETCHER] 204 No Content for ${url}, returning empty object`);
+      if (!isRetry) console.log(`[FETCHER] 204 No Content for ${url}, returning empty object`);
       return {};
     }
 
     const responseData = await resp.json();
-    console.log(`[FETCHER] Response data for ${url}:`, responseData);
+    if (!isRetry) console.log(`[FETCHER] Response data for ${url}:`, responseData);
     return responseData;
   };
 
@@ -178,35 +193,29 @@ const fetcher = async ({
   } catch (error: any) {
     console.error(`[FETCHER] Error for ${url}:`, error);
 
+    // Handle token refresh
     if (error.message === "TRY_REFRESH_TOKEN") {
       console.log(`[FETCHER] Attempting session refresh for ${url}`);
       try {
         const refreshed = await Session.attemptRefreshingSession();
-        console.log(`[FETCHER] Session refresh success: ${refreshed}`);
         if (refreshed) {
+          console.log(`[FETCHER] Session refresh successful, retrying request`);
           return await makeRequest(true);
         }
         console.warn(`[FETCHER] Session refresh failed, forcing logout`);
         await signOut();
-        localStorage.clear();
-        sessionStorage.clear();
         clearCookies();
-        console.log(`[FETCHER] Sign out completed, redirecting to /auth`);
         window.location.href = `/auth?cb=${Date.now()}`;
         throw new Error("Session expired, redirecting to login");
       } catch (refreshError) {
         console.error(`[FETCHER] Session refresh error:`, refreshError);
         await signOut();
-        localStorage.clear();
-        sessionStorage.clear();
         clearCookies();
-        console.log(`[FETCHER] Sign out completed, redirecting to /auth`);
         window.location.href = `/auth?cb=${Date.now()}`;
         throw new Error("Session expired, redirecting to login");
       }
     } else if (error.message === "No active session" || error.message === "No access token available" || error.message === "Failed to retrieve access token") {
       console.warn(`[FETCHER] Request aborted: ${error.message} for ${url}`);
-      window.location.href = `/auth?cb=${Date.now()}`;
       throw error;
     }
     throw error;
@@ -770,36 +779,9 @@ export const apiClient = {
     }),
 
   getUser: async () => {
-    console.log("[API_CLIENT] Calling getUser");
-    try {
-      const sessionExists = await Session.doesSessionExist();
-      console.log("[API_CLIENT] Session exists for getUser:", sessionExists);
-      if (!sessionExists) {
-        console.warn("[API_CLIENT] No session exists, skipping getUser");
-        return { status: "skipped", reason: "No active session" };
-      }
-
-      // Let fetcher handle token retrieval and headers
-      const response = await fetcher({
-        url: "/api/user",
-        method: "GET",
-        headers: {
-          "Cache-Control": "no-cache, no-store, must-revalidate",
-          Pragma: "no-cache",
-          Expires: "0",
-        },
-      });
-
-      console.log("[API_CLIENT] getUser response:", response);
-      return response;
-    } catch (error: any) {
-      console.error("[API_CLIENT] getUser error:", error);
-      if (error.message === "No active session" || error.status === 401) {
-        console.warn("[API_CLIENT] Skipping getUser due to no session or unauthorized");
-        return { status: "skipped", reason: "No active session or unauthorized" };
-      }
-      throw new Error(error.message || "Failed to get user data");
-    }
+    const exists = await Session.doesSessionExist();
+    if (!exists) return { status: "skipped", reason: "No active session" };
+    return fetcher({ url: "/api/user" });
   },
 
 

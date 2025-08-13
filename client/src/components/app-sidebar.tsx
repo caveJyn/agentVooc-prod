@@ -24,12 +24,11 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import type { UUID, Character } from "@elizaos/core";
 import { Book, Cog, User, Edit, Plus, Mail } from "lucide-react";
 import ConnectionStatus from "./connection-status";
-import { signOut } from "supertokens-web-js/recipe/session";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { MouseEvent, useState } from "react";
 import { Avatar, AvatarImage } from "./ui/avatar";
-import Session from "supertokens-web-js/recipe/session";
+import { sessionHelper } from "@/lib/sessionHelper";
 
 
 export function AppSidebar() {
@@ -128,81 +127,60 @@ export function AppSidebar() {
 const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
   e.preventDefault();
   const { toast } = useToast();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const { setOpen, setOpenMobile, isMobile } = useSidebar();
   const cacheBust = `?cb=${Date.now()}`;
 
   try {
     console.log("[APP_SIDEBAR] Starting logout process");
 
-    // Cancel and clear all queries
-    await queryClient.cancelQueries();
-    queryClient.removeQueries();
+    // Cancel & clear all queries efficiently
+    const queryClient = useQueryClient();
+    queryClient.cancelQueries();
     queryClient.clear();
-    console.log("[APP_SIDEBAR] React Query cache cleared");
 
-    // Check session
-    const sessionExists = await Session.doesSessionExist();
-    console.log("[APP_SIDEBAR] Session exists:", sessionExists);
-
+    // Check & sign out session (header-based)
+    const sessionExists = await sessionHelper.doesSessionExist();
     if (sessionExists) {
-      try {
-        await signOut();
-        console.log("[APP_SIDEBAR] SuperTokens session terminated");
-      } catch (sessionErr) {
-        console.warn("[APP_SIDEBAR] Error during signOut:", sessionErr);
-      }
-    } else {
-      console.log("[APP_SIDEBAR] No session found, skipping updateConnectionStatus");
+      await sessionHelper.signOut();
     }
 
-    // Clear all client-side storage
+    // Clear client-side storage & cookies
     localStorage.clear();
     sessionStorage.clear();
     clearCookies();
     setSearchQuery("");
-    console.log("[APP_SIDEBAR] Storage and cookies cleared");
 
     // Show success toast
     toast({ title: "Success", description: "Logged out successfully." });
 
-    // Force full page reload with cache-busting
+    // Force navigation to auth page
     window.location.href = `/auth${cacheBust}`;
   } catch (err) {
     console.error("[APP_SIDEBAR] Logout error:", err);
     const errorMessage = err instanceof Error ? err.message : "Failed to log out.";
 
-    // Force cleanup on error
-    await queryClient.cancelQueries();
-    queryClient.removeQueries();
-    queryClient.clear();
+    // Graceful fallback cleanup
     localStorage.clear();
     sessionStorage.clear();
     clearCookies();
     setSearchQuery("");
-    console.log("[APP_SIDEBAR] Forced cleanup completed");
 
-    // Show error toast
     toast({ variant: "destructive", title: "Error", description: errorMessage });
 
-    // Force navigation with cache-busting
+    // Force navigation to auth page with cache-busting
+    const { setOpen, setOpenMobile, isMobile } = useSidebar();
+    const navigate = useNavigate();
     navigate(`/auth${cacheBust}`, { replace: true });
-    if (isMobile) {
-      setOpenMobile(false);
-    } else {
-      setOpen(false);
-    }
+    if (isMobile) setOpenMobile(false);
+    else setOpen(false);
 
-    // Fallback to ensure redirect
     setTimeout(() => {
       if (window.location.pathname !== "/auth") {
-        console.log("[APP_SIDEBAR] Forcing redirect to /auth after error");
         window.location.href = `/auth${cacheBust}`;
       }
     }, 100);
   }
 };
+
 
 
   const handleLogin = () => {

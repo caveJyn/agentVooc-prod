@@ -144,6 +144,7 @@ export function backendConfig(): InputType {
         },
       }),
       Session.init({
+        cookieSecure: true,
         antiCsrf: "NONE",
         getTokenTransferMethod: () => "header", // Force header-based transfer
         useDynamicAccessTokenSigningKey: false,
