@@ -9,6 +9,34 @@ const BASE_URL  =
     `${import.meta.env.VITE_SERVER_URL}:${import.meta.env.VITE_SERVER_PORT}`;
 // console.log(`[FETCHER] Using BASE_URL: ${BASE_URL}`);
 
+const clearCookies = () => {
+  console.log("[FETCHER] Cookies before clearing:", document.cookie);
+  const cookies = document.cookie.split(";");
+  const domains = [
+    "agentvooc.com",
+    ".agentvooc.com",
+    window.location.hostname,
+    `.${window.location.hostname}`,
+  ];
+  const stCookies = [
+    "sAccessToken",
+    "sRefreshToken",
+    "sFrontToken",
+    "st-last-access-token-update",
+    "st-access-token",
+    "st-refresh-token",
+  ];
+  for (const cookie of cookies) {
+    const [name] = cookie.split("=").map((c) => c.trim());
+    if (stCookies.includes(name)) {
+      for (const domain of domains) {
+        document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${domain};secure;samesite=none`;
+      }
+    }
+  }
+  console.log("[FETCHER] Cookies after clearing:", document.cookie);
+};
+
 const fetcher = async ({
   url,
   method = "GET",
@@ -20,7 +48,6 @@ const fetcher = async ({
   body?: object | FormData;
   headers?: HeadersInit;
 }) => {
-  // Prevent redirect loop for auth page, except for auth-related endpoints
   if (
     window.location.pathname === "/auth" &&
     !url.startsWith("/api/auth") &&
@@ -31,10 +58,9 @@ const fetcher = async ({
     throw new Error("Already on auth page, aborting fetch");
   }
 
-  const makeRequest = async (): Promise<any> => {
-    // Check if session exists for non-auth endpoints
+  const makeRequest = async (isRetry: boolean = false): Promise<any> => {
     const sessionExists = await Session.doesSessionExist();
-    console.log(`[FETCHER] Session exists: ${sessionExists}, URL: ${url}`);
+    console.log(`[FETCHER] Session exists: ${sessionExists}, URL: ${url}, Retry: ${isRetry}`);
 
     if (
       !sessionExists &&
@@ -43,6 +69,14 @@ const fetcher = async ({
       !url.startsWith("/api/invoice")
     ) {
       console.warn(`[FETCHER] No session exists, aborting request to ${url}`);
+      if (!isRetry) {
+        await signOut();
+        localStorage.clear();
+        sessionStorage.clear();
+        clearCookies();
+        console.log(`[FETCHER] Forcing logout due to no session`);
+        window.location.href = `/auth?cb=${Date.now()}`;
+      }
       throw new Error("No active session");
     }
 
@@ -51,8 +85,29 @@ const fetcher = async ({
       try {
         accessToken = await Session.getAccessToken();
         console.log(`[FETCHER] Access token retrieved: ${accessToken ? "present" : "missing"}`);
+        if (!accessToken && !url.startsWith("/api/auth") && !url.startsWith("/api/user") && !url.startsWith("/api/invoice")) {
+          console.warn(`[FETCHER] No access token available, aborting request to ${url}`);
+          if (!isRetry) {
+            await signOut();
+            localStorage.clear();
+            sessionStorage.clear();
+            clearCookies();
+            console.log(`[FETCHER] Forcing logout due to missing access token`);
+            window.location.href = `/auth?cb=${Date.now()}`;
+          }
+          throw new Error("No access token available");
+        }
       } catch (error) {
         console.error(`[FETCHER] Failed to get access token:`, error);
+        if (!isRetry) {
+          await signOut();
+          localStorage.clear();
+          sessionStorage.clear();
+          clearCookies();
+          console.log(`[FETCHER] Forcing logout due to token retrieval failure`);
+          window.location.href = `/auth?cb=${Date.now()}`;
+        }
+        throw new Error("Failed to retrieve access token");
       }
     }
 
@@ -61,7 +116,6 @@ const fetcher = async ({
       ...(body instanceof FormData ? {} : { "Content-Type": "application/json" }),
       ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       "st-auth-mode": "header",
-      // Add cache-busting headers to prevent Cloudflare caching
       "Cache-Control": "no-cache, no-store, must-revalidate",
       Pragma: "no-cache",
       Expires: "0",
@@ -71,7 +125,6 @@ const fetcher = async ({
     const options: RequestInit = {
       method,
       headers: requestHeaders,
-      // Remove credentials: "include" since we're using header-based auth
       ...(body && (method === "POST" || method === "PATCH")
         ? { body: body instanceof FormData ? body : JSON.stringify(body) }
         : {}),
@@ -84,7 +137,10 @@ const fetcher = async ({
     });
 
     const resp = await fetch(`${BASE_URL}${url}`, options);
-    console.log(`[FETCHER] Response status for ${url}: ${resp.status}`);
+    console.log(`[FETCHER] Response status for ${url}: ${resp.status}, Headers:`, {
+      cfCacheStatus: resp.headers.get("cf-cache-status"),
+      contentType: resp.headers.get("Content-Type"),
+    });
 
     if (!resp.ok) {
       const errorText = await resp.text();
@@ -97,7 +153,7 @@ const fetcher = async ({
         // Non-JSON response
       }
 
-      if (resp.status === 401 && errorObj.message === "try refresh token") {
+      if (resp.status === 401 && errorObj.message === "try refresh token" && !isRetry) {
         console.log(`[FETCHER] Received TRY_REFRESH_TOKEN for ${url}`);
         throw new Error("TRY_REFRESH_TOKEN");
       }
@@ -133,12 +189,13 @@ const fetcher = async ({
         const refreshed = await Session.attemptRefreshingSession();
         console.log(`[FETCHER] Session refresh success: ${refreshed}`);
         if (refreshed) {
-          return await makeRequest();
+          return await makeRequest(true);
         }
         console.warn(`[FETCHER] Session refresh failed, forcing logout`);
         await signOut();
         localStorage.clear();
         sessionStorage.clear();
+        clearCookies();
         console.log(`[FETCHER] Sign out completed, redirecting to /auth`);
         window.location.href = `/auth?cb=${Date.now()}`;
         throw new Error("Session expired, redirecting to login");
@@ -147,12 +204,13 @@ const fetcher = async ({
         await signOut();
         localStorage.clear();
         sessionStorage.clear();
+        clearCookies();
         console.log(`[FETCHER] Sign out completed, redirecting to /auth`);
         window.location.href = `/auth?cb=${Date.now()}`;
         throw new Error("Session expired, redirecting to login");
       }
-    } else if (error.message === "No active session") {
-      console.warn(`[FETCHER] Request aborted due to no active session: ${url}`);
+    } else if (error.message === "No active session" || error.message === "No access token available" || error.message === "Failed to retrieve access token") {
+      console.warn(`[FETCHER] Request aborted: ${error.message} for ${url}`);
       window.location.href = `/auth?cb=${Date.now()}`;
       throw error;
     }
