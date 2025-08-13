@@ -100,7 +100,6 @@ export function AppSidebar() {
     `.${window.location.hostname}`,
   ];
 
-  // Clear all cookies
   for (const cookie of cookies) {
     const [name] = cookie.split("=").map((c) => c.trim());
     for (const domain of domains) {
@@ -108,7 +107,6 @@ export function AppSidebar() {
     }
   }
 
-  // Explicitly clear SuperTokens and custom cookies
   const stCookies = [
     "sAccessToken",
     "sRefreshToken",
@@ -133,23 +131,30 @@ const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { setOpen, setOpenMobile, isMobile } = useSidebar();
+  const cacheBust = `?cb=${Date.now()}`;
 
   try {
+    console.log("[APP_SIDEBAR] Starting logout process");
+
     // Cancel and clear all queries
     await queryClient.cancelQueries();
     queryClient.removeQueries();
     queryClient.clear();
+    console.log("[APP_SIDEBAR] React Query cache cleared");
 
-    // Check and terminate session
+    // Check session
     const sessionExists = await Session.doesSessionExist();
+    console.log("[APP_SIDEBAR] Session exists:", sessionExists);
+
     if (sessionExists) {
       try {
-        await apiClient.updateConnectionStatus({ isConnected: false });
         await signOut();
         console.log("[APP_SIDEBAR] SuperTokens session terminated");
       } catch (sessionErr) {
-        console.warn("[APP_SIDEBAR] Error during session cleanup:", sessionErr);
+        console.warn("[APP_SIDEBAR] Error during signOut:", sessionErr);
       }
+    } else {
+      console.log("[APP_SIDEBAR] No session found, skipping updateConnectionStatus");
     }
 
     // Clear all client-side storage
@@ -157,12 +162,12 @@ const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
     sessionStorage.clear();
     clearCookies();
     setSearchQuery("");
+    console.log("[APP_SIDEBAR] Storage and cookies cleared");
 
     // Show success toast
     toast({ title: "Success", description: "Logged out successfully." });
 
-    // Force full page reload with cache-busting query param
-    const cacheBust = `?cb=${Date.now()}`;
+    // Force full page reload with cache-busting
     window.location.href = `/auth${cacheBust}`;
   } catch (err) {
     console.error("[APP_SIDEBAR] Logout error:", err);
@@ -176,12 +181,12 @@ const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
     sessionStorage.clear();
     clearCookies();
     setSearchQuery("");
+    console.log("[APP_SIDEBAR] Forced cleanup completed");
 
     // Show error toast
     toast({ variant: "destructive", title: "Error", description: errorMessage });
 
     // Force navigation with cache-busting
-    const cacheBust = `?cb=${Date.now()}`;
     navigate(`/auth${cacheBust}`, { replace: true });
     if (isMobile) {
       setOpenMobile(false);

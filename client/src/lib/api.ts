@@ -35,7 +35,7 @@ const fetcher = async ({
     // Check if session exists for non-auth endpoints
     const sessionExists = await Session.doesSessionExist();
     console.log(`[FETCHER] Session exists: ${sessionExists}, URL: ${url}`);
-    
+
     if (
       !sessionExists &&
       !url.startsWith("/api/auth") &&
@@ -60,7 +60,11 @@ const fetcher = async ({
       Accept: "application/json",
       ...(body instanceof FormData ? {} : { "Content-Type": "application/json" }),
       ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-      'st-auth-mode': 'header',
+      "st-auth-mode": "header",
+      // Add cache-busting headers to prevent Cloudflare caching
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+      Pragma: "no-cache",
+      Expires: "0",
       ...headers,
     };
 
@@ -74,7 +78,7 @@ const fetcher = async ({
     };
 
     console.log(`[FETCHER] Sending ${method} request to ${BASE_URL}${url}`, {
-      headers: Object.keys(requestHeaders), // Log header keys only for security
+      headers: Object.keys(requestHeaders),
       hasAuthToken: !!accessToken,
       body: body instanceof FormData ? "[FormData]" : body,
     });
@@ -94,6 +98,7 @@ const fetcher = async ({
       }
 
       if (resp.status === 401 && errorObj.message === "try refresh token") {
+        console.log(`[FETCHER] Received TRY_REFRESH_TOKEN for ${url}`);
         throw new Error("TRY_REFRESH_TOKEN");
       }
 
@@ -126,24 +131,29 @@ const fetcher = async ({
       console.log(`[FETCHER] Attempting session refresh for ${url}`);
       try {
         const refreshed = await Session.attemptRefreshingSession();
+        console.log(`[FETCHER] Session refresh success: ${refreshed}`);
         if (refreshed) {
-          console.log(`[FETCHER] Session refreshed, retrying ${url}`);
           return await makeRequest();
         }
-        console.log(`[FETCHER] Session refresh failed, signing out`);
+        console.warn(`[FETCHER] Session refresh failed, forcing logout`);
         await signOut();
-        console.log("[FETCHER] Sign out completed successfully");
-        window.location.href = "/auth";
+        localStorage.clear();
+        sessionStorage.clear();
+        console.log(`[FETCHER] Sign out completed, redirecting to /auth`);
+        window.location.href = `/auth?cb=${Date.now()}`;
         throw new Error("Session expired, redirecting to login");
       } catch (refreshError) {
         console.error(`[FETCHER] Session refresh error:`, refreshError);
         await signOut();
-        console.log("[FETCHER] Sign out completed successfully");
-        window.location.href = "/auth";
+        localStorage.clear();
+        sessionStorage.clear();
+        console.log(`[FETCHER] Sign out completed, redirecting to /auth`);
+        window.location.href = `/auth?cb=${Date.now()}`;
         throw new Error("Session expired, redirecting to login");
       }
     } else if (error.message === "No active session") {
       console.warn(`[FETCHER] Request aborted due to no active session: ${url}`);
+      window.location.href = `/auth?cb=${Date.now()}`;
       throw error;
     }
     throw error;
@@ -706,12 +716,39 @@ export const apiClient = {
       method: "DELETE",
     }),
 
-  getUser: () => {
-    return fetcher({
-      url: "/api/user",
-      method: "GET",
-    });
+  getUser: async () => {
+    console.log("[API_CLIENT] Calling getUser");
+    try {
+      const sessionExists = await Session.doesSessionExist();
+      console.log("[API_CLIENT] Session exists for getUser:", sessionExists);
+      if (!sessionExists) {
+        console.warn("[API_CLIENT] No session exists, skipping getUser");
+        return { status: "skipped", reason: "No active session" };
+      }
+
+      // Let fetcher handle token retrieval and headers
+      const response = await fetcher({
+        url: "/api/user",
+        method: "GET",
+        headers: {
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
+      });
+
+      console.log("[API_CLIENT] getUser response:", response);
+      return response;
+    } catch (error: any) {
+      console.error("[API_CLIENT] getUser error:", error);
+      if (error.message === "No active session" || error.status === 401) {
+        console.warn("[API_CLIENT] Skipping getUser due to no session or unauthorized");
+        return { status: "skipped", reason: "No active session or unauthorized" };
+      }
+      throw new Error(error.message || "Failed to get user data");
+    }
   },
+
 
   getUserStats: () => {
     return fetcher({

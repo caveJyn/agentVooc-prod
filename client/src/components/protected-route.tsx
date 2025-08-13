@@ -1,7 +1,7 @@
 // /client/src/components/protected-route.tsx
 import { useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
-import { doesSessionExist, getUserId, signOut } from "supertokens-web-js/recipe/session";
+import { doesSessionExist, getUserId, signOut, attemptRefreshingSession } from "supertokens-web-js/recipe/session";
 import { useSubscriptionStatus } from "@/hooks/stripe-webhook";
 
 interface ProtectedRouteProps {
@@ -19,19 +19,29 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
     async function validateSession() {
       try {
+        console.log("[PROTECTED_ROUTE] Validating session");
         const sessionExists = await doesSessionExist();
+        console.log("[PROTECTED_ROUTE] Session exists:", sessionExists);
+
         if (sessionExists) {
-          const id = await getUserId();
-          setUserId(id);
-          setIsAuthenticated(true);
+          try {
+            // Attempt to refresh token to validate session
+            const refreshSuccess = await attemptRefreshingSession();
+            console.log("[PROTECTED_ROUTE] Token refresh success:", refreshSuccess);
+            if (refreshSuccess) {
+              const id = await getUserId();
+              setUserId(id);
+              setIsAuthenticated(true);
+              console.log("[PROTECTED_ROUTE] Session validated, userId:", id);
+            } else {
+              throw new Error("Session refresh failed");
+            }
+          } catch (refreshErr) {
+            console.warn("[PROTECTED_ROUTE] Session refresh error:", refreshErr);
+            throw refreshErr;
+          }
         } else {
-          setUserId(undefined);
-          setIsAuthenticated(false);
-          // Clean up any lingering session data
-          await signOut();
-          localStorage.clear();
-          sessionStorage.clear();
-          console.log("[PROTECTED_ROUTE] Session invalid, cleaned up");
+          throw new Error("No session exists");
         }
       } catch (err) {
         console.error("[PROTECTED_ROUTE] Session validation error:", err);
@@ -40,14 +50,15 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
         await signOut();
         localStorage.clear();
         sessionStorage.clear();
+        console.log("[PROTECTED_ROUTE] Session invalid, cleaned up");
       }
     }
 
     // Initial session check
     validateSession();
 
-    // Periodic session check (every 30 seconds)
-    intervalId = setInterval(validateSession, 30 * 1000);
+    // Periodic session check (every 15 seconds to catch deletions quickly)
+    intervalId = setInterval(validateSession, 15 * 1000);
 
     // Cleanup interval on unmount
     return () => {
@@ -66,8 +77,8 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   }
 
   if (!isAuthenticated) {
-    // Add cache-busting to redirect
     const cacheBust = `?cb=${Date.now()}`;
+    console.log("[PROTECTED_ROUTE] Redirecting to /auth with cache-bust:", cacheBust);
     return <Navigate to={`/auth${cacheBust}`} replace />;
   }
 
