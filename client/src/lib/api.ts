@@ -138,9 +138,8 @@ const fetcher = async ({
           }
           throw new Error("No access token available");
         }
-        // 🔍 DEBUG: Check token transfer method
         const transferMethod = Session.getTokenTransferMethod();
-        console.log(`[FETCHER] Token transfer method 1st: ${transferMethod}`);
+        console.log(`[FETCHER] Token transfer method: ${transferMethod}`);
       } catch (error) {
         if (!isRetry) console.error(`[FETCHER] Failed to get access token:`, error);
         if (!isRetry) {
@@ -151,65 +150,22 @@ const fetcher = async ({
         }
         throw new Error("Failed to retrieve access token");
       }
-      // 🔍 DEBUG: Check token transfer method
       const transferMethod = Session.getTokenTransferMethod();
-        console.log(`[FETCHER] Token transfer method 2nd: ${transferMethod}`);
+        console.log(`[FETCHER] Token transfer method: ${transferMethod}`);
     }
 
     // Build headers with header-based auth enforcement
-    // 🚀 FIX: Build headers as Record<string, string> to avoid TypeScript errors
-    const requestHeaders: Record<string, string> = {
+    const requestHeaders: HeadersInit = {
       Accept: "application/json",
+      ...(body instanceof FormData ? {} : { "Content-Type": "application/json" }),
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      ...headers,
+      "st-auth-mode": "header", // ✅ enforce header-based auth (must be last to prevent override)
     };
-
-    // Add Content-Type if not FormData
-    if (!(body instanceof FormData)) {
-      requestHeaders["Content-Type"] = "application/json";
-    }
-
-    // Add Authorization header if token exists
-    if (accessToken) {
-      requestHeaders["Authorization"] = `Bearer ${accessToken}`;
-    }
-
-    // Merge user headers (convert HeadersInit to Record<string, string>)
-    const userHeadersRecord: Record<string, string> = {};
-    if (headers) {
-      if (headers instanceof Headers) {
-        headers.forEach((value, key) => {
-          userHeadersRecord[key] = value;
-        });
-      } else if (Array.isArray(headers)) {
-        headers.forEach(([key, value]) => {
-          userHeadersRecord[key] = value;
-        });
-      } else {
-        Object.assign(userHeadersRecord, headers);
-      }
-    }
-
-    // Remove any user-provided st-auth-mode to prevent override
-    delete userHeadersRecord["st-auth-mode"];
-
-    // Merge user headers
-    Object.assign(requestHeaders, userHeadersRecord);
-
-    // 🔒 FORCE header-based auth mode (cannot be overridden)
-    requestHeaders["st-auth-mode"] = "header";
-
-    // 🔍 DEBUG: Log exact headers being sent (now TypeScript-safe)
-    console.log(`[FETCHER] Exact headers being sent:`, {
-      'Authorization': requestHeaders.Authorization ? 'Present' : 'Missing',
-      'st-auth-mode': requestHeaders['st-auth-mode'],
-      'Content-Type': requestHeaders['Content-Type'],
-      'Accept': requestHeaders.Accept,
-      'allHeaders': Object.keys(requestHeaders)
-    });
 
     const options: RequestInit = {
       method,
-      headers: requestHeaders, // Now properly typed as Record<string, string>
-      credentials: 'include', // 🚀 FIX: Add credentials for CORS
+      headers: requestHeaders,
       ...(body && (method === "POST" || method === "PATCH")
         ? { body: body instanceof FormData ? body : JSON.stringify(body) }
         : {}),
@@ -224,8 +180,6 @@ const fetcher = async ({
       });
     }
 
-        console.log(`[FETCHER] Fetch options headers:`, options.headers);
-        
     const resp = await fetch(`${BASE_URL}${url}`, options);
     if (!isRetry) {
       console.log(`[FETCHER] Response status for ${url}: ${resp.status}, Headers:`, {
