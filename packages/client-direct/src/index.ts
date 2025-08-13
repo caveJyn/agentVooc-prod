@@ -28,13 +28,14 @@ import * as path from "path";
 import { z } from "zod";
 import { createApiRouter } from "./api.ts";
 import { createVerifiableLogApiRouter } from "./verifiable-log-api.ts";
-import "./superTokens.ts"; // Ensure SuperTokens is initialized
 import { middleware, errorHandler } from "supertokens-node/framework/express";
 import { backendConfig } from "./config/backendConfig";
-import ThirdParty from "supertokens-node/recipe/thirdparty"; // Import the thirdparty recipe
 import supertokens from "supertokens-node";
 import Session from "supertokens-node/recipe/session";
 import { sanityClient, urlFor } from "@elizaos-plugins/plugin-sanity";
+
+ // Initialize SuperTokens with backend configuration
+        supertokens.init(backendConfig());
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -158,8 +159,7 @@ export class DirectClient {
         this.app = express();
         this.agents = new Map();
 
-        // Initialize SuperTokens with backend configuration
-        supertokens.init(backendConfig());
+       
         this.app.set("trust proxy", 1);
 
         // Log incoming headers & request details
@@ -185,27 +185,49 @@ export class DirectClient {
 
         // Reusable CORS configuration
         const corsOptions = {
-            origin: (origin, callback) => {
-                elizaLogger.debug(`[CORS] Request origin: ${origin || "none"}`);
-                if (!origin || allowedOrigins.includes(origin)) {
-                    callback(null, true);
-                } else {
-                    elizaLogger.warn(`[CORS] Blocked request from origin: ${origin}`);
-                    callback(new Error(`CORS policy: Origin ${origin} not allowed`));
-                }
-            },
-            credentials: true,
-            allowedHeaders: [
-                "Content-Type",
-                "Authorization",
-                ...supertokens.getAllCORSHeaders(),
-            ],
-            methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
-            exposedHeaders: ["Content-Range"], // Optional: additional exposed headers
-        };
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+        elizaLogger.debug(`[CORS] Request origin: ${origin || "none"}`);
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            elizaLogger.warn(`[CORS] Blocked request from origin: ${origin}`);
+            callback(new Error(`CORS policy: Origin ${origin} not allowed`));
+        }
+    },
+    credentials: true, // ✅ This is correct
+    allowedHeaders: [
+        // 🚀 FIX: Remove duplicate headers and organize properly
+        "Content-Type",
+        "Authorization", // ✅ For Bearer tokens
+        "st-auth-mode",  // ✅ For SuperTokens auth mode
+        "Accept",
+        "Origin",
+        "X-Requested-With",
+        "Access-Control-Request-Method",
+        "Access-Control-Request-Headers",
+        "rid", // SuperTokens specific
+        "Cache-Control", // Common header
+        "Pragma", // Common header
+        ...supertokens.getAllCORSHeaders(), // SuperTokens headers
+    ],
+    methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+    exposedHeaders: [
+        "Content-Range",
+        "Access-Control-Allow-Origin",
+        "Access-Control-Allow-Credentials",
+        ...supertokens.getAllCORSHeaders(), // 🚀 FIX: Expose SuperTokens headers too
+    ],
+    // 🚀 FIX: Add these options for better CORS handling
+    preflightContinue: false,
+    optionsSuccessStatus: 200, // Some legacy browsers (IE11, various SmartTVs) choke on 204
+};
 
         // Apply CORS globally
         this.app.use(cors(corsOptions));
+
+        // 🚀 FIX: Add explicit OPTIONS handler for preflight requests
+        this.app.options('*', cors(corsOptions));
 
         // Debug middleware for requests & responses
         this.app.use((req, res, next) => {

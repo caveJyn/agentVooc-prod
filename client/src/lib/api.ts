@@ -138,6 +138,8 @@ const fetcher = async ({
           }
           throw new Error("No access token available");
         }
+        const transferMethod = Session.getTokenTransferMethod();
+        console.log(`[FETCHER] Token transfer method 1st: ${transferMethod}`);
       } catch (error) {
         if (!isRetry) console.error(`[FETCHER] Failed to get access token:`, error);
         if (!isRetry) {
@@ -148,6 +150,8 @@ const fetcher = async ({
         }
         throw new Error("Failed to retrieve access token");
       }
+      const transferMethod = Session.getTokenTransferMethod();
+        console.log(`[FETCHER] Token transfer method 2nd: ${transferMethod}`);
     }
 
     // Build headers with header-based auth enforcement
@@ -158,6 +162,14 @@ const fetcher = async ({
       ...headers,
       "st-auth-mode": "header", // ✅ enforce header-based auth (must be last to prevent override)
     };
+
+      // 🔍 DEBUG: Log exact headers being sent
+    console.log(`[FETCHER] Exact headers being sent:`, {
+      'Authorization': requestHeaders.Authorization ? 'Present' : 'Missing',
+      'st-auth-mode': requestHeaders['st-auth-mode'],
+      'Content-Type': requestHeaders['Content-Type'],
+      'Accept': requestHeaders.Accept
+    });
 
     const options: RequestInit = {
       method,
@@ -176,6 +188,8 @@ const fetcher = async ({
       });
     }
 
+        console.log(`[FETCHER] Fetch options headers:`, options.headers);
+        
     const resp = await fetch(`${BASE_URL}${url}`, options);
     if (!isRetry) {
       console.log(`[FETCHER] Response status for ${url}: ${resp.status}, Headers:`, {

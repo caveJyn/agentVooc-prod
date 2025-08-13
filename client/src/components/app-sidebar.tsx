@@ -40,7 +40,7 @@ export function AppSidebar() {
   const userQuery = useQuery({
     queryKey: ["user"],
     queryFn: () => apiClient.getUser(),
-    staleTime: 30 * 60 * 1000, // Cache for 30 minutes
+    // staleTime: 30 * 60 * 1000, // Cache for 30 minutes
     refetchInterval: false,
   });
 
