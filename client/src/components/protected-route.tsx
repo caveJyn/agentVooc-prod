@@ -1,7 +1,7 @@
 // /client/src/components/protected-route.tsx
 import { useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
-import { doesSessionExist, getUserId } from "supertokens-web-js/recipe/session";
+import { doesSessionExist, getUserId, signOut } from "supertokens-web-js/recipe/session";
 import { useSubscriptionStatus } from "@/hooks/stripe-webhook";
 
 interface ProtectedRouteProps {
@@ -15,25 +15,46 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { data: subscriptionData, isLoading: isSubscriptionLoading } = useSubscriptionStatus(userId);
 
   useEffect(() => {
-    async function fetchUserId() {
-      const sessionExists = await doesSessionExist();
-      setIsAuthenticated(sessionExists);
-      if (sessionExists) {
-        const id = await getUserId();
-        setUserId(id);
-      } else {
+    let intervalId: NodeJS.Timeout | null = null;
+
+    async function validateSession() {
+      try {
+        const sessionExists = await doesSessionExist();
+        if (sessionExists) {
+          const id = await getUserId();
+          setUserId(id);
+          setIsAuthenticated(true);
+        } else {
+          setUserId(undefined);
+          setIsAuthenticated(false);
+          // Clean up any lingering session data
+          await signOut();
+          localStorage.clear();
+          sessionStorage.clear();
+          console.log("[PROTECTED_ROUTE] Session invalid, cleaned up");
+        }
+      } catch (err) {
+        console.error("[PROTECTED_ROUTE] Session validation error:", err);
+        setIsAuthenticated(false);
         setUserId(undefined);
+        await signOut();
+        localStorage.clear();
+        sessionStorage.clear();
       }
     }
-    fetchUserId();
-  }, []);
 
-  useEffect(() => {
-    async function checkSession() {
-      const sessionExists = await doesSessionExist();
-      setIsAuthenticated(sessionExists);
-    }
-    checkSession();
+    // Initial session check
+    validateSession();
+
+    // Periodic session check (every 30 seconds)
+    intervalId = setInterval(validateSession, 30 * 1000);
+
+    // Cleanup interval on unmount
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
   }, []);
 
   if (isAuthenticated === null || isSubscriptionLoading) {
@@ -45,7 +66,9 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/auth" replace />;
+    // Add cache-busting to redirect
+    const cacheBust = `?cb=${Date.now()}`;
+    return <Navigate to={`/auth${cacheBust}`} replace />;
   }
 
   // Allow access to /settings and /payment regardless of subscription status

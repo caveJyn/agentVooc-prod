@@ -35,10 +35,8 @@ import Session from "supertokens-web-js/recipe/session";
 export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState<string>("");
   const { setOpen, setOpenMobile, isMobile } = useSidebar();
-   const queryClient = useQueryClient();
   // Fetch user data
   const userQuery = useQuery({
     queryKey: ["user"],
@@ -131,24 +129,41 @@ export function AppSidebar() {
 
 const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
   e.preventDefault();
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { setOpen, setOpenMobile, isMobile } = useSidebar();
+
   try {
+    // Cancel and clear all queries
     await queryClient.cancelQueries();
     queryClient.removeQueries();
     queryClient.clear();
 
+    // Check and terminate session
     const sessionExists = await Session.doesSessionExist();
     if (sessionExists) {
-      await apiClient.updateConnectionStatus({ isConnected: false });
-      await signOut();
+      try {
+        await apiClient.updateConnectionStatus({ isConnected: false });
+        await signOut();
+        console.log("[APP_SIDEBAR] SuperTokens session terminated");
+      } catch (sessionErr) {
+        console.warn("[APP_SIDEBAR] Error during session cleanup:", sessionErr);
+      }
     }
 
+    // Clear all client-side storage
     localStorage.clear();
     sessionStorage.clear();
     clearCookies();
     setSearchQuery("");
 
+    // Show success toast
     toast({ title: "Success", description: "Logged out successfully." });
-    window.location.href = "/auth"; // Force full reload
+
+    // Force full page reload with cache-busting query param
+    const cacheBust = `?cb=${Date.now()}`;
+    window.location.href = `/auth${cacheBust}`;
   } catch (err) {
     console.error("[APP_SIDEBAR] Logout error:", err);
     const errorMessage = err instanceof Error ? err.message : "Failed to log out.";
@@ -161,21 +176,24 @@ const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
     sessionStorage.clear();
     clearCookies();
     setSearchQuery("");
-    console.log("[APP_SIDEBAR] Forced cleanup completed");
 
+    // Show error toast
     toast({ variant: "destructive", title: "Error", description: errorMessage });
 
-    // Force navigation
-    navigate("/auth", { replace: true });
+    // Force navigation with cache-busting
+    const cacheBust = `?cb=${Date.now()}`;
+    navigate(`/auth${cacheBust}`, { replace: true });
     if (isMobile) {
       setOpenMobile(false);
     } else {
       setOpen(false);
     }
+
+    // Fallback to ensure redirect
     setTimeout(() => {
       if (window.location.pathname !== "/auth") {
         console.log("[APP_SIDEBAR] Forcing redirect to /auth after error");
-        window.location.href = "/auth";
+        window.location.href = `/auth${cacheBust}`;
       }
     }, 100);
   }
