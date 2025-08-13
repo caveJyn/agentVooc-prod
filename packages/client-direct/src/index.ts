@@ -185,49 +185,27 @@ export class DirectClient {
 
         // Reusable CORS configuration
         const corsOptions = {
-    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-        elizaLogger.debug(`[CORS] Request origin: ${origin || "none"}`);
-        // Allow requests with no origin (like mobile apps or curl requests)
-        if (!origin || allowedOrigins.includes(origin)) {
-            callback(null, true);
-        } else {
-            elizaLogger.warn(`[CORS] Blocked request from origin: ${origin}`);
-            callback(new Error(`CORS policy: Origin ${origin} not allowed`));
-        }
-    },
-    credentials: true, // ✅ This is correct
-    allowedHeaders: [
-        // 🚀 FIX: Remove duplicate headers and organize properly
-        "Content-Type",
-        "Authorization", // ✅ For Bearer tokens
-        "st-auth-mode",  // ✅ For SuperTokens auth mode
-        "Accept",
-        "Origin",
-        "X-Requested-With",
-        "Access-Control-Request-Method",
-        "Access-Control-Request-Headers",
-        "rid", // SuperTokens specific
-        "Cache-Control", // Common header
-        "Pragma", // Common header
-        ...supertokens.getAllCORSHeaders(), // SuperTokens headers
-    ],
-    methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
-    exposedHeaders: [
-        "Content-Range",
-        "Access-Control-Allow-Origin",
-        "Access-Control-Allow-Credentials",
-        ...supertokens.getAllCORSHeaders(), // 🚀 FIX: Expose SuperTokens headers too
-    ],
-    // 🚀 FIX: Add these options for better CORS handling
-    preflightContinue: false,
-    optionsSuccessStatus: 200, // Some legacy browsers (IE11, various SmartTVs) choke on 204
-};
+            origin: (origin, callback) => {
+                elizaLogger.debug(`[CORS] Request origin: ${origin || "none"}`);
+                if (!origin || allowedOrigins.includes(origin)) {
+                    callback(null, true);
+                } else {
+                    elizaLogger.warn(`[CORS] Blocked request from origin: ${origin}`);
+                    callback(new Error(`CORS policy: Origin ${origin} not allowed`));
+                }
+            },
+            credentials: true,
+            allowedHeaders: [
+                "Content-Type",
+                "Authorization",
+                ...supertokens.getAllCORSHeaders(),
+            ],
+            methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+            exposedHeaders: ["Content-Range"], // Optional: additional exposed headers
+        };
 
         // Apply CORS globally
         this.app.use(cors(corsOptions));
-
-        // 🚀 FIX: Add explicit OPTIONS handler for preflight requests
-        this.app.options('*', cors(corsOptions));
 
         // Debug middleware for requests & responses
         this.app.use((req, res, next) => {
@@ -267,54 +245,8 @@ export class DirectClient {
         this.app.use(bodyParser.json());
         this.app.use(bodyParser.urlencoded({ extended: true }));
 
-
-        this.app.use((req, res, next) => {
-    console.log("[DEBUG] Raw request headers:", {
-        authorization: req.headers.authorization ? '[REDACTED]' : 'missing',
-        'st-auth-mode': req.headers['st-auth-mode'],
-        cookie: req.headers.cookie ? '[COOKIES_PRESENT]' : 'no_cookies',
-        'content-type': req.headers['content-type'],
-        origin: req.headers.origin,
-        'user-agent': req.headers['user-agent']?.substring(0, 50) + '...'
-    });
-    
-    // 🔍 DEBUG: Check what SuperTokens will see
-    const hasAuthHeader = !!req.headers.authorization;
-    const authMode = req.headers['st-auth-mode'];
-    const hasCookies = !!req.headers.cookie;
-    
-    console.log("[DEBUG] Auth detection:", {
-        hasAuthHeader,
-        authMode,
-        hasCookies,
-        expectedMode: authMode || (hasAuthHeader ? 'header' : 'cookie')
-    });
-    
-    next();
-});
-
-
-
         // SuperTokens middleware (before other routes)
         this.app.use(middleware());
-
-
-
-        // Add another debug middleware AFTER SuperTokens to see what it detected
-this.app.use((req, res, next) => {
-    // Check if SuperTokens added session info to request
-    const session = (req as any).session;
-    if (session) {
-        console.log("[DEBUG] SuperTokens session detected:", {
-            userId: session.getUserId?.() || 'unknown',
-            transferMethod: session.getAccessTokenPayload?.()?.transferMethod || 'unknown'
-        });
-    } else {
-        console.log("[DEBUG] No SuperTokens session found on request");
-    }
-    
-    next();
-});
 
         // Serve both uploads and generated images
         this.app.use(
