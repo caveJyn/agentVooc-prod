@@ -267,8 +267,54 @@ export class DirectClient {
         this.app.use(bodyParser.json());
         this.app.use(bodyParser.urlencoded({ extended: true }));
 
+
+        this.app.use((req, res, next) => {
+    console.log("[DEBUG] Raw request headers:", {
+        authorization: req.headers.authorization ? '[REDACTED]' : 'missing',
+        'st-auth-mode': req.headers['st-auth-mode'],
+        cookie: req.headers.cookie ? '[COOKIES_PRESENT]' : 'no_cookies',
+        'content-type': req.headers['content-type'],
+        origin: req.headers.origin,
+        'user-agent': req.headers['user-agent']?.substring(0, 50) + '...'
+    });
+    
+    // 🔍 DEBUG: Check what SuperTokens will see
+    const hasAuthHeader = !!req.headers.authorization;
+    const authMode = req.headers['st-auth-mode'];
+    const hasCookies = !!req.headers.cookie;
+    
+    console.log("[DEBUG] Auth detection:", {
+        hasAuthHeader,
+        authMode,
+        hasCookies,
+        expectedMode: authMode || (hasAuthHeader ? 'header' : 'cookie')
+    });
+    
+    next();
+});
+
+
+
         // SuperTokens middleware (before other routes)
         this.app.use(middleware());
+
+
+
+        // Add another debug middleware AFTER SuperTokens to see what it detected
+this.app.use((req, res, next) => {
+    // Check if SuperTokens added session info to request
+    const session = (req as any).session;
+    if (session) {
+        console.log("[DEBUG] SuperTokens session detected:", {
+            userId: session.getUserId?.() || 'unknown',
+            transferMethod: session.getAccessTokenPayload?.()?.transferMethod || 'unknown'
+        });
+    } else {
+        console.log("[DEBUG] No SuperTokens session found on request");
+    }
+    
+    next();
+});
 
         // Serve both uploads and generated images
         this.app.use(
