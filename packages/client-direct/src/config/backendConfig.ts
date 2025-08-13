@@ -46,10 +46,8 @@ export function backendConfig(): InputType {
             consumeCodePOST: async (input) => {
               const response = await originalImplementation.consumeCodePOST(input);
               if (response.status === "OK") {
-                const userId = response.user.id;
-                const email = response.user.emails?.[0];
-                const name = "Unknown User"; // Name not collected in OTP flow
-
+                const { id: userId, emails } = response.user;
+                const email = emails?.[0];
                 elizaLogger.debug(`User signed in/up: userId=${userId}, email=${email}`);
 
                 try {
@@ -57,24 +55,18 @@ export function backendConfig(): InputType {
                     `*[_type == "User" && userId == $userId][0]`,
                     { userId }
                   );
-                  if (!existingUser) {
-                    if (!email) {
-                      elizaLogger.error(`No email provided for userId=${userId}, cannot create User`);
-                    } else {
-                      const User = await sanityClient.create({
-                        _type: "User",
-                        name,
-                        email,
-                        interest: "agentVooc",
-                        referralSource: "email-otp",
-                        userId,
-                        createdAt: new Date().toISOString(),
-                        userType: "email",
-                      });
-                      elizaLogger.debug(`Created User: userId=${userId}, email=${User._id}`);
-                    }
-                  } else {
-                    elizaLogger.debug(`User already exists for userId=${userId}, email=${existingUser.email}`);
+                  if (!existingUser && email) {
+                    const User = await sanityClient.create({
+                      _type: "User",
+                      name: "Unknown User",
+                      email,
+                      interest: "agentVooc",
+                      referralSource: "email-otp",
+                      userId,
+                      createdAt: new Date().toISOString(),
+                      userType: "email",
+                    });
+                    elizaLogger.debug(`Created User: userId=${userId}, _id=${User._id}`);
                   }
                 } catch (error) {
                   elizaLogger.error(`Failed to create User for userId=${userId}:`, error);
@@ -113,14 +105,14 @@ export function backendConfig(): InputType {
             signInUp: async function (input) {
               const response = await originalImplementation.signInUp(input);
               if (response.status === "OK") {
-                const userId = response.user.id;
-                const email = response.user.emails?.[0] || `no-email-${userId}@example.com`;
+                const { id: userId, emails } = response.user;
+                const email = emails?.[0] || `no-email-${userId}@example.com`;
                 const name =
                   input.thirdPartyId === "google"
                     ? response.rawUserInfoFromProvider?.fromUserInfoAPI?.name || "Google User"
                     : "Unknown User";
 
-                elizaLogger.debug(`Third-party signInUp: userId=${userId}, email=${email}, name=${name}`);
+                elizaLogger.debug(`Third-party signInUp: userId=${userId}, email=${email}`);
 
                 try {
                   const existingUser = await sanityClient.fetch(
@@ -138,9 +130,7 @@ export function backendConfig(): InputType {
                       createdAt: new Date().toISOString(),
                       userType: "email",
                     });
-                    elizaLogger.debug(`Created User: userId=${userId}, email=${email}, _id=${User._id}`);
-                  } else {
-                    elizaLogger.debug(`User already exists for userId=${userId}, email=${existingUser.email}`);
+                    elizaLogger.debug(`Created User: _id=${User._id}`);
                   }
                 } catch (error) {
                   elizaLogger.error(`Failed to create User for userId=${userId}:`, error);
@@ -154,158 +144,34 @@ export function backendConfig(): InputType {
         },
       }),
       Session.init({
-        cookieSecure: true,
-        cookieSameSite: "none", // Changed from "strict" to "none" for cross-origin requests
-        sessionExpiredStatusCode: 401,
-        cookieDomain: undefined, // Changed from "agentvooc.com" to undefined for header-based auth
-        useDynamicAccessTokenSigningKey: false,
         antiCsrf: "NONE",
-        getTokenTransferMethod: () => "header", // Force header-based token transfer
+        getTokenTransferMethod: () => "header", // Force header-based transfer
+        useDynamicAccessTokenSigningKey: false,
         override: {
           functions: (originalImplementation) => ({
             ...originalImplementation,
-            createNewSession: async function (input) {
-              elizaLogger.debug(`Creating new session for user: ${input.userId}`);
-              const session = await originalImplementation.createNewSession(input);
-              elizaLogger.debug(`Session created: userId=${input.userId}, sessionHandle=${session.getHandle()}`);
-              return session;
-            },
             getSession: async function (input: any) {
-              try {
-                const request = input.userContext?._default?.request;
-                let authHeader = "";
-
-                if (request?.headers) {
-                  // Handle both Express and Fetch API style headers
-                  authHeader = request.headers.authorization || request.headers["authorization"] || "";
-                }
-
-                // Extract JWT from Authorization header
-                let accessToken = null;
-                if (authHeader && authHeader.startsWith("Bearer ")) {
-                  accessToken = authHeader.replace("Bearer ", "");
-                }
-
-                elizaLogger.debug("getSession called", {
-                  hasAuthorizationHeader: !!authHeader,
-                  authorization: authHeader ? "Bearer [PRESENT]" : "none",
-                  accessTokenPresent: !!accessToken,
-                  sessionRequired: input.options?.sessionRequired || false,
-                  headerKeys: request?.headers ? Object.keys(request.headers) : [],
-                });
-
-                const session = await originalImplementation.getSession({
-                  ...input,
-                  accessToken,
-                });
-
-                if (session) {
-                  elizaLogger.debug("Session retrieved successfully", {
-                    userId: session.getUserId(),
-                    sessionHandle: session.getHandle(),
-                  });
-                } else {
-                  elizaLogger.debug("No session retrieved");
-                }
-
-                return session;
-              } catch (error: any) {
-                const request = input.userContext?._default?.request;
-                let authHeader = "";
-
-                if (request?.headers) {
-                  authHeader = request.headers.authorization || request.headers["authorization"] || "";
-                }
-
-                elizaLogger.warn("Session retrieval failed", {
-                  errorMessage: error.message,
-                  errorType: error.type || "unknown",
-                  authorization: authHeader ? "Bearer [PRESENT]" : "none",
-                  sessionRequired: input.options?.sessionRequired || false,
-                });
-
-                throw error;
+              const request = input.userContext?._default?.request;
+              const authHeader =
+                request?.headers?.authorization || request?.headers?.["authorization"] || "";
+              let accessToken = null;
+              if (authHeader?.startsWith("Bearer ")) {
+                accessToken = authHeader.slice(7);
               }
-            },
-            refreshSession: async function (input) {
-              try {
-                const request = input.userContext?._default?.request;
-                let authHeader = "";
-
-                if (request?.headers) {
-                  authHeader = request.headers.authorization || request.headers["authorization"] || "";
-                }
-
-                elizaLogger.debug("Refreshing session", {
-                  authorization: authHeader ? "Bearer [PRESENT]" : "none",
-                });
-
-                const session = await originalImplementation.refreshSession(input);
-                elizaLogger.debug(`Session refreshed: userId=${session.getUserId()}, sessionHandle=${session.getHandle()}`);
-                return session;
-              } catch (error: any) {
-                const request = input.userContext?._default?.request;
-                let authHeader = "";
-
-                if (request?.headers) {
-                  authHeader = request.headers.authorization || request.headers["authorization"] || "";
-                }
-
-                elizaLogger.error(`Session refresh error: ${error.message}`, {
-                  errorType: error.type,
-                  authorization: authHeader ? "Bearer [PRESENT]" : "none",
-                });
-                throw error;
-              }
-            },
-            revokeSession: async function (input) {
-              elizaLogger.debug(`Revoking session: ${input.sessionHandle}`);
-              const session = await Session.getSessionInformation(input.sessionHandle);
-              const userId = session?.userId || "unknown";
-              const result = await originalImplementation.revokeSession(input);
-              elizaLogger.debug(`Session revoked: userId=${userId}`);
-              return result;
-            },
-          }),
-          apis: (originalImplementation) => ({
-            ...originalImplementation,
-            signOutPOST: async (input) => {
-              const request = input.userContext?.req as any;
-              const authHeader = request?.headers?.authorization || "none";
-              const cookies = request?.headers?.cookie || "none";
-
-              elizaLogger.debug("signOutPOST called", {
-                sessionExists: !!input.session,
-                userId: input.session?.getUserId() || "unknown",
-                cookies,
-                authorization: authHeader.startsWith("Bearer ") ? "Bearer [REDACTED]" : "none",
+              elizaLogger.debug("getSession called", {
+                hasAuthHeader: !!authHeader,
+                tokenPresent: !!accessToken,
               });
-
-              let userId: string | undefined;
-              if (input.session) {
-                userId = input.session.getUserId();
-                try {
-                  await Session.revokeAllSessionsForUser(userId);
-                  elizaLogger.debug(`Revoked all sessions for userId: ${userId}`);
-                } catch (error) {
-                  elizaLogger.error(`Failed to revoke sessions for userId: ${userId}`, error);
-                }
-              }
-
-              // Rely on SuperTokens to handle the response
-              return await originalImplementation.signOutPOST(input);
+              return originalImplementation.getSession({
+                ...input,
+                accessToken,
+              });
             },
           }),
         },
       }),
       Dashboard.init({
         admins: ["agentvooc@gmail.com"],
-        override: {
-          apis: (originalImplementation) => {
-            elizaLogger.debug("Dashboard recipe initialized");
-            return originalImplementation;
-          },
-        },
       }),
     ],
   };

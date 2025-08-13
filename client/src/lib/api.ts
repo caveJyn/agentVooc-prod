@@ -114,11 +114,6 @@ const fetcher = async ({
     const requestHeaders: HeadersInit = {
       Accept: "application/json",
       ...(body instanceof FormData ? {} : { "Content-Type": "application/json" }),
-      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-      "st-auth-mode": "header",
-      "Cache-Control": "no-cache, no-store, must-revalidate",
-      Pragma: "no-cache",
-      Expires: "0",
       ...headers,
     };
 
