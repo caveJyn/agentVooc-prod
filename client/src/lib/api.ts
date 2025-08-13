@@ -37,6 +37,9 @@ const clearCookies = () => {
   console.log("[FETCHER] Cookies after clearing:", document.cookie);
 };
 
+// Rate limiter to prevent request flooding
+const rateLimiter = new Map<string, number>();
+
 const fetcher = async ({
   url,
   method = "GET",
@@ -48,6 +51,17 @@ const fetcher = async ({
   body?: object | FormData;
   headers?: HeadersInit;
 }) => {
+  // Rate limiting to prevent request flooding
+  const rateLimitKey = `${method}:${url}`;
+  const now = Date.now();
+  const lastAttempt = rateLimiter.get(rateLimitKey) || 0;
+  
+  if (now - lastAttempt < 1000) { // 1 second cooldown per endpoint
+    console.warn(`[FETCHER] Rate limited: ${rateLimitKey}, skipping request`);
+    throw new Error("Rate limited - too many requests");
+  }
+  
+  rateLimiter.set(rateLimitKey, now);
   // Prevent requests when already on auth page (except auth-related endpoints)
   if (
     window.location.pathname === "/auth" &&
@@ -117,10 +131,10 @@ const fetcher = async ({
     // Build headers with header-based auth enforcement
     const requestHeaders: HeadersInit = {
       Accept: "application/json",
-      "st-auth-mode": "header", // ✅ enforce header-based auth
       ...(body instanceof FormData ? {} : { "Content-Type": "application/json" }),
       ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       ...headers,
+      "st-auth-mode": "header", // ✅ enforce header-based auth (must be last to prevent override)
     };
 
     const options: RequestInit = {
@@ -161,10 +175,21 @@ const fetcher = async ({
         // Non-JSON response
       }
 
-      // Handle refresh token scenario
-      if (resp.status === 401 && errorObj.message === "try refresh token" && !isRetry) {
-        console.log(`[FETCHER] Received TRY_REFRESH_TOKEN for ${url}`);
-        throw new Error("TRY_REFRESH_TOKEN");
+      // Handle refresh token scenario or general 401
+      if (resp.status === 401 && !isRetry) {
+        // Try to detect if this is a "try refresh token" scenario
+        const isRefreshTokenScenario = errorObj.message === "try refresh token" || 
+                                     errorObj.type === "TRY_REFRESH_TOKEN" ||
+                                     errorText.includes("try refresh token");
+        
+        if (isRefreshTokenScenario) {
+          console.log(`[FETCHER] Received TRY_REFRESH_TOKEN for ${url}`);
+          throw new Error("TRY_REFRESH_TOKEN");
+        } else {
+          // Generic 401 - likely auth mode mismatch or expired session
+          console.warn(`[FETCHER] 401 Unauthorized for ${url}, forcing logout`);
+          throw new Error("FORCE_LOGOUT");
+        }
       }
 
       const error = new Error(errorObj.error || errorObj.message || "Request failed");
@@ -214,6 +239,12 @@ const fetcher = async ({
         window.location.href = `/auth?cb=${Date.now()}`;
         throw new Error("Session expired, redirecting to login");
       }
+    } else if (error.message === "FORCE_LOGOUT") {
+      console.warn(`[FETCHER] Forcing logout due to 401 for ${url}`);
+      await signOut();
+      clearCookies();
+      window.location.href = `/auth?cb=${Date.now()}`;
+      throw new Error("Authentication failed, redirecting to login");
     } else if (error.message === "No active session" || error.message === "No access token available" || error.message === "Failed to retrieve access token") {
       console.warn(`[FETCHER] Request aborted: ${error.message} for ${url}`);
       throw error;
