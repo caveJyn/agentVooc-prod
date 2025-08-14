@@ -2538,7 +2538,7 @@ router.get("/user", async (req: express.Request, res: express.Response) => {
       return res.status(401).json({ error: "Unauthorized", type: "NO_SESSION" });
     }
 
-    
+
     const userId = session.getUserId();
     let user = null;
     
@@ -2655,6 +2655,62 @@ router.get("/user-stats", async (req, res) => {
       stack: error.stack
     });
     res.status(500).json({ error: "Failed to fetch user stats", details: error.message });
+  }
+});
+
+router.post("/auth/signout", async (req: express.Request, res: express.Response) => {
+  elizaLogger.debug("[CLIENT-DIRECT] Request received: POST /auth/signout", {
+    cookies: req.headers.cookie || "none",
+    authorization: req.headers.authorization || "none",
+  });
+
+  try {
+    // Attempt to get session (sessionRequired: false to handle cases where session is already invalid)
+    const session = await Session.getSession(req, res, { sessionRequired: false });
+    const userId = session?.getUserId();
+
+    if (session) {
+      // Revoke the session server-side
+      await session.revokeSession();
+      elizaLogger.debug("[CLIENT-DIRECT] Session revoked", { userId });
+    } else {
+      elizaLogger.debug("[CLIENT-DIRECT] No session found for POST /auth/signout");
+    }
+
+    // Clear all SuperTokens-related cookies explicitly
+    const cookiesToClear = [
+      { name: "sAccessToken", path: "/", domain: "agentvooc.com" },
+      { name: "sRefreshToken", path: "/api/auth/session/refresh", domain: "agentvooc.com" },
+      { name: "sFrontToken", path: "/", domain: "agentvooc.com" },
+      { name: "st-last-access-token-update", path: "/", domain: "agentvooc.com" },
+      { name: "st-access-token", path: "/", domain: "agentvooc.com" },
+      { name: "st-refresh-token", path: "/api/auth/session/refresh", domain: "agentvooc.com" },
+    ];
+
+    cookiesToClear.forEach(({ name, path, domain }) => {
+      res.clearCookie(name, {
+        path,
+        domain,
+        secure: true,
+        sameSite: "strict",
+        expires: new Date(0),
+      });
+    });
+
+    elizaLogger.debug("[CLIENT-DIRECT] Cookies cleared server-side", { cookies: cookiesToClear.map(c => c.name) });
+
+    // Set headers to prevent caching
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+
+    res.status(200).json({ status: "OK" });
+  } catch (error: any) {
+    elizaLogger.error("[CLIENT-DIRECT] Error in POST /auth/signout:", {
+      message: error.message,
+      stack: error.stack,
+    });
+    res.status(500).json({ error: "Failed to sign out", details: error.message });
   }
 });
 

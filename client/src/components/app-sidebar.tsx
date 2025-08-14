@@ -26,7 +26,7 @@ import { Book, Cog, User, Edit, Plus, Mail } from "lucide-react";
 import ConnectionStatus from "./connection-status";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { MouseEvent, useState } from "react";
+import { MouseEvent, useEffect, useState } from "react";
 import { Avatar, AvatarImage } from "./ui/avatar";
 import { sessionHelper } from "@/lib/sessionHelper";
 
@@ -36,6 +36,20 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState<string>("");
   const { setOpen, setOpenMobile, isMobile } = useSidebar();
+  const queryClient = useQueryClient(); // Moved queryClient here for consistency
+
+  // Check session on mount and redirect to /auth if no session
+  useEffect(() => {
+    const checkSession = async () => {
+      const exists = await sessionHelper.doesSessionExist();
+      if (!exists && window.location.pathname !== "/auth") {
+        console.log("[APP_SIDEBAR] No session found, redirecting to /auth");
+        navigate(`/auth?cb=${Date.now()}`, { replace: true });
+      }
+    };
+    checkSession();
+  }, [navigate]);
+
   // Fetch user data
   const userQuery = useQuery({
     queryKey: ["user"],
@@ -90,112 +104,63 @@ export function AppSidebar() {
     enabled: filteredAgents.length > 0,
   });
 
-  const clearCookies = () => {
-  console.log("[APP_SIDEBAR] Cookies before clearing:", document.cookie);
+  const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    const { toast } = useToast();
+    const cacheBust = `?cb=${Date.now()}`;
 
-  const domains = [
-    "agentvooc.com",
-    ".agentvooc.com",
-    window.location.hostname,
-    `.${window.location.hostname}`,
-    "", // No domain for localhost testing
-  ];
-  const paths = ["/", "/api", "/api/auth"]; // Cover all relevant paths
+    try {
+      console.log("[APP_SIDEBAR] Starting logout process");
 
-  const stCookies = [
-    "sAccessToken",
-    "sRefreshToken",
-    "sFrontToken",
-    "st-last-access-token-update",
-    "st-access-token",
-    "st-refresh-token",
-  ];
+      // Cancel & clear all queries
+      await queryClient.cancelQueries();
+      queryClient.invalidateQueries();
+      queryClient.clear();
+      queryClient.setQueryData(["user"], null); // Immediately clear user query
 
-  for (const cookieName of stCookies) {
-    for (const domain of domains) {
-      for (const path of paths) {
-        document.cookie = `${cookieName}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=${path};domain=${domain};Secure;SameSite=Strict`;
-        document.cookie = `${cookieName}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=${path};${domain ? `domain=${domain};` : ""}Secure;SameSite=None`;
+      // Sign out session
+      const sessionExists = await sessionHelper.doesSessionExist();
+      if (sessionExists) {
+        console.log("[APP_SIDEBAR] Signing out session");
+        await sessionHelper.signOut();
+        console.log("[APP_SIDEBAR] Sign out complete");
       }
+
+      // Clear client-side storage
+      localStorage.clear();
+      sessionStorage.clear();
+      setSearchQuery("");
+
+      // Show success toast
+      toast({ title: "Success", description: "Logged out successfully." });
+
+      // Force full page reload to clear state
+      window.location.href = `/auth${cacheBust}`;
+    } catch (err) {
+      console.error("[APP_SIDEBAR] Logout error:", err);
+      const errorMessage = err instanceof Error ? err.message : "Failed to log out.";
+
+      // Clear storage and query cache on error
+      localStorage.clear();
+      sessionStorage.clear();
+      queryClient.clear();
+      queryClient.setQueryData(["user"], null);
+      setSearchQuery("");
+
+      toast({ variant: "destructive", title: "Error", description: errorMessage });
+
+      navigate(`/auth${cacheBust}`, { replace: true });
+      if (isMobile) setOpenMobile(false);
+      else setOpen(false);
+
+      // Ensure redirect
+      setTimeout(() => {
+        if (window.location.pathname !== "/auth") {
+          window.location.href = `/auth${cacheBust}`;
+        }
+      }, 100);
     }
-  }
-
-  // Clear all other cookies
-  const cookies = document.cookie.split(";");
-  for (const cookie of cookies) {
-    const [name] = cookie.split("=").map((c) => c.trim());
-    for (const domain of domains) {
-      for (const path of paths) {
-        document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=${path};domain=${domain};Secure;SameSite=Strict`;
-        document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=${path};${domain ? `domain=${domain};` : ""}Secure;SameSite=None`;
-      }
-    }
-  }
-
-  console.log("[APP_SIDEBAR] Cookies after clearing:", document.cookie);
-};
-
-
-
-const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
-  e.preventDefault();
-  const { toast } = useToast();
-  const cacheBust = `?cb=${Date.now()}`;
-  const queryClient = useQueryClient();
-
-  try {
-    console.log("[APP_SIDEBAR] Starting logout process");
-
-    // Cancel & clear all queries
-    await queryClient.cancelQueries();
-    queryClient.invalidateQueries();
-    queryClient.clear();
-
-    // Sign out session
-    const sessionExists = await sessionHelper.doesSessionExist();
-    if (sessionExists) {
-      console.log("[APP_SIDEBAR] Signing out session");
-      await sessionHelper.signOut();
-      console.log("[APP_SIDEBAR] Sign out complete");
-    }
-
-    // Clear all client-side storage and cookies
-    localStorage.clear();
-    sessionStorage.clear();
-    clearCookies();
-    setSearchQuery("");
-
-    // Show success toast
-    toast({ title: "Success", description: "Logged out successfully." });
-
-    // Force full page reload to clear state
-    window.location.href = `/auth${cacheBust}`;
-  } catch (err) {
-    console.error("[APP_SIDEBAR] Logout error:", err);
-    const errorMessage = err instanceof Error ? err.message : "Failed to log out.";
-
-    // Clear storage and cookies on error
-    localStorage.clear();
-    sessionStorage.clear();
-    clearCookies();
-    queryClient.clear();
-    setSearchQuery("");
-
-    toast({ variant: "destructive", title: "Error", description: errorMessage });
-
-    // Force navigation
-    navigate(`/auth${cacheBust}`, { replace: true });
-    if (isMobile) setOpenMobile(false);
-    else setOpen(false);
-
-    // Ensure redirect
-    setTimeout(() => {
-      if (window.location.pathname !== "/auth") {
-        window.location.href = `/auth${cacheBust}`;
-      }
-    }, 100);
-  }
-};
+  };
 
 
 

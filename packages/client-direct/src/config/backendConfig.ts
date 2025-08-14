@@ -144,9 +144,10 @@ export function backendConfig(): InputType {
         },
       }),
       Session.init({
+        cookieDomain: "agentvooc.com",
+        cookieSameSite: "strict",
         cookieSecure: true,
-        antiCsrf: "NONE",
-       
+        antiCsrf: "VIA_TOKEN",       
       
       // 🚀 Dynamic detection based on request
       getTokenTransferMethod: ({ req, forCreateNewSession }) => {

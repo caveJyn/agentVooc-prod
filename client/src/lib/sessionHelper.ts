@@ -1,5 +1,6 @@
 // client/src/lib/sessionHelper.ts
 import Session from "supertokens-web-js/recipe/session";
+import { apiClient } from "./api";
 
 export const sessionHelper = {
   /**
@@ -56,17 +57,28 @@ export const sessionHelper = {
         return;
       }
 
-      await Session.signOut({
-        config: {
-          headers: {
-            "st-auth-mode": "cookie",
-          },
-        },
-      });
-
-      console.log("[sessionHelper] Session signed out successfully");
+      // Attempt signout with retry
+      let attempts = 0;
+      const maxAttempts = 3;
+      while (attempts < maxAttempts) {
+        try {
+          console.log(`[sessionHelper] Attempting signOut (attempt ${attempts + 1})`);
+          await apiClient.signOut();
+          console.log("[sessionHelper] Session signed out successfully");
+          break;
+        } catch (err) {
+          attempts++;
+          console.error(`[sessionHelper] signOut attempt ${attempts} failed:`, err);
+          if (attempts === maxAttempts) {
+            console.warn("[sessionHelper] Max signOut attempts reached");
+            throw new Error("Failed to sign out after retries");
+          }
+          await new Promise(resolve => setTimeout(resolve, 1000)); // 1-second delay between retries
+        }
+      }
 
       // Explicitly clear cookies client-side as a fallback
+      console.log("[sessionHelper] Cookies before clearing:", document.cookie);
       const domains = [
         "agentvooc.com",
         ".agentvooc.com",
@@ -84,7 +96,6 @@ export const sessionHelper = {
         "st-refresh-token",
       ];
 
-      console.log("[sessionHelper] Cookies before clearing:", document.cookie);
       for (const cookieName of stCookies) {
         for (const domain of domains) {
           for (const path of paths) {
@@ -94,6 +105,12 @@ export const sessionHelper = {
         }
       }
       console.log("[sessionHelper] Cookies after clearing:", document.cookie);
+
+      // Verify session is gone
+      const sessionExists = await sessionHelper.doesSessionExist();
+      if (sessionExists) {
+        console.warn("[sessionHelper] Session still exists after signOut");
+      }
     } catch (err) {
       console.error("[sessionHelper] signOut error:", err);
       throw err;

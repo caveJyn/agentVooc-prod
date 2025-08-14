@@ -151,7 +151,7 @@ const fetcher = async ({
         throw new Error("Failed to retrieve access token");
       }
     }
-    
+
     const transferMethod = Session.getTokenTransferMethod();
         console.log(`[FETCHER] Token transfer method 2nd: ${transferMethod}`);
 
@@ -861,6 +861,20 @@ export const apiClient = {
     return fetcher({
       url: "/api/user-stats",
       method: "GET",
+    });
+  },
+
+  signOut: async () => {
+    console.log("[API_CLIENT] Initiating sign out");
+    return fetcher({
+      url: "/api/auth/signout",
+      method: "POST",
+      headers: {
+        "st-auth-mode": "cookie", // Ensure cookie-based auth
+      },
+    }).then((response) => {
+      console.log("[API_CLIENT] Sign out response:", response);
+      return response;
     });
   },
   
