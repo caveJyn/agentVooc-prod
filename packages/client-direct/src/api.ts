@@ -2392,6 +2392,13 @@ router.post("/user", async (req: express.Request, res: express.Response) => {
   elizaLogger.debug("[CLIENT-DIRECT] Request body:", req.body);
   try {
     const session = await Session.getSession(req, res, { sessionRequired: true });
+
+    if (!session) {
+      elizaLogger.warn("[CLIENT-DIRECT] No session found for POST /user");
+      return res.status(401).json({ error: "Unauthorized", type: "NO_SESSION" });
+    }
+
+
     const userId = session.getUserId();
     const { name, email, interest, referralSource, createdAt, userType } = req.body;
 
@@ -2525,6 +2532,13 @@ router.post("/user", async (req: express.Request, res: express.Response) => {
 router.get("/user", async (req: express.Request, res: express.Response) => {
   try {
     const session = await Session.getSession(req, res, { sessionRequired: true });
+
+    if (!session) {
+      elizaLogger.warn("[USER_ENDPOINT] No session found for GET /user");
+      return res.status(401).json({ error: "Unauthorized", type: "NO_SESSION" });
+    }
+
+    
     const userId = session.getUserId();
     let user = null;
     

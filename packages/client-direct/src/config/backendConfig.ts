@@ -146,19 +146,38 @@ export function backendConfig(): InputType {
       Session.init({
         cookieSecure: true,
         antiCsrf: "NONE",
-        getTokenTransferMethod: (input) => {
-    const authMode = input.req.getHeaderValue("st-auth-mode");
-    elizaLogger.debug("[SESSION] Token transfer method check:", {
-      authMode,
-      hasAuthHeader: !!input.req.getHeaderValue("authorization"),
-      forCreateNewSession: input.forCreateNewSession,
-    });
-    return authMode === "header" ? "header" : "cookie";  // Changed default to "cookie"
-  },
-        useDynamicAccessTokenSigningKey: false,
-        // Remove the custom getSession override - let SuperTokens handle it automatically
-        // The override was causing the issue by manually extracting tokens
-      }),
+       
+      
+      // 🚀 Dynamic detection based on request
+      getTokenTransferMethod: ({ req, forCreateNewSession }) => {
+  const authMode = req.getHeaderValue("st-auth-mode");
+  const hasAuthHeader = !!req.getHeaderValue("authorization");
+
+  console.log("[BACKEND] Token transfer method decision:", {
+    authMode,
+    hasAuthHeader,
+    forCreateNewSession
+  });
+
+  if (authMode === "header" || hasAuthHeader) {
+    return "header";
+  }
+  return "cookie"; // fallback
+},
+
+      
+      // 🚀 Override session detection
+      override: {
+    functions: (originalImplementation) => ({
+      ...originalImplementation,
+      getSession: async function (input) {
+        // No req here unless you change API layer
+        console.log("[BACKEND] getSession override, userContext:", input.userContext);
+        return originalImplementation.getSession(input);
+      }
+    })
+  }
+    }),
       Dashboard.init({
         admins: ["agentvooc@gmail.com"],
       }),

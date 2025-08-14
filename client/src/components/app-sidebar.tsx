@@ -41,6 +41,7 @@ export function AppSidebar() {
     queryKey: ["user"],
     queryFn: () => apiClient.getUser(),
     staleTime: 0, // 30 * 60 * 1000, Cache for 30 minutes
+    refetchOnMount: "always",
     refetchInterval: false,
   });
 
@@ -49,6 +50,7 @@ export function AppSidebar() {
     queryKey: ["agents"],
     queryFn: () => apiClient.getAgents(),
     staleTime: 0, //30 * 60 * 1000,
+    refetchOnMount: "always",
     refetchInterval: false,
   });
 
@@ -91,20 +93,14 @@ export function AppSidebar() {
   const clearCookies = () => {
   console.log("[APP_SIDEBAR] Cookies before clearing:", document.cookie);
 
-  const cookies = document.cookie.split(";");
   const domains = [
     "agentvooc.com",
     ".agentvooc.com",
     window.location.hostname,
     `.${window.location.hostname}`,
+    "", // No domain for localhost testing
   ];
-
-  for (const cookie of cookies) {
-    const [name] = cookie.split("=").map((c) => c.trim());
-    for (const domain of domains) {
-      document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${domain};secure;samesite=strict`;
-    }
-  }
+  const paths = ["/", "/api", "/api/auth"]; // Cover all relevant paths
 
   const stCookies = [
     "sAccessToken",
@@ -117,34 +113,53 @@ export function AppSidebar() {
 
   for (const cookieName of stCookies) {
     for (const domain of domains) {
-      document.cookie = `${cookieName}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${domain};secure;samesite=strict`;
+      for (const path of paths) {
+        document.cookie = `${cookieName}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=${path};domain=${domain};Secure;SameSite=Strict`;
+        document.cookie = `${cookieName}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=${path};${domain ? `domain=${domain};` : ""}Secure;SameSite=None`;
+      }
+    }
+  }
+
+  // Clear all other cookies
+  const cookies = document.cookie.split(";");
+  for (const cookie of cookies) {
+    const [name] = cookie.split("=").map((c) => c.trim());
+    for (const domain of domains) {
+      for (const path of paths) {
+        document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=${path};domain=${domain};Secure;SameSite=Strict`;
+        document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=${path};${domain ? `domain=${domain};` : ""}Secure;SameSite=None`;
+      }
     }
   }
 
   console.log("[APP_SIDEBAR] Cookies after clearing:", document.cookie);
 };
 
+
+
 const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
   e.preventDefault();
   const { toast } = useToast();
   const cacheBust = `?cb=${Date.now()}`;
+  const queryClient = useQueryClient();
 
   try {
     console.log("[APP_SIDEBAR] Starting logout process");
 
-    // Cancel & clear all queries efficiently
-    const queryClient = useQueryClient();
-    await queryClient.cancelQueries(); // Await to ensure completion
-    queryClient.invalidateQueries(); // Invalidate all (refetch on remount would fail post-logout)
-    queryClient.clear(); // Fully clear cache
+    // Cancel & clear all queries
+    await queryClient.cancelQueries();
+    queryClient.invalidateQueries();
+    queryClient.clear();
 
-    // Check & sign out session (header-based)
+    // Sign out session
     const sessionExists = await sessionHelper.doesSessionExist();
     if (sessionExists) {
+      console.log("[APP_SIDEBAR] Signing out session");
       await sessionHelper.signOut();
+      console.log("[APP_SIDEBAR] Sign out complete");
     }
 
-    // Clear client-side storage & cookies
+    // Clear all client-side storage and cookies
     localStorage.clear();
     sessionStorage.clear();
     clearCookies();
@@ -153,27 +168,27 @@ const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
     // Show success toast
     toast({ title: "Success", description: "Logged out successfully." });
 
-    // Force navigation to auth page
-    window.location.href = `/auth${cacheBust}`; // Force full reload
+    // Force full page reload to clear state
+    window.location.href = `/auth${cacheBust}`;
   } catch (err) {
     console.error("[APP_SIDEBAR] Logout error:", err);
     const errorMessage = err instanceof Error ? err.message : "Failed to log out.";
 
-    // Graceful fallback cleanup
+    // Clear storage and cookies on error
     localStorage.clear();
     sessionStorage.clear();
     clearCookies();
+    queryClient.clear();
     setSearchQuery("");
 
     toast({ variant: "destructive", title: "Error", description: errorMessage });
 
-    // Force navigation to auth page with cache-busting
-    const { setOpen, setOpenMobile, isMobile } = useSidebar();
-    const navigate = useNavigate();
+    // Force navigation
     navigate(`/auth${cacheBust}`, { replace: true });
     if (isMobile) setOpenMobile(false);
     else setOpen(false);
 
+    // Ensure redirect
     setTimeout(() => {
       if (window.location.pathname !== "/auth") {
         window.location.href = `/auth${cacheBust}`;
