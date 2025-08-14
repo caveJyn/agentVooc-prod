@@ -1,7 +1,7 @@
 // /client/src/lib/sessionHelper.ts
 import Session from "supertokens-web-js/recipe/session";
 import { apiClient } from "./api";
-import { clearCookies } from "./clearCookies"; // Import the new clearCookies function
+import { clearCookies } from "./clearCookies";
 
 export const sessionHelper = {
   /**
@@ -55,6 +55,9 @@ export const sessionHelper = {
       const exists = await sessionHelper.doesSessionExist();
       if (!exists) {
         console.log("[sessionHelper] No session exists, skipping signOut");
+        clearCookies(true); // Clear cookies even if no session
+        localStorage.clear();
+        sessionStorage.clear();
         return;
       }
 
@@ -78,25 +81,26 @@ export const sessionHelper = {
         }
       }
 
-      // Clear cookies using the shared utility
-      clearCookies();
+      // Clear all cookies and storage
+      clearCookies(true);
+      localStorage.clear();
+      sessionStorage.clear();
 
       // Verify session is gone
       const sessionExists = await sessionHelper.doesSessionExist();
       if (sessionExists) {
-        console.warn("[sessionHelper] Session still exists after signOut");
+        console.warn("[sessionHelper] Session still exists after signOut, forcing cleanup");
+        await Session.signOut();
+        clearCookies(true);
+        localStorage.clear();
+        sessionStorage.clear();
       }
+
+      console.log("[sessionHelper] Signout complete, redirecting to /auth");
+      window.location.href = `/auth?cb=${Date.now()}`;
     } catch (err) {
       console.error("[sessionHelper] signOut error:", err);
       throw err;
     }
   },
 };
-
-// If you ever need the current access token (for API requests via headers):
-// const session = await sessionHelper.getSession();
-// if (session) {
-//   const token = session.accessToken;
-//   // use token in Authorization header
-// }
-

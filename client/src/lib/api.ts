@@ -73,7 +73,7 @@ const fetcher = async ({
   const makeRequest = async (isRetry: boolean = false): Promise<any> => {
     const sessionExists = await Session.doesSessionExist();
     if (!isRetry) {
-      console.log(`[FETCHER] Session exists: ${sessionExists}, URL: ${url}`);
+      console.log(`[FETCHER] Session exists: ${sessionExists}, URL: ${url}, Cookies:`, document.cookie);
     }
 
     // Check session for non-auth endpoints
@@ -86,8 +86,10 @@ const fetcher = async ({
       if (!isRetry) console.warn(`[FETCHER] No session exists, aborting request to ${url}`);
       if (!isRetry) {
         await signOut();
-        clearCookies(); // Use the imported clearCookies
-        console.log(`[FETCHER] Forcing logout due to no session`);
+        clearCookies(true); // Force clear all cookies
+        localStorage.clear();
+        sessionStorage.clear();
+        console.log(`[FETCHER] Forcing logout due to no session, Cookies after clear:`, document.cookie);
         window.location.href = `/auth?cb=${Date.now()}`;
       }
       throw new Error("No active session");
@@ -206,7 +208,7 @@ const fetcher = async ({
       // Handle 500 error for multiple cookies
       if (resp.status === 500 && errorText.includes("multiple session cookies")) {
         console.warn(`[FETCHER] Multiple session cookies detected for ${url}, clearing cookies`);
-        clearCookies(); // Clear cookies on 500 error
+        clearCookies(true); // Force clear all cookies
         throw new Error("MULTIPLE_COOKIES");
       }
 
@@ -240,7 +242,8 @@ const fetcher = async ({
     if (error.message === "TRY_REFRESH_TOKEN" || error.message === "MULTIPLE_COOKIES") {
       console.log(`[FETCHER] Attempting session refresh for ${url}`);
       try {
-        clearCookies(); // Clear cookies before refresh to prevent duplicates
+        clearCookies(true); // Force clear all cookies before refresh
+        console.log(`[FETCHER] Cookies after clear before refresh:`, document.cookie);
         const refreshed = await Session.attemptRefreshingSession();
         if (refreshed) {
           console.log(`[FETCHER] Session refresh successful, retrying request`);
@@ -248,31 +251,38 @@ const fetcher = async ({
         }
         console.warn(`[FETCHER] Session refresh failed, forcing logout`);
         await signOut();
-        clearCookies();
+        clearCookies(true);
+        localStorage.clear();
+        sessionStorage.clear();
+        console.log(`[FETCHER] Cookies after logout:`, document.cookie);
         window.location.href = `/auth?cb=${Date.now()}`;
         throw new Error("Session expired, redirecting to login");
       } catch (refreshError) {
         console.error(`[FETCHER] Session refresh error:`, refreshError);
         await signOut();
-        clearCookies();
+        clearCookies(true);
+        localStorage.clear();
+        sessionStorage.clear();
+        console.log(`[FETCHER] Cookies after refresh error:`, document.cookie);
         window.location.href = `/auth?cb=${Date.now()}`;
         throw new Error("Session expired, redirecting to login");
       }
-    } else if (error.message === "FORCE_LOGOUT") {
-      if (!circuitBreaker.isOpen) {
-        console.warn(`[FETCHER] Forcing logout due to 401 for ${url}`);
-        await signOut();
-        clearCookies();
-        window.location.href = `/auth?cb=${Date.now()}`;
-      }
-      throw new Error("Authentication failed, redirecting to login");
     } else if (
+      error.message === "FORCE_LOGOUT" ||
       error.message === "No active session" ||
       error.message === "No access token available" ||
       error.message === "Failed to retrieve access token"
     ) {
-      console.warn(`[FETCHER] Request aborted: ${error.message} for ${url}`);
-      throw error;
+      if (!circuitBreaker.isOpen) {
+        console.warn(`[FETCHER] Forcing logout due to ${error.message} for ${url}`);
+        await signOut();
+        clearCookies(true);
+        localStorage.clear();
+        sessionStorage.clear();
+        console.log(`[FETCHER] Cookies after forced logout:`, document.cookie);
+        window.location.href = `/auth?cb=${Date.now()}`;
+      }
+      throw new Error("Authentication failed, redirecting to login");
     }
     throw error;
   }
@@ -849,17 +859,18 @@ export const apiClient = {
   },
 
   signOut: async () => {
-    console.log("[API_CLIENT] Initiating sign out");
-    return fetcher({
-      url: "/api/auth/signout",
-      method: "POST",
-      headers: {
-        "st-auth-mode": "cookie", // Ensure cookie-based auth
-      },
-    }).then((response) => {
-      console.log("[API_CLIENT] Sign out response:", response);
-      return response;
-    });
+    try {
+      console.log("[apiClient] Initiating signOut");
+      await Session.signOut();
+      clearCookies(true);
+      localStorage.clear();
+      sessionStorage.clear();
+      console.log("[apiClient] Signout complete, Cookies:", document.cookie);
+      window.location.href = `/auth?cb=${Date.now()}`;
+    } catch (error) {
+      console.error("[apiClient] Signout error:", error);
+      throw error;
+    }
   },
   
   getItems: ({ itemType }: { itemType?: string } = {}) => {
