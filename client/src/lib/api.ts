@@ -1,6 +1,5 @@
 import type { UUID, Character, Plugin } from "@elizaos/core";
 import Session, { signOut }  from "supertokens-web-js/recipe/session";
-import { clearCookies } from "./clearCookies";
 
 // Base URL for API requests
 // this routes trafic to the server(backend) localhost:3000
@@ -10,280 +9,144 @@ const BASE_URL  =
     `${import.meta.env.VITE_SERVER_URL}:${import.meta.env.VITE_SERVER_PORT}`;
 // console.log(`[FETCHER] Using BASE_URL: ${BASE_URL}`);
 
-
-
-// Rate limiter to prevent request flooding
-const rateLimiter = new Map<string, number>();
-
-// Circuit breaker to prevent infinite reload loops
-const circuitBreaker = {
-  failures: 0,
-  lastFailure: 0,
-  isOpen: false,
-  openUntil: 0,
-};
-
-const CIRCUIT_BREAKER_THRESHOLD = 3; // Max failures before opening circuit
-const CIRCUIT_BREAKER_TIMEOUT = 30000; // 30 seconds before retry
-
 const fetcher = async ({
   url,
-  method = "GET",
+  method,
   body,
-  headers = {},
+  headers,
 }: {
   url: string;
   method?: "GET" | "POST" | "DELETE" | "PATCH";
   body?: object | FormData;
   headers?: HeadersInit;
 }) => {
-  // Check circuit breaker
-  const now = Date.now();
-  if (circuitBreaker.isOpen && now < circuitBreaker.openUntil) {
-    console.warn(`[FETCHER] Circuit breaker OPEN - blocking requests until ${new Date(circuitBreaker.openUntil).toLocaleTimeString()}`);
-    throw new Error("Circuit breaker open - too many auth failures");
-  } else if (circuitBreaker.isOpen && now >= circuitBreaker.openUntil) {
-    console.log(`[FETCHER] Circuit breaker RESET - attempting recovery`);
-    circuitBreaker.isOpen = false;
-    circuitBreaker.failures = 0;
-  }
-
-  // Rate limiting to prevent request flooding
-  const rateLimitKey = `${method}:${url}`;
-  const lastAttempt = rateLimiter.get(rateLimitKey) || 0;
-
-  if (now - lastAttempt < 1000) {
-    console.warn(`[FETCHER] Rate limited: ${rateLimitKey}, skipping request`);
-    throw new Error("Rate limited - too many requests");
-  }
-
-  rateLimiter.set(rateLimitKey, now);
-
-  // Prevent requests when already on auth page (except auth-related endpoints)
+  // Prevent redirect loop if already on /auth, except for auth-related endpoints
   if (
     window.location.pathname === "/auth" &&
     !url.startsWith("/api/auth") &&
-    !url.startsWith("/api/user") &&
-    !url.startsWith("/api/invoice")
+    !url.startsWith("/api/user")
   ) {
-    console.log(`[FETCHER] Aborting fetch: Already on auth page for ${url}`);
+    // console.log(`[FETCHER] Aborting fetch: Already on auth page for ${url}`);
     throw new Error("Already on auth page, aborting fetch");
   }
 
-  const makeRequest = async (isRetry: boolean = false): Promise<any> => {
-    const sessionExists = await Session.doesSessionExist();
-    if (!isRetry) {
-      console.log(`[FETCHER] Session exists: ${sessionExists}, URL: ${url}, Cookies:`, document.cookie);
-    }
-
-    // Check session for non-auth endpoints
-    if (
-      !sessionExists &&
-      !url.startsWith("/api/auth") &&
-      !url.startsWith("/api/user") &&
-      !url.startsWith("/api/invoice")
-    ) {
-      if (!isRetry) console.warn(`[FETCHER] No session exists, aborting request to ${url}`);
-      if (!isRetry) {
-        await signOut();
-        clearCookies(true); // Force clear all cookies
-        localStorage.clear();
-        sessionStorage.clear();
-        console.log(`[FETCHER] Forcing logout due to no session, Cookies after clear:`, document.cookie);
-        window.location.href = `/auth?cb=${Date.now()}`;
-      }
-      throw new Error("No active session");
-    }
-
-    // Get access token for header-based auth
-    let accessToken: string | undefined;
-    if (sessionExists) {
-      try {
-        accessToken = await Session.getAccessToken();
-        if (!isRetry) {
-          console.log(`[FETCHER] Access token retrieved: ${accessToken ? "present" : "missing"}`);
-        }
-        if (!accessToken && !url.startsWith("/api/auth") && !url.startsWith("/api/user") && !url.startsWith("/api/invoice")) {
-          if (!isRetry) console.warn(`[FETCHER] No access token available, aborting request to ${url}`);
-          if (!isRetry) {
-            await signOut();
-            localStorage.clear();
-            sessionStorage.clear();
-            clearCookies(); // Use the imported clearCookies
-            console.log(`[FETCHER] Forcing logout due to missing access token`);
-            window.location.href = `/auth?cb=${Date.now()}`;
-          }
-          throw new Error("No access token available");
-        }
-        const transferMethod = Session.getTokenTransferMethod();
-        console.log(`[FETCHER] Token transfer method 1st: ${transferMethod}`);
-      } catch (error) {
-        if (!isRetry) console.error(`[FETCHER] Failed to get access token:`, error);
-        if (!isRetry) {
-          await signOut();
-          clearCookies(); // Use the imported clearCookies
-          console.log(`[FETCHER] Forcing logout due to token retrieval failure`);
-          window.location.href = `/auth?cb=${Date.now()}`;
-        }
-        throw new Error("Failed to retrieve access token");
-      }
-    }
-
-    const transferMethod = Session.getTokenTransferMethod();
-    console.log(`[FETCHER] Token transfer method 2nd: ${transferMethod}`);
-
-    // Build headers with header-based auth enforcement
-    const requestHeaders: HeadersInit = {
-      Accept: "application/json",
-      ...(body instanceof FormData ? {} : { "Content-Type": "application/json" }),
-      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-      ...headers,
-      "st-auth-mode": "cookie", // Default to cookie
-      ...(transferMethod === "header" && accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-    };
-
+  const makeRequest = async (): Promise<any> => {
     const options: RequestInit = {
-      method,
-      headers: requestHeaders,
-      ...(body && (method === "POST" || method === "PATCH")
-        ? { body: body instanceof FormData ? body : JSON.stringify(body) }
-        : {}),
+      method: method ?? "GET",
+      headers: headers
+        ? headers
+        : {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+      credentials: "include", // Required for SuperTokens to send session cookies
     };
 
-    if (!isRetry) {
-      console.log(`[FETCHER] Sending ${method} request to ${BASE_URL}${url}`, {
-        headers: Object.keys(requestHeaders),
-        hasAuthToken: !!accessToken,
-        authMode: "cookie", // Corrected log to reflect actual auth mode
-        body: body instanceof FormData ? "[FormData]" : body,
-      });
+    if (method === "POST" || method === "PATCH") {
+      if (body instanceof FormData) {
+        if (options.headers && typeof options.headers === "object") {
+          options.headers = Object.fromEntries(
+            Object.entries(options.headers as Record<string, string>).filter(
+              ([key]) => key !== "Content-Type"
+            )
+          );
+        }
+        options.body = body;
+        // console.log(`[FETCHER] Preparing ${method} request with FormData body for ${url}`);
+      } else {
+        options.body = JSON.stringify(body);
+        // console.log(`[FETCHER] Preparing ${method} request with JSON body for ${url}:`, body);
+      }
     }
+
+    // console.log(`[FETCHER] Sending request to ${BASE_URL}${url} with method: ${method}`);
+    // console.log(`[FETCHER] Fetching ${BASE_URL}${url} with headers:`, options.headers);
 
     const resp = await fetch(`${BASE_URL}${url}`, options);
-    if (!isRetry) {
-      console.log(`[FETCHER] Response status for ${url}: ${resp.status}, Headers:`, {
-        cfCacheStatus: resp.headers.get("cf-cache-status"),
-        contentType: resp.headers.get("Content-Type"),
-      });
+    // console.log(`[FETCHER] Response status for ${url}: ${resp.status}`);
+    // console.log(`[FETCHER] Response headers for ${url}:`, 
+    //   {
+    //   "access-control-allow-origin": resp.headers.get("access-control-allow-origin"),
+    //   "access-control-allow-credentials": resp.headers.get("access-control-allow-credentials"),
+    // });
+
+    const contentType = resp.headers.get("Content-Type");
+    if (contentType?.includes("audio/mpeg")) {
+      // console.log(`[FETCHER] Response is audio/mpeg for ${url}, returning blob`);
+      return await resp.blob();
     }
 
     if (!resp.ok) {
       const errorText = await resp.text();
-      if (!isRetry) {
-        console.error(`[FETCHER] Fetch error for ${url}: ${errorText}, Status: ${resp.status}`);
-      }
-
-      let errorObj: any = { error: errorText };
+      // console.error(`[FETCHER] Fetch error for ${url}:`, errorText, "Status:", resp.status);
+      
+      let errorMessage = "An error occurred.";
+      let errorObj: any = {};
+      
       try {
         errorObj = JSON.parse(errorText);
+        errorMessage = errorObj.error || errorObj.message || errorText;
+        // console.log(`[FETCHER] Parsed error for ${url}:`, errorMessage);
       } catch {
-        // Non-JSON response
+        errorMessage = errorText || "Unknown error";
+        // console.log(`[FETCHER] Failed to parse error response for ${url}:`, errorText);
       }
 
-      // Handle refresh token scenario or general 401
-      if (resp.status === 401 && !isRetry) {
-        const isRefreshTokenScenario =
-          errorObj.message === "try refresh token" ||
-          errorObj.type === "TRY_REFRESH_TOKEN" ||
-          errorText.includes("try refresh token");
-
-        if (isRefreshTokenScenario) {
-          console.log(`[FETCHER] Received TRY_REFRESH_TOKEN for ${url}`);
-          throw new Error("TRY_REFRESH_TOKEN");
-        } else {
-          console.warn(`[FETCHER] 401 Unauthorized for ${url}, incrementing circuit breaker`);
-          circuitBreaker.failures++;
-          circuitBreaker.lastFailure = Date.now();
-
-          if (circuitBreaker.failures >= CIRCUIT_BREAKER_THRESHOLD) {
-            circuitBreaker.isOpen = true;
-            circuitBreaker.openUntil = Date.now() + CIRCUIT_BREAKER_TIMEOUT;
-            console.error(`[FETCHER] Circuit breaker OPENED - too many 401s (${circuitBreaker.failures})`);
-          }
-
-          throw new Error("FORCE_LOGOUT");
-        }
+      // Check if this is a SuperTokens session refresh error
+      if (resp.status === 401 && errorObj.message === "try refresh token") {
+        // console.log(`[FETCHER] Session refresh needed for ${url}`);
+        throw new Error("TRY_REFRESH_TOKEN");
       }
 
-      // Handle 500 error for multiple cookies
-      if (resp.status === 500 && errorText.includes("multiple session cookies")) {
-        console.warn(`[FETCHER] Multiple session cookies detected for ${url}, clearing cookies`);
-        clearCookies(true); // Force clear all cookies
-        throw new Error("MULTIPLE_COOKIES");
-      }
-
-      const error = new Error(errorObj.error || errorObj.message || "Request failed");
+      const error = new Error(errorMessage);
       (error as any).status = resp.status;
+      // console.log(`[FETCHER] Throwing error for ${url}:`, errorMessage);
       throw error;
     }
 
-    // Handle different response types
-    if (resp.headers.get("Content-Type")?.includes("audio/mpeg")) {
-      if (!isRetry) console.log(`[FETCHER] Response is audio/mpeg for ${url}, returning blob`);
-      return await resp.blob();
-    }
-
+    // Handle 204 No Content responses
     if (resp.status === 204) {
-      if (!isRetry) console.log(`[FETCHER] 204 No Content for ${url}, returning empty object`);
+      // console.log(`[FETCHER] 204 No Content for ${url}, returning empty object`);
       return {};
     }
 
+    // console.log(`[FETCHER] Parsing response as JSON for ${url}`);
     const responseData = await resp.json();
-    if (!isRetry) console.log(`[FETCHER] Response data for ${url}:`, responseData);
+    // console.log(`[FETCHER] Response data for ${url}:`, responseData);
     return responseData;
   };
 
   try {
     return await makeRequest();
   } catch (error: any) {
-    console.error(`[FETCHER] Error for ${url}:`, error);
-
-    // Handle token refresh
-    if (error.message === "TRY_REFRESH_TOKEN" || error.message === "MULTIPLE_COOKIES") {
-      console.log(`[FETCHER] Attempting session refresh for ${url}`);
+    // console.error(`[FETCHER] Error for ${url}:`, error);
+    
+    // Handle SuperTokens session refresh
+    if (error.message === "TRY_REFRESH_TOKEN") {
+      // console.log(`[FETCHER] Attempting session refresh for ${url}`);
+      
       try {
-        clearCookies(true); // Force clear all cookies before refresh
-        console.log(`[FETCHER] Cookies after clear before refresh:`, document.cookie);
+        // Attempt to refresh the session
         const refreshed = await Session.attemptRefreshingSession();
+        
         if (refreshed) {
-          console.log(`[FETCHER] Session refresh successful, retrying request`);
-          return await makeRequest(true);
+          // console.log(`[FETCHER] Session refreshed successfully, retrying ${url}`);
+          // Retry the original request with the new session
+          return await makeRequest();
+        } else {
+          // console.log(`[FETCHER] Session refresh failed, redirecting to auth for ${url}`);
+          // Session refresh failed, redirect to auth
+          window.location.href = "/auth";
+          throw new Error("Session expired, please login again");
         }
-        console.warn(`[FETCHER] Session refresh failed, forcing logout`);
-        await signOut();
-        clearCookies(true);
-        localStorage.clear();
-        sessionStorage.clear();
-        console.log(`[FETCHER] Cookies after logout:`, document.cookie);
-        window.location.href = `/auth?cb=${Date.now()}`;
-        throw new Error("Session expired, redirecting to login");
       } catch (refreshError) {
-        console.error(`[FETCHER] Session refresh error:`, refreshError);
-        await signOut();
-        clearCookies(true);
-        localStorage.clear();
-        sessionStorage.clear();
-        console.log(`[FETCHER] Cookies after refresh error:`, document.cookie);
-        window.location.href = `/auth?cb=${Date.now()}`;
-        throw new Error("Session expired, redirecting to login");
+        // console.error(`[FETCHER] Session refresh error for ${url}:`, refreshError);
+        // Session refresh failed, redirect to auth
+        window.location.href = "/auth";
+        throw new Error("Session expired, please login again");
       }
-    } else if (
-      error.message === "FORCE_LOGOUT" ||
-      error.message === "No active session" ||
-      error.message === "No access token available" ||
-      error.message === "Failed to retrieve access token"
-    ) {
-      if (!circuitBreaker.isOpen) {
-        console.warn(`[FETCHER] Forcing logout due to ${error.message} for ${url}`);
-        await signOut();
-        clearCookies(true);
-        localStorage.clear();
-        sessionStorage.clear();
-        console.log(`[FETCHER] Cookies after forced logout:`, document.cookie);
-        window.location.href = `/auth?cb=${Date.now()}`;
-      }
-      throw new Error("Authentication failed, redirecting to login");
     }
+    
     throw error;
   }
 };
@@ -844,33 +707,18 @@ export const apiClient = {
       method: "DELETE",
     }),
 
-  getUser: async () => {
-    const exists = await Session.doesSessionExist();
-    if (!exists) return { status: "skipped", reason: "No active session" };
-    return fetcher({ url: "/api/user" });
+  getUser: () => {
+    return fetcher({
+      url: "/api/user",
+      method: "GET",
+    });
   },
-
 
   getUserStats: () => {
     return fetcher({
       url: "/api/user-stats",
       method: "GET",
     });
-  },
-
-  signOut: async () => {
-    try {
-      console.log("[apiClient] Initiating signOut");
-      await Session.signOut();
-      clearCookies(true);
-      localStorage.clear();
-      sessionStorage.clear();
-      console.log("[apiClient] Signout complete, Cookies:", document.cookie);
-      window.location.href = `/auth?cb=${Date.now()}`;
-    } catch (error) {
-      console.error("[apiClient] Signout error:", error);
-      throw error;
-    }
   },
   
   getItems: ({ itemType }: { itemType?: string } = {}) => {
@@ -971,7 +819,6 @@ export const apiClient = {
       url: "/api/connection-status",
       method: "GET",
     }),
-
 
   getLegalDocuments: (): Promise<{ legalDocuments: LegalDocument[] }> => {
     return fetcher({

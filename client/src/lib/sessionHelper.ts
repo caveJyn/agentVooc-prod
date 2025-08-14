@@ -1,7 +1,5 @@
-// /client/src/lib/sessionHelper.ts
+// client/src/lib/sessionHelper.ts
 import Session from "supertokens-web-js/recipe/session";
-import { apiClient } from "./api";
-import { clearCookies } from "./clearCookies";
 
 export const sessionHelper = {
   /**
@@ -55,52 +53,59 @@ export const sessionHelper = {
       const exists = await sessionHelper.doesSessionExist();
       if (!exists) {
         console.log("[sessionHelper] No session exists, skipping signOut");
-        clearCookies(true); // Clear cookies even if no session
-        localStorage.clear();
-        sessionStorage.clear();
         return;
       }
 
-      // Attempt signout with retry
-      let attempts = 0;
-      const maxAttempts = 3;
-      while (attempts < maxAttempts) {
-        try {
-          console.log(`[sessionHelper] Attempting signOut (attempt ${attempts + 1})`);
-          await apiClient.signOut();
-          console.log("[sessionHelper] Session signed out successfully");
-          break;
-        } catch (err) {
-          attempts++;
-          console.error(`[sessionHelper] signOut attempt ${attempts} failed:`, err);
-          if (attempts === maxAttempts) {
-            console.warn("[sessionHelper] Max signOut attempts reached");
-            throw new Error("Failed to sign out after retries");
+      await Session.signOut({
+        config: {
+          headers: {
+            "st-auth-mode": "cookie",
+          },
+        },
+      });
+
+      console.log("[sessionHelper] Session signed out successfully");
+
+      // Explicitly clear cookies client-side as a fallback
+      const domains = [
+        "agentvooc.com",
+        ".agentvooc.com",
+        window.location.hostname,
+        `.${window.location.hostname}`,
+        "",
+      ];
+      const paths = ["/", "/api", "/api/auth"];
+      const stCookies = [
+        "sAccessToken",
+        "sRefreshToken",
+        "sFrontToken",
+        "st-last-access-token-update",
+        "st-access-token",
+        "st-refresh-token",
+      ];
+
+      console.log("[sessionHelper] Cookies before clearing:", document.cookie);
+      for (const cookieName of stCookies) {
+        for (const domain of domains) {
+          for (const path of paths) {
+            document.cookie = `${cookieName}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=${path};${domain ? `domain=${domain};` : ""}Secure;SameSite=Strict`;
+            document.cookie = `${cookieName}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=${path};${domain ? `domain=${domain};` : ""}Secure;SameSite=None`;
           }
-          await new Promise(resolve => setTimeout(resolve, 1000)); // 1-second delay between retries
         }
       }
-
-      // Clear all cookies and storage
-      clearCookies(true);
-      localStorage.clear();
-      sessionStorage.clear();
-
-      // Verify session is gone
-      const sessionExists = await sessionHelper.doesSessionExist();
-      if (sessionExists) {
-        console.warn("[sessionHelper] Session still exists after signOut, forcing cleanup");
-        await Session.signOut();
-        clearCookies(true);
-        localStorage.clear();
-        sessionStorage.clear();
-      }
-
-      console.log("[sessionHelper] Signout complete, redirecting to /auth");
-      window.location.href = `/auth?cb=${Date.now()}`;
+      console.log("[sessionHelper] Cookies after clearing:", document.cookie);
     } catch (err) {
       console.error("[sessionHelper] signOut error:", err);
       throw err;
     }
   },
 };
+
+
+// If you ever need the current access token (for API requests via headers):
+// const session = await sessionHelper.getSession();
+// if (session) {
+//   const token = session.accessToken;
+//   // use token in Authorization header
+// }
+
