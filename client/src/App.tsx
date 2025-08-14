@@ -86,35 +86,77 @@ function AppContent() {
     }
     window.twq("config", "q5y7y");
     window.twq("event", "PageView");
+  // Initialize Ezoic if not already done
+    if (!window.ezstandalone) {
+      window.ezstandalone = {
+        cmd: []
+      };
+    }
   }, [location]);
 
   return (
     <TooltipProvider delayDuration={0}>
       <SidebarProvider>
         <Helmet>
+          {/* Ezoic Privacy Scripts - MUST BE FIRST */}
+          <script 
+            src="https://cmp.gatekeeperconsent.com/min.js" 
+            data-cfasync="false"
+          />
+          <script 
+            src="https://the.gatekeeperconsent.com/cmp.min.js" 
+            data-cfasync="false"
+          />
+          
+          {/* Ezoic Header Script */}
+          <script async src="//www.ezojs.com/ezoic/sa.min.js" />
+          <script>
+            {`
+              window.ezstandalone = window.ezstandalone || {};
+              ezstandalone.cmd = ezstandalone.cmd || [];
+            `}
+          </script>
+
+          {/* Twitter Ads */}
           <script
             async
             src="https://static.ads-twitter.com/uwt.js"
             type="text/javascript"
-          ></script>
-          {/* Add AdSense Script */}
+          />
+          
+          {/* Google AdSense */}
           <script
             async
             src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9622114924468888"
             crossOrigin="anonymous"
-          ></script>
+          />
         </Helmet>
+        
         <CookieConsent
           location="bottom"
-          buttonText="Accept"
+          buttonText="Accept All"
+          declineButtonText="Decline"
           cookieName="agentVoocConsent"
           style={{ background: '#2B373B' }}
           buttonStyle={{ color: '#fff', background: '#4CAF50' }}
+          declineButtonStyle={{ color: '#fff', background: '#f44336' }}
           expires={150}
           sameSite="Lax"
+          enableDeclineButton
+          onAccept={() => {
+            // Trigger Ezoic consent acceptance
+             if (window.ezstandalone?.cmd) {
+              window.ezstandalone.cmd.push(() => {
+                if (window.ezstandalone) {
+                  window.ezstandalone.consent = true;
+                }
+              });
+            }
+          }}
         >
-          This website uses cookies to enhance your experience and serve ads. By continuing, you agree to our use of cookies.
+          This website uses cookies and ads to enhance your experience. We use Google AdSense and Ezoic for advertisements.
         </CookieConsent>
+
         {showAppSidebar && <AppSidebar />}
         {showDocsSidebar && <DocsSidebar />}
         {!showAppSidebar && isMobile && <NavSidebar />}
