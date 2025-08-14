@@ -160,7 +160,7 @@ const fetcher = async ({
       ...(body instanceof FormData ? {} : { "Content-Type": "application/json" }),
       ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       ...headers,
-      "st-auth-mode": "header", // ✅ enforce header-based auth (must be last to prevent override)
+      "st-auth-mode": "cookie", // ✅ enforce header-based auth (must be last to prevent override)
     };
 
     const options: RequestInit = {

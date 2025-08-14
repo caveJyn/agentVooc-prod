@@ -147,21 +147,14 @@ export function backendConfig(): InputType {
         cookieSecure: true,
         antiCsrf: "NONE",
         getTokenTransferMethod: (input) => {
-          // Check for explicit header mode request first
-          const authMode = input.req.getHeaderValue("st-auth-mode");
-          elizaLogger.debug("[SESSION] Token transfer method check:", {
-            authMode,
-            hasAuthHeader: !!input.req.getHeaderValue("authorization"),
-            forCreateNewSession: input.forCreateNewSession,
-          });
-          
-          if (authMode === "header") {
-            return "header";
-          }
-          
-          // Default to header mode for your app
-          return "header";
-        },
+    const authMode = input.req.getHeaderValue("st-auth-mode");
+    elizaLogger.debug("[SESSION] Token transfer method check:", {
+      authMode,
+      hasAuthHeader: !!input.req.getHeaderValue("authorization"),
+      forCreateNewSession: input.forCreateNewSession,
+    });
+    return authMode === "header" ? "header" : "cookie";  // Changed default to "cookie"
+  },
         useDynamicAccessTokenSigningKey: false,
         // Remove the custom getSession override - let SuperTokens handle it automatically
         // The override was causing the issue by manually extracting tokens

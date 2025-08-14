@@ -134,8 +134,9 @@ const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
 
     // Cancel & clear all queries efficiently
     const queryClient = useQueryClient();
-    queryClient.cancelQueries();
-    queryClient.clear();
+    await queryClient.cancelQueries(); // Await to ensure completion
+    queryClient.invalidateQueries(); // Invalidate all (refetch on remount would fail post-logout)
+    queryClient.clear(); // Fully clear cache
 
     // Check & sign out session (header-based)
     const sessionExists = await sessionHelper.doesSessionExist();
@@ -153,7 +154,7 @@ const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
     toast({ title: "Success", description: "Logged out successfully." });
 
     // Force navigation to auth page
-    window.location.href = `/auth${cacheBust}`;
+    window.location.href = `/auth${cacheBust}`; // Force full reload
   } catch (err) {
     console.error("[APP_SIDEBAR] Logout error:", err);
     const errorMessage = err instanceof Error ? err.message : "Failed to log out.";

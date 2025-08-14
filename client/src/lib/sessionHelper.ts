@@ -52,7 +52,7 @@ export const sessionHelper = {
       await Session.signOut({
         config: {
           headers: {
-            "st-auth-mode": "header", // ✅ enforce header-based mode
+            "st-auth-mode": "cookie", // ✅ enforce header-based mode
           },
         },
       });

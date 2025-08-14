@@ -29,7 +29,7 @@ export const frontendConfig = () => {
       Passwordless.init(),
       ThirdParty.init(),
       Session.init({
-        getTokenTransferMethod: (): string => "header",
+        getTokenTransferMethod: (): string => "cookie",
         override: {
           functions: (originalImplementation: any): SessionOverrideFunctions => ({
             ...originalImplementation,
