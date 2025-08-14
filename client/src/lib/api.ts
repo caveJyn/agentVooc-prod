@@ -150,9 +150,10 @@ const fetcher = async ({
         }
         throw new Error("Failed to retrieve access token");
       }
-      const transferMethod = Session.getTokenTransferMethod();
-        console.log(`[FETCHER] Token transfer method 2nd: ${transferMethod}`);
     }
+    
+    const transferMethod = Session.getTokenTransferMethod();
+        console.log(`[FETCHER] Token transfer method 2nd: ${transferMethod}`);
 
     // Build headers with header-based auth enforcement
     const requestHeaders: HeadersInit = {
@@ -160,7 +161,9 @@ const fetcher = async ({
       ...(body instanceof FormData ? {} : { "Content-Type": "application/json" }),
       ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       ...headers,
-      "st-auth-mode": "cookie", // ✅ enforce header-based auth (must be last to prevent override)
+      "st-auth-mode": "cookie", // Default to cookie
+    // Only add Authorization for header mode
+    ...(transferMethod === "header" && accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
     };
 
     const options: RequestInit = {
@@ -947,60 +950,19 @@ export const apiClient = {
         method: "POST",
     }),
 
-  updateConnectionStatus: async ({ isConnected, clientId }: { isConnected: boolean; clientId?: string }) => {
-    console.log("[API_CLIENT] updateConnectionStatus called with:", { isConnected, clientId });
-    try {
-      const sessionExists = await Session.doesSessionExist();
-      console.log("[API_CLIENT] Session exists for updateConnectionStatus:", sessionExists);
-      if (!sessionExists) {
-        console.warn("[API_CLIENT] No session exists, skipping updateConnectionStatus");
-        return { status: "skipped", reason: "No active session" };
-      }
+  updateConnectionStatus: (data: { isConnected: boolean }) =>
+    fetcher({
+      url: "/api/connection-status",
+      method: "POST",
+      body: data,
+    }),
 
-      // Let fetcher handle token retrieval and headers
-      const response = await fetcher({
-        url: "/api/connection-status",
-        method: "POST",
-        body: { isConnected, clientId },
-      });
+  getConnectionStatus: () =>
+    fetcher({
+      url: "/api/connection-status",
+      method: "GET",
+    }),
 
-      console.log("[API_CLIENT] updateConnectionStatus response:", response);
-      return response;
-    } catch (error: any) {
-      console.error("[API_CLIENT] updateConnectionStatus error:", error);
-      if (error.message === "No active session" || error.status === 401) {
-        return { status: "skipped", reason: "No active session or unauthorized" };
-      }
-      throw new Error(error.message || "Failed to update connection status");
-    }
-  },
-
-  getConnectionStatus: async () => {
-    console.log("[API_CLIENT] Calling getConnectionStatus");
-    try {
-      const sessionExists = await Session.doesSessionExist();
-      console.log("[API_CLIENT] Session exists for getConnectionStatus:", sessionExists);
-      if (!sessionExists) {
-        console.warn("[API_CLIENT] No session exists, skipping getConnectionStatus");
-        return { status: "skipped", reason: "No active session" };
-      }
-
-      // Let fetcher handle token retrieval and headers
-      const response = await fetcher({
-        url: "/api/connection-status",
-        method: "GET",
-      });
-
-      console.log("[API_CLIENT] getConnectionStatus response:", response);
-      return response;
-    } catch (error: any) {
-      console.error("[API_CLIENT] getConnectionStatus error:", error);
-      if (error.message === "No active session" || error.status === 401) {
-        return { status: "skipped", reason: "No active session or unauthorized" };
-      }
-      throw new Error(error.message || "Failed to get connection status");
-    }
-  },
 
   getLegalDocuments: (): Promise<{ legalDocuments: LegalDocument[] }> => {
     return fetcher({

@@ -40,7 +40,7 @@ export function AppSidebar() {
   const userQuery = useQuery({
     queryKey: ["user"],
     queryFn: () => apiClient.getUser(),
-    // staleTime: 30 * 60 * 1000, // Cache for 30 minutes
+    staleTime: 0, // 30 * 60 * 1000, Cache for 30 minutes
     refetchInterval: false,
   });
 
@@ -48,7 +48,7 @@ export function AppSidebar() {
   const query = useQuery({
     queryKey: ["agents"],
     queryFn: () => apiClient.getAgents(),
-    staleTime: 30 * 60 * 1000,
+    staleTime: 0, //30 * 60 * 1000,
     refetchInterval: false,
   });
 
