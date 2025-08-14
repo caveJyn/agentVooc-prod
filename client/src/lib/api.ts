@@ -1,5 +1,5 @@
 import type { UUID, Character, Plugin } from "@elizaos/core";
-import Session, { signOut }  from "supertokens-web-js/recipe/session";
+import Session  from "supertokens-web-js/recipe/session";
 
 // Base URL for API requests
 // this routes trafic to the server(backend) localhost:3000
