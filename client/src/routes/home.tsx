@@ -1,434 +1,442 @@
-// client/src/components/app-sidebar.tsx
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-// import info from "@/lib/info.json";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarMenuSkeleton,
-  SidebarTrigger,
-  SidebarInput,
-  SidebarMenuAction,
-  SidebarMenuBadge,
-  useSidebar
-} from "@/components/ui/sidebar";
-import { apiClient } from "@/lib/api";
-import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import type { UUID, Character } from "@elizaos/core";
-import { Book, Cog, User, Edit, Plus, Mail } from "lucide-react";
-import ConnectionStatus from "@/components/connection-status";
+// client/src/routes/home.tsx
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Cog, Trash2, Edit, Book } from "lucide-react";
+import PageTitle from "@/components/page-title";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
-import { MouseEvent, useEffect, useState } from "react";
-import { Avatar, AvatarImage } from "@/components/ui/avatar";
-import { sessionHelper } from "@/lib/sessionHelper";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { apiClient } from "@/lib/api";
+import { NavLink } from "react-router-dom";
+import type { UUID } from "@elizaos/core";
+import { formatAgentName } from "@/lib/utils";
+import { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import { sessionHelper } from "@/lib/sessionHelper"; // Import sessionHelper
 
+interface User {
+  userId: string;
+  userType: string;
+  email: string;
+  name: string;
+}
 
-export function AppSidebar() {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const { setOpen, setOpenMobile, isMobile } = useSidebar();
-  const queryClient = useQueryClient(); // Moved queryClient here for consistency
+interface HomeProps {
+  isAuthenticated?: boolean; // Added from ProtectedRoute
+}
 
-  // Check session on mount and redirect to /auth if no session
+export default function Home({ isAuthenticated }: HomeProps) {
+  const [error, setError] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const queryClient = useQueryClient();
+
   useEffect(() => {
-    const checkSession = async () => {
-      const exists = await sessionHelper.doesSessionExist();
-      if (!exists && window.location.pathname !== "/auth") {
-        console.log("[APP_SIDEBAR] No session found, redirecting to /auth");
-        navigate(`/auth?cb=${Date.now()}`, { replace: true });
-      }
-    };
-    checkSession();
-  }, [navigate]);
-
-  // Fetch user data
-  const userQuery = useQuery({
-    queryKey: ["user"],
-    queryFn: () => apiClient.getUser(),
-    staleTime: 0, // 30 * 60 * 1000, Cache for 30 minutes
-    refetchOnMount: "always",
-    refetchInterval: false,
-  });
-
-  // Fetch all agents/characters
-  const query = useQuery({
-    queryKey: ["agents"],
-    queryFn: () => apiClient.getAgents(),
-    staleTime: 0, //30 * 60 * 1000,
-    refetchOnMount: "always",
-    refetchInterval: false,
-  });
-
-  const agents = query?.data?.agents || [];
-
-  // Filter agents based on search query
-  const filteredAgents = agents.filter((agent: { id: UUID; name: string }) =>
-    agent.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  // Fetch character data for each filtered agent
-  const characterQueries = useQuery({
-    queryKey: ["characters", filteredAgents.map((a: { id: UUID }) => a.id)],
-    queryFn: async () => {
-      const results = await Promise.all(
-        filteredAgents.map((agent: { id: UUID }) =>
-          apiClient
-            .getCharacter(agent.id)
-            .then((data: { character: Character }) => ({
-              agentId: agent.id,
-              character: data.character,
-            }))
-            .catch((_error: Error) => {
-              // console.error(
-              //   `[AppSidebar] Error fetching character for agent ${agent.id}:`,
-              //   error
-              // );
-              return { agentId: agent.id, character: null };
-            })
-        )
-      );
-      return Object.fromEntries(
-        results.map((r) => [r.agentId, r.character])
-      );
-    },
-    staleTime: 30 * 60 * 1000,
-    enabled: filteredAgents.length > 0,
-  });
-
-  const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    const { toast } = useToast();
-    const cacheBust = `?cb=${Date.now()}`;
-
-    try {
-      console.log("[APP_SIDEBAR] Starting logout process");
-
-      // Cancel & clear all queries
-      await queryClient.cancelQueries();
-      queryClient.invalidateQueries();
-      queryClient.clear();
-      queryClient.setQueryData(["user"], null); // Immediately clear user query
-
-      // Sign out session
-      const sessionExists = await sessionHelper.doesSessionExist();
-      if (sessionExists) {
-        console.log("[APP_SIDEBAR] Signing out session");
-        await sessionHelper.signOut();
-        console.log("[APP_SIDEBAR] Sign out complete");
-      }
-
-      // Clear client-side storage
-      localStorage.clear();
-      sessionStorage.clear();
-      setSearchQuery("");
-
-      // Show success toast
-      toast({ title: "Success", description: "Logged out successfully." });
-
-      // Force full page reload to clear state
-      window.location.href = `/auth${cacheBust}`;
-    } catch (err) {
-      console.error("[APP_SIDEBAR] Logout error:", err);
-      const errorMessage = err instanceof Error ? err.message : "Failed to log out.";
-
-      // Clear storage and query cache on error
-      localStorage.clear();
-      sessionStorage.clear();
-      queryClient.clear();
-      queryClient.setQueryData(["user"], null);
-      setSearchQuery("");
-
-      toast({ variant: "destructive", title: "Error", description: errorMessage });
-
-      navigate(`/auth${cacheBust}`, { replace: true });
-      if (isMobile) setOpenMobile(false);
-      else setOpen(false);
-
-      // Ensure redirect
-      setTimeout(() => {
-        if (window.location.pathname !== "/auth") {
-          window.location.href = `/auth${cacheBust}`;
+    async function initialize() {
+      try {
+        console.log("[HOME] Initializing, checking session");
+        const sessionExists = await sessionHelper.doesSessionExist();
+        console.log("[HOME] Session exists:", sessionExists);
+        if (sessionExists) {
+          const userData = await apiClient.getUser();
+          console.log("[HOME] User data fetched:", userData);
+          if (userData.user) {
+            const userInfo: User = {
+              userId: userData.user.userId,
+              userType: userData.user.userType,
+              email: userData.user.email,
+              name: userData.user.name,
+            };
+            setUser(userInfo);
+            queryClient.setQueryData(["user"], userInfo); // Update user query cache
+          } else {
+            setError("No user data returned. Please try logging in again.");
+            setUser(null);
+            queryClient.setQueryData(["user"], null);
+            queryClient.invalidateQueries({ queryKey: ["agents"] });
+          }
+        } else {
+          console.log("[HOME] No session, clearing user and cache");
+          setUser(null);
+          queryClient.setQueryData(["user"], null);
+          queryClient.invalidateQueries({ queryKey: ["agents"] });
+          queryClient.clear(); // Clear all queries for unauthenticated users
         }
-      }, 100);
+      } catch (err: any) {
+        console.error("[HOME] Error handling session or user data:", err);
+        setError("Failed to load user data: " + (err.message || "Unknown error"));
+        setUser(null);
+        queryClient.setQueryData(["user"], null);
+        queryClient.invalidateQueries({ queryKey: ["agents"] });
+      }
+    }
+    initialize();
+  }, [queryClient]);
+
+  const agentsQuery = useQuery({
+    queryKey: ["agents", user?.userId], // Include userId in queryKey to scope cache to user
+    queryFn: async () => {
+      try {
+        const data = await apiClient.getAgents();
+        console.log("[HOME] Agents fetched:", data);
+        return data;
+      } catch (err: any) {
+        const errorMessage = err.message.includes("Unauthorized")
+          ? "Please log in to view your characters."
+          : err.message.includes("User not found")
+          ? "Your account is not registered. Please sign up again."
+          : "Failed to fetch your characters: " + (err.message || "Unknown error");
+        setError(errorMessage);
+        console.error("[HOME] Error fetching agents:", err.message, "Status:", err.status);
+        throw err;
+      }
+    },
+    enabled: !!user?.userId && isAuthenticated, // Only fetch if authenticated and userId exists
+    staleTime: 0, // No caching to ensure fresh data
+    refetchOnMount: "always", // Always refetch to avoid stale data
+  });
+
+  const deleteCharacterMutation = useMutation({
+    mutationFn: (characterId: string) => apiClient.deleteCharacter(characterId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["agents", user?.userId] });
+      toast({
+        title: "Success",
+        description: "Character deleted successfully.",
+      });
+    },
+    onError: (error: any) => {
+      console.error("[HOME] Error deleting character:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to delete character.",
+      });
+    },
+  });
+
+  const agents = agentsQuery?.data?.agents || [];
+
+  const handleDeleteCharacter = (characterId: string, characterName: string) => {
+    if (window.confirm(`Are you sure you want to delete the character "${characterName}"? This action cannot be undone.`)) {
+      deleteCharacterMutation.mutate(characterId);
     }
   };
 
-
-
-  const handleLogin = () => {
-  navigate("/auth");
-};
-
-  const handleEditAgent = (agentId: UUID) => {
-    navigate(`/edit-character/${agentId}`);
-  };
-
-  const handleCreateCharacter = () => {
-    if (isMobile) {
-      setOpenMobile(false); // Close sidebar on mobile
-    } else {
-      setOpen(false); // Close sidebar on desktop
-    }
-    navigate("/create-character"); // Navigate to create-character
-  };
-
-  return (
-    <Sidebar className="bg-agentvooc-secondary-bg text-agentvooc-primary border-r border-agentvooc-border shadow-agentvooc-glow">
-      <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
-              <NavLink to="/home" className="hover:bg-agentvooc-secondary-accent hover:text-agentvooc-accent transition-all">
-                <div className="flex items-center gap-0.5 leading-none">
-                  <Avatar className="size-8 p-1 border rounded-full select-none">
-                      <AvatarImage src="/aV-logo.png" />
-                    </Avatar>
-                  <span className="font-semibold text-agentvooc-primary">agentVooc</span><span className="text-agentvooc-accent">.</span>
-                  {/* <span className="text-agentvooc-secondary mt-1">v{info?.version}</span> */}
-                </div>
-              </NavLink>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem className="flex justify-end mr-2">
-            <SidebarTrigger className="hover:bg-agentvooc-secondary-accent hover:text-agentvooc-accent">
-            </SidebarTrigger>
-          </SidebarMenuItem>
-         
-              <SidebarMenuItem>
-            <Button
-              variant="default"
-              className="flex justify-start w-full"
-              onClick={handleCreateCharacter} // Use handleCreateCharacter
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Create Character
-            </Button>
-          </SidebarMenuItem>
-           
-        </SidebarMenu>
-      </SidebarHeader>
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Agents</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem className="mr-2">
-                <SidebarInput
-                  placeholder="Search agents..."
-                  value={searchQuery}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
-                  className="mx-2  border-agentvooc-accent/50 focus:ring-agentvooc-accent"
-                />
-              </SidebarMenuItem>
-              {query?.isPending || characterQueries.isPending ? (
-                <>
-                  {Array.from({ length: 5 }).map((_, index) => (
-                    <SidebarMenuItem key={`skeleton-${index}`}>
-                      <SidebarMenuSkeleton showIcon />
-                    </SidebarMenuItem>
-                  ))}
-                </>
-              ) : filteredAgents.length === 0 ? (
-                <SidebarMenuItem>
-                  <p className="text-sm text-agentvooc-secondary px-2">
-                    No agents found
-                  </p>
-                </SidebarMenuItem>
-              ) : (
-                filteredAgents.map((agent: { id: UUID; name: string }) => (
-                  <SidebarMenuItem key={agent.id} className="group">
-                    <SidebarMenuButton
-                      asChild
-                      isActive={location.pathname.includes(agent.id)}
-                      tooltip={`Chat with ${agent.name}`}
-                      className=" transition-all"
-                    >
-                      <NavLink to={`/chat/${agent.id}`}>
-                        <User className="" />
-                        <span>{agent.name}</span>
-                      </NavLink>
-                    </SidebarMenuButton>
-                    <SidebarMenuAction
-                       onClick={() => handleEditAgent(agent.id)}
-                       showOnHover
-                       className="p-1 text-agentvooc-accent"
-                        >   
-                       <Edit className="h-4 w-4" />
-                    </SidebarMenuAction>
-                    <SidebarMenuBadge>.</SidebarMenuBadge>
-                    <KnowledgeVaultLink
-                      agentId={agent.id}
-                      agentName={agent.name}
-                      character={characterQueries.data?.[agent.id]}
-                      isCharacterPending={characterQueries.isPending}
-                    />
-                    <EmailVaultLink
-                      agentId={agent.id}
-                      agentName={agent.name}
-                      character={characterQueries.data?.[agent.id]}
-                      isCharacterPending={characterQueries.isPending}
-                    />
-                  </SidebarMenuItem>
-                ))
-              )}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-      <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <NavLink
-                to="https://elizaos.github.io/eliza/docs/intro/"
-                target="_blank"
-                className="hover:bg-agentvooc-secondary-accent hover:text-agentvooc-accent"
+  // Preview mode for unauthenticated users
+  if (!isAuthenticated || !user) {
+    return (
+      <div className="flex flex-col gap-8 min-h-screen p-4 sm:p-6 md:p-8 bg-agentvooc-secondary-bg">
+        {/* Hero Section */}
+        <div className="text-center max-w-4xl mx-auto">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-agentvooc-primary mb-4">
+            Your AI Workforce is Here
+          </h1>
+          <p className="text-lg sm:text-xl md:text-2xl text-agentvooc-secondary mb-6 leading-relaxed">
+            Deploy intelligent AI agents that handle your Gmail, answer customer queries with your knowledge, and automate repetitive tasks—while you focus on what matters most.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <NavLink to="/auth">
+              <Button
+                size="lg"
+                className="bg-agentvooc-accent text-agentvooc-secondary-bg hover:bg-agentvooc-accent/80 transition-colors px-8 py-4 text-lg font-semibold"
               >
-                <Book className="text-agentvooc-accent" />
-                <span>agentVooc OS-Fork of ElizaOS</span>
-              </NavLink>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-	  <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <NavLink
-                to="https://agentvooc.com/company/blog/how-it-works"
-                className="hover:bg-agentvooc-secondary-accent hover:text-agentvooc-accent"
-              >
-                <Cog className="text-agentvooc-accent" />
-                <span>How it works</span>
-              </NavLink>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <NavLink
-                to="/settings"
-                className="hover:bg-agentvooc-secondary-accent hover:text-agentvooc-accent"
-              >
-                <Cog className="text-agentvooc-accent" />
-                <span>Settings</span>
-              </NavLink>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <p className="text-sm text-agentvooc-secondary px-2">
-              {userQuery.isLoading
-                ? "Loading..."
-                : userQuery.data?.user?.email || "No User Logged In"}
+                Start 7-Day Free Trial
+              </Button>
+            </NavLink>
+            <div className="text-sm text-agentvooc-secondary">
+              Cancel with 1 click • Setup in 5 minutes
+            </div>
+          </div>
+        </div>
+
+        {/* Value Proposition Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+          <Card className="border-agentvooc-accent/30 hover:border-agentvooc-accent transition-all shadow-agentvooc-glow p-6">
+            <div className="text-center">
+              <div className="bg-agentvooc-accent/10 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                <span className="text-2xl">📧</span>
+              </div>
+              <h3 className="text-xl font-semibold text-agentvooc-primary mb-2">Gmail Automation</h3>
+              <p className="text-agentvooc-secondary">
+                Let Voltara check, categorize, and reply to emails intelligently. Wake up to an organized inbox and start drafting and sending in seconds.
+              </p>
+            </div>
+          </Card>
+          <Card className="border-agentvooc-accent/30 hover:border-agentvooc-accent transition-all shadow-agentvooc-glow p-6">
+            <div className="text-center">
+              <div className="bg-agentvooc-accent/10 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                <span className="text-2xl">🧠</span>
+              </div>
+              <h3 className="text-xl font-semibold text-agentvooc-primary mb-2">Smart Knowledge Base</h3>
+              <p className="text-agentvooc-secondary">
+                Upload your text-based knowledge to create AI agents that answer questions with your specific knowledge—perfect for customer support and internal queries.
+              </p>
+            </div>
+          </Card>
+          <Card className="border-agentvooc-accent/30 hover:border-agentvooc-accent transition-all shadow-agentvooc-glow p-6">
+            <div className="text-center">
+              <div className="bg-agentvooc-accent/10 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                <span className="text-2xl">⚡</span>
+              </div>
+              <h3 className="text-xl font-semibold text-agentvooc-primary mb-2">Custom AI Agents</h3>
+              <p className="text-agentvooc-secondary">
+                Build personalized AI characters with unique personalities and expertise tailored to your specific business needs and workflows.
+              </p>
+            </div>
+          </Card>
+        </div>
+
+        {/* Demo Agent Showcase */}
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-agentvooc-primary mb-4">
+              See What's Possible
+            </h2>
+            <p className="text-lg text-agentvooc-secondary">
+              Real examples of AI agents you can deploy today
             </p>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-  {userQuery.data?.user ? (
-    <Button
-      onClick={handleLogout}
-      variant="default"
-      className=""
-    >
-      Logout
-    </Button>
-  ) : (
-    <Button
-      onClick={handleLogin}
-      variant="default"
-      className=""
-    >
-      Log In
-    </Button>
-  )}
-</SidebarMenuItem>
-          <SidebarMenuItem>
-            <ConnectionStatus />
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
-    </Sidebar>
-  );
-}
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="border-agentvooc-accent/30 hover:border-agentvooc-accent transition-all shadow-agentvooc-glow overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-agentvooc-accent/10 to-agentvooc-accent/5 p-6">
+                <CardTitle className="text-xl text-agentvooc-primary">Voltara</CardTitle>
+                <p className="text-agentvooc-secondary">Your Gmail automation specialist</p>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-center bg-agentvooc-secondary-bg rounded-lg h-32 mb-4">
+                  <div className="text-5xl font-bold text-agentvooc-accent">V</div>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center text-sm text-agentvooc-secondary">
+                    <span className="text-green-500 mr-2">✓</span>
+                    Automatically checks and organizes your inbox
+                  </div>
+                  <div className="flex items-center text-sm text-agentvooc-secondary">
+                    <span className="text-green-500 mr-2">✓</span>
+                    Drafts intelligent replies in your writing style
+                  </div>
+                  <div className="flex items-center text-sm text-agentvooc-secondary">
+                    <span className="text-green-500 mr-2">✓</span>
+                    Generates Replies
+                  </div>
+                  <div className="flex items-center text-sm text-agentvooc-secondary">
+                    <span className="text-green-500 mr-2">✓</span>
+                    Works 24/7 to keep your inbox under control
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-agentvooc-accent/30 hover:border-agentvooc-accent transition-all shadow-agentvooc-glow overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-agentvooc-accent/10 to-agentvooc-accent/5 p-6">
+                <CardTitle className="text-xl text-agentvooc-primary">Knowledge Assistant</CardTitle>
+                <p className="text-agentvooc-secondary">Your company's smart knowledge base</p>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-center bg-agentvooc-secondary-bg rounded-lg h-32 mb-4">
+                  <div className="text-5xl font-bold text-agentvooc-accent">KA</div>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center text-sm text-agentvooc-secondary">
+                    <span className="text-green-500 mr-2">✓</span>
+                    Upload text-based knowledge bases
+                  </div>
+                  <div className="flex items-center text-sm text-agentvooc-secondary">
+                    <span className="text-green-500 mr-2">✓</span>
+                    Answer customer questions with your data
+                  </div>
+                  <div className="flex items-center text-sm text-agentvooc-secondary">
+                    <span className="text-green-500 mr-2">✓</span>
+                    Provide accurate, contextual responses
+                  </div>
+                  <div className="flex items-center text-sm text-agentvooc-secondary">
+                    <span className="text-green-500 mr-2">✓</span>
+                    Scale your expertise across teams
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
 
-function KnowledgeVaultLink({
-  agentId,
-  agentName,
-  character,
-  isCharacterPending,
-}: {
-  agentId: UUID;
-  agentName: string;
-  character: Character | null;
-  isCharacterPending: boolean;
-}) {
-  const location = useLocation();
+        {/* Social Proof & Use Cases */}
+        <div className="bg-agentvooc-accent/5 rounded-xl p-6 sm:p-8 max-w-6xl mx-auto">
+          <h3 className="text-2xl font-bold text-agentvooc-primary text-center mb-6">
+            Perfect for Growing Teams
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="text-center">
+              <div className="text-3xl mb-2">👩‍💼</div>
+              <h4 className="font-semibold text-agentvooc-primary mb-1">Entrepreneurs</h4>
+              <p className="text-sm text-agentvooc-secondary">Automate customer support while you focus on growth</p>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl mb-2">🏢</div>
+              <h4 className="font-semibold text-agentvooc-primary mb-1">Small Businesses</h4>
+              <p className="text-sm text-agentvooc-secondary">Handle more customers without hiring more staff</p>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl mb-2">🛠️</div>
+              <h4 className="font-semibold text-agentvooc-primary mb-1">Service Providers</h4>
+              <p className="text-sm text-agentvooc-secondary">Respond to inquiries faster and more consistently</p>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl mb-2">📚</div>
+              <h4 className="font-semibold text-agentvooc-primary mb-1">Consultants</h4>
+              <p className="text-sm text-agentvooc-secondary">Share expertise through AI-powered interactions</p>
+            </div>
+          </div>
+        </div>
 
-  if (isCharacterPending || !character) {
-    return null;
-  }
+        {/* Pricing Highlight */}
+        <div className="text-center max-w-4xl mx-auto">
+          <h3 className="text-2xl font-bold text-agentvooc-primary mb-4">
+            Start Free, Scale When Ready
+          </h3>
+          <div className="bg-white/10 backdrop-blur rounded-xl p-6 border border-agentvooc-accent/30">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="text-left">
+                <div className="text-3xl font-bold text-agentvooc-accent mb-1">7 Days Free</div>
+                <div className="text-sm text-agentvooc-secondary mt-1">Cancel anytime • No setup fees</div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <NavLink to="/auth" className="w-full">
+                  <Button
+                    size="lg"
+                    className="bg-agentvooc-accent text-agentvooc-secondary-bg hover:bg-agentvooc-accent/80 transition-colors px-8 py-3 font-semibold w-full"
+                  >
+                    Get Started Free
+                  </Button>
+                </NavLink>
+                <div className="text-xs text-agentvooc-secondary text-center">
+                  Join the revolution of automating with AI
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-  if (!character.settings?.ragKnowledge) {
-    return null;
-  }
-
-  return (
-    <SidebarMenu className="ml-4">
-      <SidebarMenuItem>
-        <SidebarMenuButton
-          asChild
-          isActive={location.pathname === `/knowledge/${agentId}`}
-          tooltip={`Knowledge Vault for ${agentName}`}
-        >
-          <NavLink to={`/knowledge/${agentId}`}>
-            <Book className="text-agentvooc-accent" />
-            <span>Knowledge Vault</span>
+        {/* Final CTA */}
+        <div className="text-center">
+          <p className="text-agentvooc-secondary mb-4">
+            Ready to transform how you handle emails and customer interactions?
+          </p>
+          <NavLink to="/auth">
+            <Button
+              size="lg"
+              variant="outline"
+              className="border-agentvooc-accent text-agentvooc-primary hover:bg-agentvooc-accent hover:text-agentvooc-secondary-bg transition-colors px-8 py-3"
+            >
+              Start Your Free Trial →
+            </Button>
           </NavLink>
-        </SidebarMenuButton>
-      </SidebarMenuItem>
-    </SidebarMenu>
-  );
-}
-
-function EmailVaultLink({
-  agentId,
-  agentName,
-  character,
-  isCharacterPending,
-}: {
-  agentId: UUID;
-  agentName: string;
-  character: Character | null;
-  isCharacterPending: boolean;
-}) {
-  const location = useLocation();
-
-  if (isCharacterPending || !character) {
-    return null;
+        </div>
+      </div>
+    );
   }
 
-  if (!character.plugins?.map((p: any) => typeof p === "string" ? p : p.name).includes("email")) {
-    return null;
-  }
-
+  // Authenticated user dashboard
   return (
-    <SidebarMenu className="ml-4">
-      <SidebarMenuItem>
-        <SidebarMenuButton
-          asChild
-          isActive={location.pathname === `/email-vault/${agentId}`}
-          tooltip={`Email Vault for ${agentName}`}
-        >
-          <NavLink to={`/email-vault/${agentId}`}>
-            <Mail className="text-agentvooc-accent" />
-            <span>Email Vault</span>
-          </NavLink>
-        </SidebarMenuButton>
-      </SidebarMenuItem>
-    </SidebarMenu>
+    <div className="flex flex-col gap-4 min-h-screen p-4 md:p-8 bg-agentvooc-secondary-bg">
+      <div className="flex items-center justify-between">
+        <PageTitle title="Your AI Agents" />
+      </div>
+
+      {error && (
+        <div className="bg-red-500 text-white p-2 rounded">{error}</div>
+      )}
+      {agentsQuery.isLoading && (
+        <div className="text-agentvooc-secondary flex items-center">
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          Loading your characters...
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {!agentsQuery.isLoading && !error && agents.length === 0 && (
+          <div className="text-agentvooc-secondary col-span-full text-center">
+            You haven't created any characters yet. Click "Create Character" in the sidebar to get started!
+          </div>
+        )}
+        {agents.map((agent: { id: UUID; name: string; profile?: { image?: string } }) => (
+          <Card
+            key={agent.id}
+            className="border-agentvooc-accent/30 hover:border-agentvooc-accent transition-all shadow-agentvooc-glow overflow-hidden min-w-[200px]"
+          >
+            <CardHeader className="p-4">
+              <CardTitle className="text-lg truncate">{agent?.name}</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="rounded-md bg-agentvooc-secondary-bg aspect-square w-full grid place-items-center">
+                {agent.profile?.image ? (
+                  <img
+                    src={agent.profile.image}
+                    alt={`${agent.name}'s profile`}
+                    className="w-full h-full object-cover rounded-md"
+                  />
+                ) : (
+                  <div className="text-4xl md:text-6xl font-bold uppercase text-agentvooc-accent">
+                    {formatAgentName(agent?.name)}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+            <CardFooter className="p-4">
+              <div className="flex flex-col gap-2 w-full">
+                <NavLink to={`/chat/${agent.id}`} className="w-full">
+                  <Button variant="default">Chat</Button>
+                </NavLink>
+                <div className="flex gap-2 justify-center">
+                  <NavLink to={`/settings/${agent.id}`}>
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      className="w-9 h-9 border-agentvooc-accent/30 text-agentvooc-primary hover:bg-agentvooc-accent hover:text-agentvooc-secondary-bg transition-colors"
+                      aria-label="Settings"
+                    >
+                      <Cog className="h-4 w-4" />
+                    </Button>
+                  </NavLink>
+                  <NavLink to={`/knowledge/${agent.id}`}>
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      className="w-9 h-9 border-agentvooc-accent/30 text-agentvooc-primary hover:bg-agentvooc-accent hover:text-agentvooc-secondary-bg transition-colors"
+                      aria-label="Knowledge"
+                    >
+                      <Book className="h-4 w-4" />
+                    </Button>
+                  </NavLink>
+                  <NavLink to={`/edit-character/${agent.id}`}>
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      className="w-9 h-9 border-agentvooc-accent/30 text-agentvooc-primary hover:bg-agentvooc-accent hover:text-agentvooc-secondary-bg transition-colors"
+                      aria-label="Edit Character"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  </NavLink>
+                  <Button
+                    size="icon"
+                    variant="destructive"
+                    onClick={() => handleDeleteCharacter(agent.id, agent.name)}
+                    className="w-9 h-9 bg-red-500 text-white hover:bg-red-600 transition-colors"
+                    disabled={deleteCharacterMutation.isPending}
+                    aria-label="Delete Character"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </CardFooter>
+          </Card>
+        ))}
+      </div>
+    </div>
   );
 }
