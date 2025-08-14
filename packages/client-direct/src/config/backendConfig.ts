@@ -144,7 +144,6 @@ export function backendConfig(): InputType {
         },
       }),
       Session.init({
-        cookieDomain: "agentvooc.com",
         cookieSameSite: "strict",
         cookieSecure: true,
         antiCsrf: "VIA_TOKEN",       

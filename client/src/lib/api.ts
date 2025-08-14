@@ -1,5 +1,6 @@
 import type { UUID, Character, Plugin } from "@elizaos/core";
 import Session, { signOut }  from "supertokens-web-js/recipe/session";
+import { clearCookies } from "./clearCookies";
 
 // Base URL for API requests
 // this routes trafic to the server(backend) localhost:3000
@@ -9,33 +10,7 @@ const BASE_URL  =
     `${import.meta.env.VITE_SERVER_URL}:${import.meta.env.VITE_SERVER_PORT}`;
 // console.log(`[FETCHER] Using BASE_URL: ${BASE_URL}`);
 
-const clearCookies = () => {
-  console.log("[FETCHER] Cookies before clearing:", document.cookie);
-  const cookies = document.cookie.split(";");
-  const domains = [
-    "agentvooc.com",
-    ".agentvooc.com",
-    window.location.hostname,
-    `.${window.location.hostname}`,
-  ];
-  const stCookies = [
-    "sAccessToken",
-    "sRefreshToken",
-    "sFrontToken",
-    "st-last-access-token-update",
-    "st-access-token",
-    "st-refresh-token",
-  ];
-  for (const cookie of cookies) {
-    const [name] = cookie.split("=").map((c) => c.trim());
-    if (stCookies.includes(name)) {
-      for (const domain of domains) {
-        document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${domain};secure;samesite=none`;
-      }
-    }
-  }
-  console.log("[FETCHER] Cookies after clearing:", document.cookie);
-};
+
 
 // Rate limiter to prevent request flooding
 const rateLimiter = new Map<string, number>();
@@ -68,7 +43,6 @@ const fetcher = async ({
     console.warn(`[FETCHER] Circuit breaker OPEN - blocking requests until ${new Date(circuitBreaker.openUntil).toLocaleTimeString()}`);
     throw new Error("Circuit breaker open - too many auth failures");
   } else if (circuitBreaker.isOpen && now >= circuitBreaker.openUntil) {
-    // Reset circuit breaker after timeout
     console.log(`[FETCHER] Circuit breaker RESET - attempting recovery`);
     circuitBreaker.isOpen = false;
     circuitBreaker.failures = 0;
@@ -77,13 +51,14 @@ const fetcher = async ({
   // Rate limiting to prevent request flooding
   const rateLimitKey = `${method}:${url}`;
   const lastAttempt = rateLimiter.get(rateLimitKey) || 0;
-  
-  if (now - lastAttempt < 1000) { // 1 second cooldown per endpoint
+
+  if (now - lastAttempt < 1000) {
     console.warn(`[FETCHER] Rate limited: ${rateLimitKey}, skipping request`);
     throw new Error("Rate limited - too many requests");
   }
-  
+
   rateLimiter.set(rateLimitKey, now);
+
   // Prevent requests when already on auth page (except auth-related endpoints)
   if (
     window.location.pathname === "/auth" &&
@@ -111,7 +86,7 @@ const fetcher = async ({
       if (!isRetry) console.warn(`[FETCHER] No session exists, aborting request to ${url}`);
       if (!isRetry) {
         await signOut();
-        clearCookies();
+        clearCookies(); // Use the imported clearCookies
         console.log(`[FETCHER] Forcing logout due to no session`);
         window.location.href = `/auth?cb=${Date.now()}`;
       }
@@ -132,7 +107,7 @@ const fetcher = async ({
             await signOut();
             localStorage.clear();
             sessionStorage.clear();
-            clearCookies();
+            clearCookies(); // Use the imported clearCookies
             console.log(`[FETCHER] Forcing logout due to missing access token`);
             window.location.href = `/auth?cb=${Date.now()}`;
           }
@@ -144,7 +119,7 @@ const fetcher = async ({
         if (!isRetry) console.error(`[FETCHER] Failed to get access token:`, error);
         if (!isRetry) {
           await signOut();
-          clearCookies();
+          clearCookies(); // Use the imported clearCookies
           console.log(`[FETCHER] Forcing logout due to token retrieval failure`);
           window.location.href = `/auth?cb=${Date.now()}`;
         }
@@ -153,7 +128,7 @@ const fetcher = async ({
     }
 
     const transferMethod = Session.getTokenTransferMethod();
-        console.log(`[FETCHER] Token transfer method 2nd: ${transferMethod}`);
+    console.log(`[FETCHER] Token transfer method 2nd: ${transferMethod}`);
 
     // Build headers with header-based auth enforcement
     const requestHeaders: HeadersInit = {
@@ -162,8 +137,7 @@ const fetcher = async ({
       ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
       ...headers,
       "st-auth-mode": "cookie", // Default to cookie
-    // Only add Authorization for header mode
-    ...(transferMethod === "header" && accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      ...(transferMethod === "header" && accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
     };
 
     const options: RequestInit = {
@@ -178,7 +152,7 @@ const fetcher = async ({
       console.log(`[FETCHER] Sending ${method} request to ${BASE_URL}${url}`, {
         headers: Object.keys(requestHeaders),
         hasAuthToken: !!accessToken,
-        authMode: "header",
+        authMode: "cookie", // Corrected log to reflect actual auth mode
         body: body instanceof FormData ? "[FormData]" : body,
       });
     }
@@ -206,28 +180,34 @@ const fetcher = async ({
 
       // Handle refresh token scenario or general 401
       if (resp.status === 401 && !isRetry) {
-        // Try to detect if this is a "try refresh token" scenario
-        const isRefreshTokenScenario = errorObj.message === "try refresh token" || 
-                                     errorObj.type === "TRY_REFRESH_TOKEN" ||
-                                     errorText.includes("try refresh token");
-        
+        const isRefreshTokenScenario =
+          errorObj.message === "try refresh token" ||
+          errorObj.type === "TRY_REFRESH_TOKEN" ||
+          errorText.includes("try refresh token");
+
         if (isRefreshTokenScenario) {
           console.log(`[FETCHER] Received TRY_REFRESH_TOKEN for ${url}`);
           throw new Error("TRY_REFRESH_TOKEN");
         } else {
-          // Generic 401 - likely auth mode mismatch or expired session
           console.warn(`[FETCHER] 401 Unauthorized for ${url}, incrementing circuit breaker`);
           circuitBreaker.failures++;
           circuitBreaker.lastFailure = Date.now();
-          
+
           if (circuitBreaker.failures >= CIRCUIT_BREAKER_THRESHOLD) {
             circuitBreaker.isOpen = true;
             circuitBreaker.openUntil = Date.now() + CIRCUIT_BREAKER_TIMEOUT;
             console.error(`[FETCHER] Circuit breaker OPENED - too many 401s (${circuitBreaker.failures})`);
           }
-          
+
           throw new Error("FORCE_LOGOUT");
         }
+      }
+
+      // Handle 500 error for multiple cookies
+      if (resp.status === 500 && errorText.includes("multiple session cookies")) {
+        console.warn(`[FETCHER] Multiple session cookies detected for ${url}, clearing cookies`);
+        clearCookies(); // Clear cookies on 500 error
+        throw new Error("MULTIPLE_COOKIES");
       }
 
       const error = new Error(errorObj.error || errorObj.message || "Request failed");
@@ -257,9 +237,10 @@ const fetcher = async ({
     console.error(`[FETCHER] Error for ${url}:`, error);
 
     // Handle token refresh
-    if (error.message === "TRY_REFRESH_TOKEN") {
+    if (error.message === "TRY_REFRESH_TOKEN" || error.message === "MULTIPLE_COOKIES") {
       console.log(`[FETCHER] Attempting session refresh for ${url}`);
       try {
+        clearCookies(); // Clear cookies before refresh to prevent duplicates
         const refreshed = await Session.attemptRefreshingSession();
         if (refreshed) {
           console.log(`[FETCHER] Session refresh successful, retrying request`);
@@ -278,7 +259,6 @@ const fetcher = async ({
         throw new Error("Session expired, redirecting to login");
       }
     } else if (error.message === "FORCE_LOGOUT") {
-      // Only redirect if circuit breaker allows it
       if (!circuitBreaker.isOpen) {
         console.warn(`[FETCHER] Forcing logout due to 401 for ${url}`);
         await signOut();
@@ -286,7 +266,11 @@ const fetcher = async ({
         window.location.href = `/auth?cb=${Date.now()}`;
       }
       throw new Error("Authentication failed, redirecting to login");
-    } else if (error.message === "No active session" || error.message === "No access token available" || error.message === "Failed to retrieve access token") {
+    } else if (
+      error.message === "No active session" ||
+      error.message === "No access token available" ||
+      error.message === "Failed to retrieve access token"
+    ) {
       console.warn(`[FETCHER] Request aborted: ${error.message} for ${url}`);
       throw error;
     }

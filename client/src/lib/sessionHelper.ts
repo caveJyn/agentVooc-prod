@@ -1,6 +1,7 @@
-// client/src/lib/sessionHelper.ts
+// /client/src/lib/sessionHelper.ts
 import Session from "supertokens-web-js/recipe/session";
 import { apiClient } from "./api";
+import { clearCookies } from "./clearCookies"; // Import the new clearCookies function
 
 export const sessionHelper = {
   /**
@@ -77,34 +78,8 @@ export const sessionHelper = {
         }
       }
 
-      // Explicitly clear cookies client-side as a fallback
-      console.log("[sessionHelper] Cookies before clearing:", document.cookie);
-      const domains = [
-        "agentvooc.com",
-        ".agentvooc.com",
-        window.location.hostname,
-        `.${window.location.hostname}`,
-        "",
-      ];
-      const paths = ["/", "/api", "/api/auth"];
-      const stCookies = [
-        "sAccessToken",
-        "sRefreshToken",
-        "sFrontToken",
-        "st-last-access-token-update",
-        "st-access-token",
-        "st-refresh-token",
-      ];
-
-      for (const cookieName of stCookies) {
-        for (const domain of domains) {
-          for (const path of paths) {
-            document.cookie = `${cookieName}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=${path};${domain ? `domain=${domain};` : ""}Secure;SameSite=Strict`;
-            document.cookie = `${cookieName}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=${path};${domain ? `domain=${domain};` : ""}Secure;SameSite=None`;
-          }
-        }
-      }
-      console.log("[sessionHelper] Cookies after clearing:", document.cookie);
+      // Clear cookies using the shared utility
+      clearCookies();
 
       // Verify session is gone
       const sessionExists = await sessionHelper.doesSessionExist();
@@ -117,7 +92,6 @@ export const sessionHelper = {
     }
   },
 };
-
 
 // If you ever need the current access token (for API requests via headers):
 // const session = await sessionHelper.getSession();

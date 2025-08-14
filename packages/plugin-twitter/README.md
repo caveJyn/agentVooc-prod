@@ -1,159 +1,275 @@
-# agentVooc Twitter/X Client
+# @elizaos/plugin-twitter
 
-This package provides Twitter/X integration for the agentVooc AI agent.
+A plugin for Twitter/X integration, providing automated tweet posting capabilities with character-aware content generation.
 
-## Features
+## Overview
 
-- Post generation and management
-- Interaction handling (mentions, replies)
-- Search functionality
-- Twitter Spaces support with STT/TTS capabilities
-- Media handling (images, videos)
-- Approval workflow via Discord (optional)
+This plugin provides functionality to:
 
-## Setup Guide
+- Compose context-aware tweets
+- Post tweets to Twitter/X platform
+- Handle authentication and session management
+- Support premium Twitter features
+- Manage tweet length restrictions
 
-### Prerequisites
-
-- A Twitter/X Developer Account with API access
-- Node.js and pnpm installed
-- Discord bot (if using approval workflow)
-- ElevenLabs API key (if using Spaces with TTS)
-
-### Step 1: Configure Environment Variables
-
-Create or edit `.env` file in your project root:
+## Installation
 
 ```bash
-# Twitter API Credentials
-TWITTER_USERNAME=           # Your Twitter/X username
-TWITTER_PASSWORD=           # Your Twitter/X password
-TWITTER_EMAIL=              # Your Twitter/X email
-TWITTER_2FA_SECRET=         # Optional: 2FA secret for login
-
-# Twitter Client Configuration
-TWITTER_DRY_RUN=false      # Set to true for testing without posting
-MAX_TWEET_LENGTH=280       # Default tweet length limit
-TWITTER_SEARCH_ENABLE=false # Enable search functionality
-TWITTER_RETRY_LIMIT=5      # Login retry attempts
-TWITTER_POLL_INTERVAL=120  # Poll interval in seconds
-TWITTER_TARGET_USERS=      # Comma-separated list of target users
-
-# Post Generation Settings
-ENABLE_TWITTER_POST_GENERATION=true
-POST_INTERVAL_MIN=90       # Minimum interval between posts (minutes)
-POST_INTERVAL_MAX=180      # Maximum interval between posts (minutes)
-POST_IMMEDIATELY=false     # Skip approval workflow
-
-# Action Processing
-ENABLE_ACTION_PROCESSING=false
-ACTION_INTERVAL=5          # Action check interval (minutes)
-MAX_ACTIONS_PROCESSING=1   # Maximum concurrent actions
-
-# Spaces Configuration (Optional)
-TWITTER_SPACES_ENABLE=false
-ELEVENLABS_XI_API_KEY=     # Required for TTS in Spaces
-
-# Approval Workflow (Optional)
-TWITTER_APPROVAL_DISCORD_BOT_TOKEN=
-TWITTER_APPROVAL_DISCORD_CHANNEL_ID=
-TWITTER_APPROVAL_CHECK_INTERVAL=300000  # 5 minutes in milliseconds
+npm install @elizaos/plugin-twitter
 ```
 
-### Step 2: Initialize the Client
+## Configuration
+
+The plugin requires the following environment variables:
+
+```env
+TWITTER_USERNAME=your_username
+TWITTER_PASSWORD=your_password
+TWITTER_EMAIL=your_email              # Optional: for 2FA
+TWITTER_2FA_SECRET=your_2fa_secret    # Optional: for 2FA
+TWITTER_PREMIUM=false                 # Optional: enables premium features
+TWITTER_DRY_RUN=false                # Optional: test without posting
+```
+
+## Usage
+
+Import and register the plugin in your Eliza configuration:
 
 ```typescript
-import { TwitterClientInterface } from "@elizaos/twitter";
+import { twitterPlugin } from "@elizaos/plugin-twitter";
 
-const twitterPlugin = {
-    name: "twitter",
-    description: "Twitter client",
-    clients: [TwitterClientInterface],
+export default {
+    plugins: [twitterPlugin],
+    // ... other configuration
 };
-
-// Register with your Eliza runtime
-runtime.registerPlugin(twitterPlugin);
 ```
 
 ## Features
 
-### Post Generation
+### Tweet Composition
 
-The client can automatically generate and post tweets based on your agent's character profile and topics. Posts can be:
-- Regular tweets (≤280 characters)
-- Long-form tweets (Note Tweets)
-- Media tweets (with images/videos)
+The plugin uses context-aware templates to generate appropriate tweets:
 
-### Interactions
+```typescript
+import { postAction } from "@elizaos/plugin-twitter";
 
-Handles:
-- Mentions
-- Replies
-- Quote tweets
-- Direct messages
+// Tweet will be composed based on context and character limits
+const result = await postAction.handler(runtime, message, state);
+```
 
-### Search
+### Tweet Posting
 
-When enabled, periodically searches Twitter for relevant topics and engages with found content.
+```typescript
+// Post with automatic content generation
+await postAction.handler(runtime, message, state);
 
-### Twitter Spaces
-
-Supports creating and managing Twitter Spaces with:
-- Speech-to-Text (STT) for transcription
-- Text-to-Speech (TTS) via ElevenLabs
-- Speaker management
-- Idle monitoring
-- Recording capabilities
-
-### Approval Workflow
-
-Optional Discord-based approval system for tweets:
-1. Generated tweets are sent to a Discord channel
-2. Moderators can approve/reject via reactions
-3. Approved tweets are automatically posted
+// Dry run mode (for testing)
+process.env.TWITTER_DRY_RUN = "true";
+await postAction.handler(runtime, message, state);
+```
 
 ## Development
+
+### Building
+
+```bash
+npm run build
+```
 
 ### Testing
 
 ```bash
-# Run tests
-pnpm test
-
-# Run with debug logging
-DEBUG=eliza:* pnpm start
+npm run test
 ```
 
-### Common Issues
+### Development Mode
 
-#### Login Failures
-- Verify credentials in .env
-- Check 2FA configuration
-- Ensure no rate limiting
+```bash
+npm run dev
+```
 
-#### Post Generation Issues
-- Verify character profile configuration
-- Check MAX_TWEET_LENGTH setting
-- Monitor approval workflow logs
+## Dependencies
 
-#### Spaces Issues
-- Verify ELEVENLABS_XI_API_KEY if using TTS
-- Check space configuration in character profile
-- Monitor idle timeout settings
+- `@elizaos/core`: Core Eliza functionality
+- `agent-twitter-client`: Twitter API client
+- `tsup`: Build tool
+- Other standard dependencies listed in package.json
 
-## Security Notes
+## API Reference
 
-- Never commit .env or credential files
-- Use environment variables for sensitive data
-- Implement proper rate limiting
-- Monitor API usage and costs (especially for ElevenLabs)
+### Core Interfaces
 
-## Support
+```typescript
+interface TweetContent {
+    text: string;
+}
 
-For issues or questions:
-1. Check the Common Issues section
-2. Review debug logs (enable with DEBUG=eliza:*)
-3. Open an issue with:
-   - Error messages
-   - Configuration details
-   - Steps to reproduce
+// Tweet Schema
+const TweetSchema = z.object({
+    text: z.string().describe("The text of the tweet"),
+});
+
+// Action Interface
+interface Action {
+    name: "POST_TWEET";
+    similes: string[];
+    description: string;
+    validate: (
+        runtime: IAgentRuntime,
+        message: Memory,
+        state?: State
+    ) => Promise<boolean>;
+    handler: (
+        runtime: IAgentRuntime,
+        message: Memory,
+        state?: State
+    ) => Promise<boolean>;
+    examples: Array<Array<any>>;
+}
+```
+
+### Plugin Methods
+
+- `postAction.handler`: Main method for posting tweets
+- `postAction.validate`: Validates Twitter credentials
+- `composeTweet`: Internal method for tweet generation
+- `postTweet`: Internal method for tweet posting
+
+## Common Issues/Troubleshooting
+
+### Issue: Authentication Failures
+
+- **Cause**: Invalid credentials or 2FA configuration
+- **Solution**: Verify credentials and 2FA setup
+
+### Issue: Tweet Length Errors
+
+- **Cause**: Content exceeds Twitter's character limit
+- **Solution**: Enable TWITTER_PREMIUM for extended tweets or ensure content is within limits
+
+### Issue: Rate Limiting
+
+- **Cause**: Too many requests in short time
+- **Solution**: Implement proper request throttling
+
+## Security Best Practices
+
+- Store credentials securely using environment variables
+- Use 2FA when possible
+- Implement proper error handling
+- Keep dependencies updated
+- Use dry run mode for testing
+- Monitor Twitter API usage
+
+## Template System
+
+The plugin uses a sophisticated template system for tweet generation:
+
+```typescript
+const tweetTemplate = `
+# Context
+{{recentMessages}}
+
+# Topics
+{{topics}}
+
+# Post Directions
+{{postDirections}}
+
+# Recent interactions
+{{recentPostInteractions}}
+
+# Task
+Generate a tweet that:
+1. Relates to the recent conversation
+2. Matches the character's style
+3. Is concise and engaging
+4. Must be UNDER 180 characters
+5. Speaks from the perspective of {{agentName}}
+`;
+```
+
+## Future Enhancements
+
+1. **Content Generation**
+
+    - Advanced context awareness
+    - Multi-language support
+    - Style customization
+    - Hashtag optimization
+    - Media generation
+    - Thread composition
+
+2. **Engagement Features**
+
+    - Auto-reply system
+    - Engagement analytics
+    - Follower management
+    - Interaction scheduling
+    - Sentiment analysis
+    - Community management
+
+3. **Tweet Management**
+
+    - Thread management
+    - Tweet scheduling
+    - Content moderation
+    - Archive management
+    - Delete automation
+    - Edit optimization
+
+4. **Analytics Integration**
+
+    - Performance tracking
+    - Engagement metrics
+    - Audience insights
+    - Trend analysis
+    - ROI measurement
+    - Custom reporting
+
+5. **Authentication**
+
+    - OAuth improvements
+    - Multi-account support
+    - Session management
+    - Rate limit handling
+    - Security enhancements
+    - Backup mechanisms
+
+6. **Developer Tools**
+    - Enhanced debugging
+    - Testing framework
+    - Documentation generator
+    - Integration templates
+    - Error handling
+    - Logging system
+
+We welcome community feedback and contributions to help prioritize these enhancements.
+
+## Contributing
+
+Contributions are welcome! Please see the [CONTRIBUTING.md](CONTRIBUTING.md) file for more information.
+
+## Credits
+
+This plugin integrates with and builds upon several key technologies:
+
+- [Twitter/X API](https://developer.twitter.com/en/docs): Official Twitter platform API
+- [agent-twitter-client](https://www.npmjs.com/package/agent-twitter-client): Twitter API client library
+- [Zod](https://github.com/colinhacks/zod): TypeScript-first schema validation
+
+Special thanks to:
+
+- The Twitter/X Developer Platform team
+- The agent-twitter-client maintainers for API integration tools
+- The Eliza community for their contributions and feedback
+
+For more information about Twitter/X integration capabilities:
+
+- [Twitter API Documentation](https://developer.twitter.com/en/docs)
+- [Twitter Developer Portal](https://developer.twitter.com/en/portal/dashboard)
+- [Twitter API Best Practices](https://developer.twitter.com/en/docs/twitter-api/rate-limits)
+
+## License
+
+This plugin is part of the Eliza project. See the main project repository for license information.
