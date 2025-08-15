@@ -235,13 +235,13 @@ export class DirectClient {
 
             const originalJson = res.json;
             res.json = function (body) {
-                elizaLogger.debug(`Response for ${req.method} ${req.url}:`, JSON.stringify(body));
-                elizaLogger.debug(`CORS headers for ${req.method} ${req.url}:`, {
-                    "Access-Control-Allow-Origin": res.get("Access-Control-Allow-Origin"),
-                    "Access-Control-Allow-Credentials": res.get("Access-Control-Allow-Credentials"),
-                    "Access-Control-Allow-Headers": res.get("Access-Control-Allow-Headers"),
-                    "Set-Cookie": res.get("Set-Cookie"),
-                });
+                // elizaLogger.debug(`Response for ${req.method} ${req.url}:`, JSON.stringify(body));
+                // elizaLogger.debug(`CORS headers for ${req.method} ${req.url}:`, {
+                //     "Access-Control-Allow-Origin": res.get("Access-Control-Allow-Origin"),
+                //     "Access-Control-Allow-Credentials": res.get("Access-Control-Allow-Credentials"),
+                //     "Access-Control-Allow-Headers": res.get("Access-Control-Allow-Headers"),
+                //     "Set-Cookie": res.get("Set-Cookie"),
+                // });
                 return originalJson.call(this, body);
             };
 
