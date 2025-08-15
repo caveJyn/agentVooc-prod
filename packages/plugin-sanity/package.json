@@ -23,35 +23,34 @@
     "dev:plugin": "tsup src/index.ts --format esm --dts --watch",
     "test": "vitest run"
   },
-
   "files": [
     "dist",
     "dist-studio",
     "src"
   ],
-  
   "keywords": [
     "sanity",
     "elizaos",
     "plugin"
   ],
   "dependencies": {
-    "@sanity/client": "^6.20.0",
-    "@sanity/vision": "^3.81.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "sanity": "^3.81.0",
-    "styled-components": "^6.1.15",
-    "@elizaos/core": "workspace:^",
-    "@elizaos-plugins/client-telegram": "workspace:*",
-    "@elizaos-plugins/plugin-twitter": "workspace:*",
     "@elizaos-plugins/client-instagram": "workspace:*",
+    "@elizaos-plugins/client-telegram": "workspace:*",
     "@elizaos-plugins/plugin-email": "workspace:*",
     "@elizaos-plugins/plugin-shared-email-sanity": "workspace:*",
+    "@elizaos-plugins/plugin-twitter": "workspace:*",
+    "@elizaos/core": "workspace:^",
+    "@sanity/client": "^6.20.0",
+    "@sanity/image-url": "^1.1.0",
+    "@sanity/vision": "^4.4.1",
     "dotenv": "^16.4.5",
-    "@sanity/image-url": "^1.1.0"
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "sanity": "^4.4.1",
+    "styled-components": "^6.1.15"
   },
   "devDependencies": {
+    "@sanity/embeddings-index-cli": "^1.0.10",
     "@sanity/eslint-config-studio": "^5.0.2",
     "@types/node": "^22.10.5",
     "@types/react": "^18.0.25",
@@ -59,9 +58,7 @@
     "prettier": "^3.0.2",
     "tsup": "^8.3.5",
     "typescript": "^5.1.6",
-    "vitest": "^2.1.9",
-    "@sanity/embeddings-index-cli": "^1.0.10"
-    
+    "vitest": "^2.1.9"
   },
   "license": "UNLICENSED",
   "prettier": {
