@@ -86,12 +86,6 @@ function AppContent() {
     }
     window.twq("config", "q5y7y");
     window.twq("event", "PageView");
-  // Initialize Ezoic if not already done
-    if (!window.ezstandalone) {
-      window.ezstandalone = {
-        cmd: []
-      };
-    }
   }, [location]);
 
   return (
@@ -100,19 +94,19 @@ function AppContent() {
         <Helmet>
           
           {/* Google AdSense */}
-          <script
+          {/* <script
             async
             src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9622114924468888"
             crossOrigin="anonymous"
-          />
+          /> */}
           
                     
           {/* Twitter Ads */}
-          <script
+          {/* <script
             async
             src="https://static.ads-twitter.com/uwt.js"
             type="text/javascript"
-          />
+          /> */}
         </Helmet>
         
         <CookieConsent
@@ -126,16 +120,6 @@ function AppContent() {
           expires={150}
           sameSite="Lax"
           enableDeclineButton
-          onAccept={() => {
-            // Trigger Ezoic consent acceptance
-             if (window.ezstandalone?.cmd) {
-              window.ezstandalone.cmd.push(() => {
-                if (window.ezstandalone) {
-                  window.ezstandalone.consent = true;
-                }
-              });
-            }
-          }}
         >
           This website uses cookies and ads to enhance your experience. We use Google AdSense and Ezoic for advertisements.
         </CookieConsent>
