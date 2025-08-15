@@ -98,37 +98,20 @@ function AppContent() {
     <TooltipProvider delayDuration={0}>
       <SidebarProvider>
         <Helmet>
-          {/* Ezoic Privacy Scripts - MUST BE FIRST */}
-          <script 
-            src="https://cmp.gatekeeperconsent.com/min.js" 
-            data-cfasync="false"
-          />
-          <script 
-            src="https://the.gatekeeperconsent.com/cmp.min.js" 
-            data-cfasync="false"
-          />
-          
-          {/* Ezoic Header Script */}
-          <script async src="//www.ezojs.com/ezoic/sa.min.js" />
-          <script>
-            {`
-              window.ezstandalone = window.ezstandalone || {};
-              ezstandalone.cmd = ezstandalone.cmd || [];
-            `}
-          </script>
-
-          {/* Twitter Ads */}
-          <script
-            async
-            src="https://static.ads-twitter.com/uwt.js"
-            type="text/javascript"
-          />
           
           {/* Google AdSense */}
           <script
             async
             src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9622114924468888"
             crossOrigin="anonymous"
+          />
+          
+                    
+          {/* Twitter Ads */}
+          <script
+            async
+            src="https://static.ads-twitter.com/uwt.js"
+            type="text/javascript"
           />
         </Helmet>
         
