@@ -1,6 +1,5 @@
 // client/src/components/app-sidebar.tsx
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-// import info from "@/lib/info.json";
 import {
   Sidebar,
   SidebarContent,
@@ -17,7 +16,7 @@ import {
   SidebarInput,
   SidebarMenuAction,
   SidebarMenuBadge,
-  useSidebar
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { apiClient } from "@/lib/api";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
@@ -31,18 +30,19 @@ import { Avatar, AvatarImage } from "./ui/avatar";
 import { sessionHelper } from "@/lib/sessionHelper";
 import { clearCookies } from "@/lib/clearCookies";
 
-
 export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState<string>("");
   const { setOpen, setOpenMobile, isMobile } = useSidebar();
-  
+  const { toast } = useToast(); // Move useToast to top level
+  const queryClient = useQueryClient(); // Move useQueryClient to top level
+
   // Fetch user data
   const userQuery = useQuery({
     queryKey: ["user"],
     queryFn: () => apiClient.getUser(),
-    staleTime: 0, // 30 * 60 * 1000, Cache for 30 minutes
+    staleTime: 0,
     refetchOnMount: "always",
     refetchInterval: false,
   });
@@ -51,7 +51,7 @@ export function AppSidebar() {
   const query = useQuery({
     queryKey: ["agents"],
     queryFn: () => apiClient.getAgents(),
-    staleTime: 0, //30 * 60 * 1000,
+    staleTime: 0,
     refetchOnMount: "always",
     refetchInterval: false,
   });
@@ -76,86 +76,74 @@ export function AppSidebar() {
               character: data.character,
             }))
             .catch((_error: Error) => {
-              // console.error(
-              //   `[AppSidebar] Error fetching character for agent ${agent.id}:`,
-              //   error
-              // );
               return { agentId: agent.id, character: null };
             })
         )
       );
-      return Object.fromEntries(
-        results.map((r) => [r.agentId, r.character])
-      );
+      return Object.fromEntries(results.map((r) => [r.agentId, r.character]));
     },
     staleTime: 30 * 60 * 1000,
     enabled: filteredAgents.length > 0,
   });
 
-  
-const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
-  e.preventDefault();
-  const { toast } = useToast();
-  const cacheBust = `?cb=${Date.now()}`;
+  const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    const cacheBust = `?cb=${Date.now()}`;
 
-  try {
-    console.log("[APP_SIDEBAR] Starting logout process");
+    try {
+      console.log("[APP_SIDEBAR] Starting logout process");
 
-    // Cancel & clear all queries efficiently
-    const queryClient = useQueryClient();
-    await queryClient.cancelQueries(); // Await to ensure completion
-    queryClient.invalidateQueries(); // Invalidate all (refetch on remount would fail post-logout)
-    queryClient.clear(); // Fully clear cache
+      // Cancel & clear all queries efficiently
+      await queryClient.cancelQueries();
+      queryClient.invalidateQueries();
+      queryClient.clear();
 
-    // Check & sign out session (header-based)
-    const sessionExists = await sessionHelper.doesSessionExist();
-    if (sessionExists) {
-      await sessionHelper.signOut();
-    }
-
-    // Clear client-side storage & cookies
-    localStorage.clear();
-    sessionStorage.clear();
-    clearCookies();
-    setSearchQuery("");
-
-    // Show success toast
-    toast({ title: "Success", description: "Logged out successfully." });
-
-    // Force navigation to auth page
-    window.location.href = `/auth${cacheBust}`; // Force full reload
-  } catch (err) {
-    console.error("[APP_SIDEBAR] Logout error:", err);
-    const errorMessage = err instanceof Error ? err.message : "Failed to log out.";
-
-    // Graceful fallback cleanup
-    localStorage.clear();
-    sessionStorage.clear();
-    clearCookies();
-    setSearchQuery("");
-
-    toast({ variant: "destructive", title: "Error", description: errorMessage });
-
-    // Force navigation to auth page with cache-busting
-    const { setOpen, setOpenMobile, isMobile } = useSidebar();
-    const navigate = useNavigate();
-    navigate(`/auth${cacheBust}`, { replace: true });
-    if (isMobile) setOpenMobile(false);
-    else setOpen(false);
-
-    setTimeout(() => {
-      if (window.location.pathname !== "/auth") {
-        window.location.href = `/auth${cacheBust}`;
+      // Check & sign out session (header-based)
+      const sessionExists = await sessionHelper.doesSessionExist();
+      if (sessionExists) {
+        await sessionHelper.signOut();
       }
-    }, 100);
-  }
-};
 
+      // Clear client-side storage & cookies
+      localStorage.clear();
+      sessionStorage.clear();
+      clearCookies();
+      setSearchQuery("");
 
+      // Show success toast
+      toast({ title: "Success", description: "Logged out successfully." });
+
+      // Force navigation to auth page
+      window.location.href = `/auth${cacheBust}`;
+    } catch (err) {
+      console.error("[APP_SIDEBAR] Logout error:", err);
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to log out.";
+
+      // Graceful fallback cleanup
+      localStorage.clear();
+      sessionStorage.clear();
+      clearCookies();
+      setSearchQuery("");
+
+      toast({ variant: "destructive", title: "Error", description: errorMessage });
+
+      // Use existing navigate and useSidebar hooks
+      navigate(`/auth${cacheBust}`, { replace: true });
+      if (isMobile) setOpenMobile(false);
+      else setOpen(false);
+
+      setTimeout(() => {
+        if (window.location.pathname !== "/auth") {
+          window.location.href = `/auth${cacheBust}`;
+        }
+      }, 100);
+    }
+  };
 
   const handleLogin = () => {
-  navigate("/auth");
-};
+    navigate("/auth");
+  };
 
   const handleEditAgent = (agentId: UUID) => {
     navigate(`/edit-character/${agentId}`);
@@ -163,11 +151,11 @@ const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
 
   const handleCreateCharacter = () => {
     if (isMobile) {
-      setOpenMobile(false); // Close sidebar on mobile
+      setOpenMobile(false);
     } else {
-      setOpen(false); // Close sidebar on desktop
+      setOpen(true);
     }
-    navigate("/create-character"); // Navigate to create-character
+    navigate("/create-character");
   };
 
   return (
@@ -176,33 +164,35 @@ const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <NavLink to="/home" className="hover:bg-agentvooc-secondary-accent hover:text-agentvooc-accent transition-all">
+              <NavLink
+                to="/home"
+                className="hover:bg-agentvooc-secondary-accent hover:text-agentvooc-accent transition-all"
+              >
                 <div className="flex items-center gap-0.5 leading-none">
                   <Avatar className="size-8 p-1 border rounded-full select-none">
-                      <AvatarImage src="/aV-logo.png" />
-                    </Avatar>
-                  <span className="font-semibold text-agentvooc-primary">agentVooc</span><span className="text-agentvooc-accent">.</span>
-                  {/* <span className="text-agentvooc-secondary mt-1">v{info?.version}</span> */}
+                    <AvatarImage src="/aV-logo.png" />
+                  </Avatar>
+                  <span className="font-semibold text-agentvooc-primary">
+                    agentVooc
+                  </span>
+                  <span className="text-agentvooc-accent">.</span>
                 </div>
               </NavLink>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem className="flex justify-end mr-2">
-            <SidebarTrigger className="hover:bg-agentvooc-secondary-accent hover:text-agentvooc-accent">
-            </SidebarTrigger>
+            <SidebarTrigger className="hover:bg-agentvooc-secondary-accent hover:text-agentvooc-accent"></SidebarTrigger>
           </SidebarMenuItem>
-         
-              <SidebarMenuItem>
+          <SidebarMenuItem>
             <Button
               variant="default"
               className="flex justify-start w-full"
-              onClick={handleCreateCharacter} // Use handleCreateCharacter
+              onClick={handleCreateCharacter}
             >
               <Plus className="mr-2 h-4 w-4" />
               Create Character
             </Button>
           </SidebarMenuItem>
-           
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
@@ -214,8 +204,10 @@ const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
                 <SidebarInput
                   placeholder="Search agents..."
                   value={searchQuery}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
-                  className="mx-2  border-agentvooc-accent/50 focus:ring-agentvooc-accent"
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setSearchQuery(e.target.value)
+                  }
+                  className="mx-2 border-agentvooc-accent/50 focus:ring-agentvooc-accent"
                 />
               </SidebarMenuItem>
               {query?.isPending || characterQueries.isPending ? (
@@ -239,7 +231,7 @@ const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
                       asChild
                       isActive={location.pathname.includes(agent.id)}
                       tooltip={`Chat with ${agent.name}`}
-                      className=" transition-all"
+                      className="transition-all"
                     >
                       <NavLink to={`/chat/${agent.id}`}>
                         <User className="" />
@@ -247,11 +239,11 @@ const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
                       </NavLink>
                     </SidebarMenuButton>
                     <SidebarMenuAction
-                       onClick={() => handleEditAgent(agent.id)}
-                       showOnHover
-                       className="p-1 text-agentvooc-accent"
-                        >   
-                       <Edit className="h-4 w-4" />
+                      onClick={() => handleEditAgent(agent.id)}
+                      showOnHover
+                      className="p-1 text-agentvooc-accent"
+                    >
+                      <Edit className="h-4 w-4" />
                     </SidebarMenuAction>
                     <SidebarMenuBadge>.</SidebarMenuBadge>
                     <KnowledgeVaultLink
@@ -287,7 +279,7 @@ const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
               </NavLink>
             </SidebarMenuButton>
           </SidebarMenuItem>
-	  <SidebarMenuItem>
+          <SidebarMenuItem>
             <SidebarMenuButton asChild>
               <NavLink
                 to="https://agentvooc.com/company/blog/how-it-works"
@@ -317,24 +309,16 @@ const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
             </p>
           </SidebarMenuItem>
           <SidebarMenuItem>
-  {userQuery.data?.user ? (
-    <Button
-      onClick={handleLogout}
-      variant="default"
-      className=""
-    >
-      Logout
-    </Button>
-  ) : (
-    <Button
-      onClick={handleLogin}
-      variant="default"
-      className=""
-    >
-      Log In
-    </Button>
-  )}
-</SidebarMenuItem>
+            {userQuery.data?.user ? (
+              <Button onClick={handleLogout} variant="default" className="">
+                Logout
+              </Button>
+            ) : (
+              <Button onClick={handleLogin} variant="default" className="">
+                Log In
+              </Button>
+            )}
+          </SidebarMenuItem>
           <SidebarMenuItem>
             <ConnectionStatus />
           </SidebarMenuItem>
@@ -344,6 +328,7 @@ const handleLogout = async (e: MouseEvent<HTMLButtonElement>) => {
   );
 }
 
+// KnowledgeVaultLink and EmailVaultLink remain unchanged
 function KnowledgeVaultLink({
   agentId,
   agentName,
@@ -400,7 +385,9 @@ function EmailVaultLink({
     return null;
   }
 
-  if (!character.plugins?.map((p: any) => typeof p === "string" ? p : p.name).includes("email")) {
+  if (
+    !character.plugins?.map((p: any) => (typeof p === "string" ? p : p.name)).includes("email")
+  ) {
     return null;
   }
 
