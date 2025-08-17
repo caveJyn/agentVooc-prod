@@ -7,7 +7,7 @@ export default defineConfig({
   name: 'agentVooc',
   title: 'agentVooc',
 
-  projectId: 'k75gr3bm',
+  projectId: 'drief73m',
   dataset: 'production',
 
   plugins: [structureTool(), visionTool()],

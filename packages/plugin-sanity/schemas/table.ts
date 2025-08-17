@@ -1,4 +1,4 @@
-// /home/kaijin/projects/bots/venv/elizaOS_env/agentVooc-prod/packages/plugin-sanity/schemas/table.ts
+// /packages/plugin-sanity/schemas/table.ts
 export default {
   name: 'table',
   title: 'Table',
@@ -53,21 +53,22 @@ export default {
               content: 'content',
               align: 'align',
             },
-            prepare({ content, align }: { content: any[]; align: string }) {
+            prepare(value: Record<string, any>) {
+              const { content, align } = value
               const text = content
                 ?.map((block: any) =>
                   block.children?.map((child: any) => child.text || '').join('')
                 )
-                .join(' ');
+                .join(' ')
               return {
                 title: text || 'Empty Header',
                 subtitle: `Align: ${align || 'left'}`,
-              };
+              }
             },
           },
         },
       ],
-      validation: (Rule: any) => Rule.required().min(1).max(12), // Limit to reasonable number of columns
+      validation: (Rule: any) => Rule.required().min(1).max(12),
       description: 'Define the column headers for the table.',
     },
     {
@@ -138,7 +139,7 @@ export default {
                               },
                             ],
                           },
-                          lists: [], // Disable lists for simplicity
+                          lists: [],
                         },
                       ],
                       validation: (Rule: any) => Rule.required(),
@@ -182,16 +183,17 @@ export default {
                       rowspan: 'rowspan',
                       align: 'align',
                     },
-                    prepare({ content, colspan, rowspan, align }: { content: any[]; colspan: number; rowspan: number; align: string }) {
+                    prepare(value: Record<string, any>) {
+                      const { content, colspan, rowspan, align } = value
                       const text = content
                         ?.map((block: any) =>
                           block.children?.map((child: any) => child.text || '').join('')
                         )
-                        .join(' ');
+                        .join(' ')
                       return {
                         title: text || 'Empty Cell',
                         subtitle: `Colspan: ${colspan}, Rowspan: ${rowspan}, Align: ${align}`,
-                      };
+                      }
                     },
                   },
                 },
@@ -199,16 +201,13 @@ export default {
               validation: (Rule: any) => [
                 Rule.required().min(1),
                 Rule.custom((cells: any[], context: any) => {
-                  // Access the table's columns from the document or parent
-                  const table = context.document || context.parent;
-                  const columnCount = table?.columns?.length || 0;
-                  if (columnCount === 0) {
-                    return true; // Skip validation if columns are not yet defined
-                  }
-                  const totalColspan = cells.reduce((sum, cell) => sum + (cell.colspan || 1), 0);
+                  const table = context.document || context.parent
+                  const columnCount = table?.columns?.length || 0
+                  if (columnCount === 0) return true
+                  const totalColspan = cells.reduce((sum, cell) => sum + (cell.colspan || 1), 0)
                   return totalColspan === columnCount
                     ? true
-                    : `Each row must have cells with a total colspan of ${columnCount} to match the number of columns.`;
+                    : `Each row must have cells with a total colspan of ${columnCount} to match the number of columns.`
                 }),
               ],
             },
@@ -217,19 +216,20 @@ export default {
             select: {
               cells: 'cells',
             },
-            prepare({ cells }: { cells: any[] }) {
+            prepare(value: Record<string, any>) {
+              const { cells } = value
               const text = cells
-                ?.map((cell) =>
+                ?.map((cell: any) =>
                   cell.content
                     ?.map((block: any) =>
                       block.children?.map((child: any) => child.text || '').join('')
                     )
                     .join('')
                 )
-                .join(' | ');
+                .join(' | ')
               return {
                 title: text || 'Empty Row',
-              };
+              }
             },
           },
         },
@@ -239,18 +239,15 @@ export default {
   ],
   validation: (Rule: any) =>
     Rule.custom((table: any) => {
-      // Ensure rows are consistent with columns when both are defined
-      if (!table?.columns?.length || !table?.rows?.length) {
-        return true; // Skip validation if columns or rows are not yet defined
-      }
-      const columnCount = table.columns.length;
+      if (!table?.columns?.length || !table?.rows?.length) return true
+      const columnCount = table.columns.length
       const invalidRows = table.rows.filter((row: any) => {
-        const totalColspan = row.cells.reduce((sum: number, cell: any) => sum + (cell.colspan || 1), 0);
-        return totalColspan !== columnCount;
-      });
+        const totalColspan = row.cells.reduce((sum: number, cell: any) => sum + (cell.colspan || 1), 0)
+        return totalColspan !== columnCount
+      })
       return invalidRows.length === 0
         ? true
-        : `Some rows have a total colspan that does not match the ${columnCount} columns.`;
+        : `Some rows have a total colspan that does not match the ${columnCount} columns.`
     }),
   preview: {
     select: {
@@ -258,12 +255,13 @@ export default {
       columns: 'columns',
       caption: 'caption',
     },
-    prepare({ rows, columns, caption }: { rows: any[]; columns: any[]; caption: string }) {
-      const title = `Table: ${columns?.length || 0} cols, ${rows?.length || 0} rows`;
+    prepare(value: Record<string, any>) {
+      const { rows, columns, caption } = value
+      const title = `Table: ${columns?.length || 0} cols, ${rows?.length || 0} rows`
       return {
         title,
         subtitle: caption || 'No caption',
-      };
+      }
     },
   },
-};
+}

@@ -157,7 +157,6 @@ export default {
             options: {
               hotspot: true,
             },
-            validation: (Rule: any) => Rule.required(),
           },
         ],
       },

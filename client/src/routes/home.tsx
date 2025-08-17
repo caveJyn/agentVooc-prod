@@ -1,4 +1,3 @@
-// client/src/routes/home.tsx
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Cog, Trash2, Edit, Book } from "lucide-react";
 import PageTitle from "@/components/page-title";
@@ -11,7 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { apiClient } from "@/lib/api";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom"; // Add useNavigate
 import type { UUID } from "@elizaos/core";
 import { formatAgentName } from "@/lib/utils";
 import { useEffect, useState } from "react";
@@ -30,67 +29,102 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const queryClient = useQueryClient();
+  const navigate = useNavigate(); // Add navigate for controlled redirects
 
   useEffect(() => {
+    // Prevent running if already on /auth to avoid loops
+    if (window.location.pathname === "/auth") {
+      console.log("[HOME] Already on /auth, skipping initialization");
+      return;
+    }
+
+    let isMounted = true;
+
     async function initialize() {
-      // console.log("[HOME] Initializing Home component");
+      console.log("[HOME] Initializing Home component");
       try {
         const sessionExists = await doesSessionExist();
-        // console.log("[HOME] Session exists:", sessionExists);
-        if (sessionExists) {
-          // console.log("[HOME] Fetching user data");
-          const userData = await apiClient.getUser();
-          // console.log("[HOME] Fetched user data:", userData);
-          if (userData.user) {
-            const userInfo: User = {
-              userId: userData.user.userId,
-              userType: userData.user.userType,
-              email: userData.user.email,
-              name: userData.user.name,
-            };
-            setUser(userInfo);
-            // console.log("[HOME] User state updated:", userInfo);
-          } else {
-            console.warn("[HOME] No user data in response:", userData);
-            setError("No user data returned. Please try logging in again.");
+        console.log("[HOME] Session exists:", sessionExists);
+
+        if (!sessionExists) {
+          console.log("[HOME] No session exists, redirecting to /auth");
+          if (isMounted) {
             setUser(null);
-            window.location.href = "/auth";
+            queryClient.clear();
+            navigate("/auth", { replace: true });
           }
+          return;
+        }
+
+        console.log("[HOME] Fetching user data");
+        const userData = await apiClient.getUser();
+        console.log("[HOME] Fetched user data:", userData);
+
+        if (!isMounted) return;
+
+        if (userData.user) {
+          const userInfo: User = {
+            userId: userData.user.userId,
+            userType: userData.user.userType,
+            email: userData.user.email,
+            name: userData.user.name,
+          };
+          setUser(userInfo);
+          console.log("[HOME] User state updated:", userInfo);
         } else {
-          // console.log("[HOME] No session exists, proceeding as guest");
+          console.warn("[HOME] No user data in response:", userData);
+          setError("No user data returned. Please try logging in again.");
           setUser(null);
-          // Clear cached data
-          queryClient.clear();
+          navigate("/auth", { replace: true });
         }
       } catch (err: any) {
+        if (!isMounted) return;
         console.error("[HOME] Error handling session or user data:", err);
-        setError("Failed to load user data: " + (err.message || "Unknown error"));
-        setUser(null);
-        // Force redirect to auth on session error
-        window.location.href = "/auth";
+
+        // Avoid redirect if the error is due to a failed session refresh
+        if (err.message === "Session expired, please login again") {
+          console.log("[HOME] Session expired, redirecting to /auth");
+          setError("Session expired. Please log in again.");
+          setUser(null);
+          navigate("/auth", { replace: true });
+        } else {
+          setError("Failed to load user data: " + (err.message || "Unknown error"));
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Failed to initialize session. Please try again.",
+          });
+        }
       }
-      // console.log("[HOME] User state after initialization:", user);
     }
+
     initialize();
-  }, [queryClient]);
+
+    return () => {
+      isMounted = false; // Prevent state updates after unmount
+    };
+  }, [queryClient, navigate]);
 
   const agentsQuery = useQuery({
     queryKey: ["agents"],
     queryFn: async () => {
       try {
         const data = await apiClient.getAgents();
-        // console.log("[HOME] Raw agents data:", data);
+        console.log("[HOME] Raw agents data:", data);
         return data;
       } catch (err: any) {
+        console.error("[HOME] Error fetching agents:", err.message, "Status:", err.status);
         const errorMessage = err.message.includes("Unauthorized")
           ? "Please log in to view your characters."
           : err.message.includes("User not found")
           ? "Your account is not registered. Please sign up again."
           : "Failed to fetch your characters: " + (err.message || "Unknown error");
         setError(errorMessage);
-        console.error("[HOME] Error fetching agents:", err.message, "Status:", err.status);
+
+        // Only redirect to /auth if not already there
         if (err.message.includes("Unauthorized") && window.location.pathname !== "/auth") {
-          window.location.href = "/auth";
+          console.log("[HOME] Unauthorized, redirecting to /auth");
+          navigate("/auth", { replace: true });
         }
         throw err;
       }
@@ -126,6 +160,7 @@ export default function Home() {
       deleteCharacterMutation.mutate(characterId);
     }
   };
+
 
  try {
     // Replace the existing (!user) section in home.tsx with this enhanced version

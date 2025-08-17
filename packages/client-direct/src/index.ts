@@ -414,7 +414,7 @@ async function getUserLimits(user) {
 
 this.app.post(
   "/api/:agentId/message",
-  
+  cors(corsOptions), // Use global corsOptions
   upload.single("file"),
   async (req: express.Request, res: express.Response) => {
     try {

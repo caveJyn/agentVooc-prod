@@ -159,7 +159,7 @@ export default {
     select: {
       title: "email", // Use the email field as the document title
       subtitle: "userId", // Optional: Use name as subtitle
-      stattus: "isConnected"
+      status: "isConnected"
     },
   },
 };

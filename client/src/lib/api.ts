@@ -7,7 +7,7 @@ import Session  from "supertokens-web-js/recipe/session";
 const BASE_URL  =
     import.meta.env.VITE_SERVER_BASE_URL ||
     `${import.meta.env.VITE_SERVER_URL}:${import.meta.env.VITE_SERVER_PORT}`;
-// console.log(`[FETCHER] Using BASE_URL: ${BASE_URL}`);
+console.log(`[FETCHER] Using BASE_URL: ${BASE_URL}`);
 
 const fetcher = async ({
   url,
